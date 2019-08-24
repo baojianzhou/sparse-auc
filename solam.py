@@ -2,6 +2,8 @@
 import numpy as np
 from scipy import sparse
 import sklearn as sk
+from sklearn.model_selection import KFold
+
 
 def demo():
     g_pass = 15
@@ -36,7 +38,10 @@ def demo():
 
     # set the results to zeros
     for m in range(g_iters):
-        v_indices = sk.utils.
+        kf = KFold(n_splits=10, shuffle=True)
+        for train_index, test_index in kf.split(pp_feat):
+            x_tr, x_te = pp_feat[train_index], pp_feat[test_index]
+            y_tr, y_te = pp_label[train_index], pp_label[test_index]
 
 def main():
     demo()
