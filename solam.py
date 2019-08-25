@@ -7,6 +7,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
+from algo_wrapper.algo_wrapper import algo_solam
 
 
 def load_results():
@@ -71,12 +72,10 @@ def demo():
             y_tr, y_te = pp_label[train_index], pp_label[test_index]
             rand_id = range(len(x_tr))
             run_time, n_auc, n_auc_2, wt = fn_ep_solam(x_tr, y_tr, x_te, y_te, opt_solam, rand_id)
-            print('run time: %.6f, auc: %.6f' % (run_time, n_auc))
+            print('run time: %.6f, auc: %.6f' % (run_time, n_auc)),
             print('run time: %.6f, auc: %.6f' % (
-                results['run_time'][m][j], results['auc'][m][j]))
-            wt_ = np.asarray([_[0] for _ in results['wt'][m][j]])
-            print(np.linalg.norm(wt_ - wt))
-            print('---')
+                results['run_time'][m][j], results['auc'][m][j])),
+            print('speed up: %.4f', results['run_time'][m][j] / run_time)
 
 
 def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
@@ -90,6 +89,23 @@ def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
     :param rand_id:
     :return:
     """
+    t_start = time.time()
+    wt_py = fn_ep_solam_py(x_train, y_train, options, rand_id)
+    run_time_py = time.time() - t_start
+    t_start = time.time()
+    # TODO be careful, the rand_ind type should be np.int32
+    wt_c, a, b = algo_solam(np.asarray(x_train, dtype=float), np.asarray(y_train, dtype=float),
+                            para_rand_ind=np.asarray(range(len(x_train)), dtype=np.int32),
+                            para_r=options['sr'], para_xi=options['sc'],
+                            para_n_pass=options['n_pass'], verbose=0)
+    run_time_c = time.time() - t_start
+    v_fpr, v_tpr, n_auc, n_auc_2 = evaluate(x_test, y_test, wt_py)
+    v_fpr, v_tpr, n_auc, n_auc_2 = evaluate(x_test, y_test, wt_c)
+    print(np.linalg.norm(wt_py - wt_c))
+    return run_time_c, n_auc, n_auc_2, wt_c
+
+
+def fn_ep_solam_py(x_train, y_train, options, rand_id):
     sr = options['sr']
     sc = options['sc']
     n_pass = options['n_pass']
@@ -101,13 +117,13 @@ def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
     # initial vector
     n_v0 = np.zeros(n_dim + 2)
     n_v0[:n_dim] = np.zeros(n_dim) + np.sqrt(sr * sr / float(n_dim))
+    print(np.linalg.norm(n_v0[:n_dim]))
     n_v0[n_dim] = sr
     n_v0[n_dim + 1] = sr
     n_a_p0 = 2. * sr
-    # iteration    time.
+    # iteration time.
     n_t = 1.
     n_cnt = 1
-    t_start = time.time()
     wt = np.zeros(n_dim)
     while True:
         if n_cnt > n_pass:
@@ -128,8 +144,7 @@ def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
                 v_p_dv[n_dim] = - 2. * (1. - n_p1_) * (vt_dot - n_a)
                 v_p_dv[n_dim + 1] = 0.
                 v_p_dv = n_v0 - n_ga * v_p_dv
-                v_p_da = -2. * (1. - n_p1_) * vt_dot
-                v_p_da += - 2. * n_p1_ * (1. - n_p1_) * n_a_p0
+                v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0
                 v_p_da = n_a_p0 + n_ga * v_p_da
             else:
                 n_p1_ = ((n_t - 1.) * n_p0_) / n_t
@@ -176,10 +191,7 @@ def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
             n_t = n_t + 1.
             wt = n_v1_[:n_dim]
         n_cnt += 1
-
-    v_fpr, v_tpr, n_auc, n_auc_2 = evaluate(x_test, y_test, wt)
-    run_time = time.time() - t_start
-    return run_time, n_auc, n_auc_2, wt
+    return wt
 
 
 def evaluate(x_te, y_te, wt):
