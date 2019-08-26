@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
-__all__ = ['algo_test', 'algo_solam', 'fn_ep_solam_py']
+__all__ = ['algo_test', 'algo_solam', 'algo_solam_cv', 'fn_ep_solam_py']
 import numpy as np
+from sklearn.metrics import auc
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import KFold
 
 try:
     import sparse_module
@@ -39,6 +43,43 @@ def algo_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_n_pass, verbose)
     a = np.asarray(re[1])
     b = np.asanyarray(re[2])
     return wt, a, b
+
+
+def algo_solam_cv(x_tr, y_tr, para_n_pass, para_n_cv, verbose):
+    """
+    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
+    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
+    :param x_tr: training samples (n,p) dimension. --double
+    :param y_tr: training labels (n,1) dimension. --double
+    :param para_n_pass: radius of w. --double
+    :param para_n_cv: parameter to control the learning rate. --double
+    :param verbose: print out information. --int
+    :return: statistical results
+    """
+    max_auc = 0.0
+    opt = dict()
+    for m in range(1, 101, 9):
+        para_xi = float(m * 1.0)
+        for n in np.arange(-1, 5):
+            para_r = float(10. ** n)
+            cur_auc = np.zeros(para_n_cv)
+            kf = KFold(n_splits=para_n_cv, shuffle=True)
+            for ind, (tr_ind, te_ind) in enumerate(kf.split(x_tr)):
+                x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
+                y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
+                re = c_algo_solam(np.asarray(x_train, dtype=float),
+                                  np.asarray(y_train, dtype=float),
+                                  np.asarray(range(len(x_train)), dtype=np.int32),
+                                  para_r, para_xi, para_n_pass, verbose)
+                wt = np.asarray(re[0])
+                cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
+            mean_auc = np.mean(cur_auc)
+            if mean_auc > max_auc:
+                max_auc = mean_auc
+                opt['sc'] = m
+                opt['sr'] = 10. ** n
+                opt['n_pass'] = para_n_pass
+    return opt
 
 
 def fn_ep_solam_py(x_train, y_train, options, rand_id):
@@ -128,3 +169,11 @@ def fn_ep_solam_py(x_train, y_train, options, rand_id):
             wt = n_v1_[:n_dim]
         n_cnt += 1
     return wt
+
+
+def evaluate(x_te, y_te, wt):
+    v_py = np.dot(x_te, wt)
+    v_fpr, v_tpr, _ = roc_curve(y_true=y_te, y_score=v_py)
+    n_auc = roc_auc_score(y_true=y_te, y_score=v_py)
+    n_auc_2 = auc(v_fpr, v_tpr)
+    return v_fpr, v_tpr, n_auc, n_auc_2

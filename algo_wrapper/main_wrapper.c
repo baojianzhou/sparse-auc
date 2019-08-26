@@ -72,8 +72,8 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
 
 
 static PyMethodDef sparse_methods[] = {
-        {"c_test",       (PyCFunction) test,            METH_VARARGS, "test docs"},
-        {"c_algo_solam", (PyCFunction) wrap_algo_solam, METH_VARARGS, "wrap_algo_solam docs"},
+        {"c_test",          (PyCFunction) test,               METH_VARARGS, "test docs"},
+        {"c_algo_solam",    (PyCFunction) wrap_algo_solam,    METH_VARARGS, "wrap_algo_solam docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */
