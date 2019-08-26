@@ -28,6 +28,7 @@ typedef struct {
     double *wt;
     double a;
     double b;
+    double alpha;
 } solam_results;
 
 bool algo_solam_func(solam_para *para, solam_results *results);

@@ -26,6 +26,9 @@ static PyObject *test(PyObject *self, PyObject *args) {
 }
 
 static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
+    /*
+     * Wrapper of the SOLAM algorithm
+     */
     if (self != NULL) {
         printf("error: unknown error !!\n");
         return NULL;
@@ -49,6 +52,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     result->wt = malloc(sizeof(double) * para->p);
     result->a = 0.0;
     result->b = 0.0;
+    //call SOLAM algorithm
     algo_solam_func(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);

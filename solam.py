@@ -8,6 +8,7 @@ from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 from algo_wrapper.algo_wrapper import algo_solam
+from algo_wrapper.algo_wrapper import fn_ep_solam_py
 
 
 def load_results():
@@ -29,7 +30,7 @@ def load_results():
 
 def demo():
     results = load_results()
-    g_pass = 1
+    g_pass = 3
     g_seq_num = 1
     g_iters = 5
     g_cv = 5
@@ -71,11 +72,15 @@ def demo():
             x_tr, x_te = pp_feat[train_index], pp_feat[test_index]
             y_tr, y_te = pp_label[train_index], pp_label[test_index]
             rand_id = range(len(x_tr))
+            wt_ = []
+            for _ in list(results['wt'][m][j]):
+                wt_.append(_[0])
+            wt_ = np.asarray(wt_)
             run_time, n_auc, n_auc_2, wt = fn_ep_solam(x_tr, y_tr, x_te, y_te, opt_solam, rand_id)
-            print('run time: %.6f, auc: %.6f' % (run_time, n_auc)),
-            print('run time: %.6f, auc: %.6f' % (
-                results['run_time'][m][j], results['auc'][m][j])),
-            print('speed up: %.4f', results['run_time'][m][j] / run_time)
+            print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+            print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
+            print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt - wt_))),
+            print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
 
 
 def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
@@ -90,108 +95,13 @@ def fn_ep_solam(x_train, y_train, x_test, y_test, options, rand_id):
     :return:
     """
     t_start = time.time()
-    wt_py = fn_ep_solam_py(x_train, y_train, options, rand_id)
-    run_time_py = time.time() - t_start
-    t_start = time.time()
-    # TODO be careful, the rand_ind type should be np.int32
     wt_c, a, b = algo_solam(np.asarray(x_train, dtype=float), np.asarray(y_train, dtype=float),
                             para_rand_ind=np.asarray(range(len(x_train)), dtype=np.int32),
                             para_r=options['sr'], para_xi=options['sc'],
                             para_n_pass=options['n_pass'], verbose=0)
     run_time_c = time.time() - t_start
-    v_fpr, v_tpr, n_auc, n_auc_2 = evaluate(x_test, y_test, wt_py)
     v_fpr, v_tpr, n_auc, n_auc_2 = evaluate(x_test, y_test, wt_c)
-    print(np.linalg.norm(wt_py - wt_c))
     return run_time_c, n_auc, n_auc_2, wt_c
-
-
-def fn_ep_solam_py(x_train, y_train, options, rand_id):
-    sr = options['sr']
-    sc = options['sc']
-    n_pass = options['n_pass']
-    n_dim = x_train.shape[1]
-    n_p0_ = 0.  # number of positive
-    n_v0_ = np.zeros(n_dim + 2)
-    n_a_p0_ = 0.
-    n_g_a0_ = 0.
-    # initial vector
-    n_v0 = np.zeros(n_dim + 2)
-    n_v0[:n_dim] = np.zeros(n_dim) + np.sqrt(sr * sr / float(n_dim))
-    print(np.linalg.norm(n_v0[:n_dim]))
-    n_v0[n_dim] = sr
-    n_v0[n_dim + 1] = sr
-    n_a_p0 = 2. * sr
-    # iteration time.
-    n_t = 1.
-    n_cnt = 1
-    wt = np.zeros(n_dim)
-    while True:
-        if n_cnt > n_pass:
-            break
-        for j in range(len(rand_id)):
-            id_ = rand_id[j]
-            t_feat = x_train[id_]
-            t_label = y_train[id_]
-            n_ga = sc / np.sqrt(n_t)
-            if t_label > 0:  # if it is positive case
-                n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t
-                v_wt = n_v0[:n_dim]
-                n_a = n_v0[n_dim]
-                v_p_dv = np.zeros_like(n_v0)
-                vt_dot = np.dot(v_wt, t_feat)
-                v_p_dv[:n_dim] = 2. * (1. - n_p1_) * (vt_dot - n_a) * t_feat
-                v_p_dv[:n_dim] -= 2. * (1. + n_a_p0) * (1. - n_p1_) * t_feat
-                v_p_dv[n_dim] = - 2. * (1. - n_p1_) * (vt_dot - n_a)
-                v_p_dv[n_dim + 1] = 0.
-                v_p_dv = n_v0 - n_ga * v_p_dv
-                v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0
-                v_p_da = n_a_p0 + n_ga * v_p_da
-            else:
-                n_p1_ = ((n_t - 1.) * n_p0_) / n_t
-                v_wt = n_v0[:n_dim]
-                n_b = n_v0[n_dim + 1]
-                v_p_dv = np.zeros_like(n_v0)
-                vt_dot = np.dot(v_wt, t_feat)
-                v_p_dv[:n_dim] = 2. * n_p1_ * (vt_dot - n_b) * t_feat
-                v_p_dv[:n_dim] += 2. * (1. + n_a_p0) * n_p1_ * t_feat
-                v_p_dv[n_dim] = 0.
-                v_p_dv[n_dim + 1] = - 2. * n_p1_ * (vt_dot - n_b)
-                v_p_dv = n_v0 - n_ga * v_p_dv
-                v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0
-                v_p_da = n_a_p0 + n_ga * v_p_da
-
-            # normalization -- the projection step.
-            n_rv = np.linalg.norm(v_p_dv[:n_dim])
-            if n_rv > sr:
-                v_p_dv[:n_dim] = v_p_dv[:n_dim] / n_rv * sr
-            if v_p_dv[n_dim] > sr:
-                v_p_dv[n_dim] = sr
-            if v_p_dv[n_dim + 1] > sr:
-                v_p_dv[n_dim + 1] = sr
-            n_v1 = v_p_dv
-            n_ra = np.linalg.norm(v_p_da)
-            if n_ra > 2. * sr:
-                n_a_p1 = v_p_da / n_ra * (2. * sr)
-            else:
-                n_a_p1 = v_p_da
-            # update gamma_
-            n_g_a1_ = n_g_a0_ + n_ga
-            # update v_
-            n_v1_ = (n_g_a0_ * n_v0_ + n_ga * n_v0) / n_g_a1_
-            # update alpha_
-            n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_
-            # update the information
-            n_p0_ = n_p1_
-            n_v0_ = n_v1_
-            n_a_p0_ = n_a_p1_
-            n_g_a0_ = n_g_a1_
-            n_v0 = n_v1
-            n_a_p0 = n_a_p1
-            # update the counts
-            n_t = n_t + 1.
-            wt = n_v1_[:n_dim]
-        n_cnt += 1
-    return wt
 
 
 def evaluate(x_te, y_te, wt):
