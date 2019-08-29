@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include "algo_solam.h"
+#include "algo_sparse_solam.h"
 
 static PyObject *test(PyObject *self, PyObject *args) {
     if (self != NULL) {
@@ -71,9 +72,58 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
 }
 
 
+static PyObject *wrap_algo_sparse_solam(PyObject *self, PyObject *args) {
+    /*
+     * Wrapper of the SOLAM algorithm
+     */
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    sparse_solam_para *para = malloc(sizeof(sparse_solam_para));
+    PyArrayObject *x_tr_, *y_tr_, *rand_ind_;
+    if (!PyArg_ParseTuple(args, "O!O!O!ddiii",
+                          &PyArray_Type, &x_tr_,
+                          &PyArray_Type, &y_tr_,
+                          &PyArray_Type, &rand_ind_,
+                          &para->para_r,
+                          &para->para_xi,
+                          &para->para_s,
+                          &para->para_num_pass,
+                          &para->verbose)) { return NULL; }
+    para->num_tr = (int) x_tr_->dimensions[0];
+    para->p = (int) x_tr_->dimensions[1];
+    para->x_tr = (double *) PyArray_DATA(x_tr_);
+    para->y_tr = (double *) PyArray_DATA(y_tr_);
+    para->para_rand_ind = (int *) PyArray_DATA(rand_ind_);
+    sparse_solam_results *result = malloc(sizeof(sparse_solam_results));
+    result->wt = malloc(sizeof(double) * para->p);
+    result->a = 0.0;
+    result->b = 0.0;
+    //call SOLAM algorithm
+    algo_sparse_solam_func(para, result);
+    PyObject *results = PyTuple_New(3);
+    PyObject *wt = PyList_New(para->p);
+    PyObject *a = PyFloat_FromDouble(result->a);
+    PyObject *b = PyFloat_FromDouble(result->b);
+    for (int i = 0; i < para->p; i++) {
+        PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
+    }
+    PyTuple_SetItem(results, 0, wt);
+    PyTuple_SetItem(results, 1, a);
+    PyTuple_SetItem(results, 2, b);
+    free(para);
+    free(result->wt);
+    free(result);
+    return results;
+}
+
+
 static PyMethodDef sparse_methods[] = {
         {"c_test",          (PyCFunction) test,               METH_VARARGS, "test docs"},
         {"c_algo_solam",    (PyCFunction) wrap_algo_solam,    METH_VARARGS, "wrap_algo_solam docs"},
+        {"c_algo_sparse_solam",    (PyCFunction) wrap_algo_sparse_solam,
+         METH_VARARGS, "wrap_algo_sparse_solam docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */

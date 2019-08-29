@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__all__ = ['algo_test', 'algo_solam', 'algo_solam_cv', 'fn_ep_solam_py']
+__all__ = ['algo_test', 'algo_solam', 'algo_solam_cv', 'fn_ep_solam_py', 'algo_sparse_solam_cv']
 import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
@@ -12,6 +12,7 @@ try:
     try:
         from sparse_module import c_test
         from sparse_module import c_algo_solam
+        from sparse_module import c_algo_sparse_solam
     except ImportError:
         print('cannot find some function(s) in sparse_module')
         exit(0)
@@ -71,6 +72,44 @@ def algo_solam_cv(x_tr, y_tr, para_n_pass, para_n_cv, verbose):
                                   np.asarray(y_train, dtype=float),
                                   np.asarray(range(len(x_train)), dtype=np.int32),
                                   para_r, para_xi, para_n_pass, verbose)
+                wt = np.asarray(re[0])
+                cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
+            mean_auc = np.mean(cur_auc)
+            if mean_auc > max_auc:
+                max_auc = mean_auc
+                opt['sc'] = m
+                opt['sr'] = 10. ** n
+                opt['n_pass'] = para_n_pass
+    return opt
+
+
+def algo_sparse_solam_cv(x_tr, y_tr, para_n_pass,para_s, para_n_cv, verbose):
+    """
+    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
+    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
+    :param x_tr: training samples (n,p) dimension. --double
+    :param y_tr: training labels (n,1) dimension. --double
+    :param para_s: the sparsity parameter.
+    :param para_n_pass: radius of w. --double
+    :param para_n_cv: parameter to control the learning rate. --double
+    :param verbose: print out information. --int
+    :return: statistical results
+    """
+    max_auc = 0.0
+    opt = dict()
+    for m in range(1, 101, 9):
+        para_xi = float(m * 1.0)
+        for n in np.arange(-1, 5):
+            para_r = float(10. ** n)
+            cur_auc = np.zeros(para_n_cv)
+            kf = KFold(n_splits=para_n_cv, shuffle=True)
+            for ind, (tr_ind, te_ind) in enumerate(kf.split(x_tr)):
+                x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
+                y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
+                re = c_algo_sparse_solam(np.asarray(x_train, dtype=float),
+                                  np.asarray(y_train, dtype=float),
+                                  np.asarray(range(len(x_train)), dtype=np.int32),
+                                  para_r, para_xi,para_s, para_n_pass, verbose)
                 wt = np.asarray(re[0])
                 cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
             mean_auc = np.mean(cur_auc)
