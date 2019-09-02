@@ -7,6 +7,11 @@
 
 #include "algo_base.h"
 
+#define sign(x) (x > 0) - (x < 0)
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define swap(a, b) { register double temp=(a);(a)=(b);(b)=temp; }
+
 typedef struct {
     double *x_tr;
     double *y_tr;

@@ -79,8 +79,7 @@ bool arg_sort_ascend(const double *x, int *sorted_indices, int x_len) {
     return true;
 }
 
-bool arg_magnitude_sort_descend(const double *x,
-                                int *sorted_indices, int x_len) {
+bool arg_magnitude_sort_descend(const double *x, int *sorted_indices, int x_len) {
     data_pair *w_pairs = malloc(sizeof(data_pair) * x_len);
     for (int i = 0; i < x_len; i++) {
         w_pairs[i].val = fabs(x[i]);
@@ -94,8 +93,7 @@ bool arg_magnitude_sort_descend(const double *x,
     return true;
 }
 
-bool arg_magnitude_sort_ascend(const double *x,
-                               int *sorted_indices, int x_len) {
+bool arg_magnitude_sort_ascend(const double *x, int *sorted_indices, int x_len) {
     data_pair *w_pairs = malloc(sizeof(data_pair) * x_len);
     for (int i = 0; i < x_len; i++) {
         w_pairs[i].val = fabs(x[i]);
@@ -110,8 +108,7 @@ bool arg_magnitude_sort_ascend(const double *x,
 }
 
 
-bool arg_magnitude_sort_top_k(const double *x,
-                              int *sorted_set, int k, int x_len) {
+bool arg_magnitude_sort_top_k(const double *x, int *sorted_set, int k, int x_len) {
     if (k > x_len) {
         printf("Error: k should be <= x_len\n");
         exit(EXIT_FAILURE);
@@ -129,8 +126,7 @@ bool arg_magnitude_sort_top_k(const double *x,
     return true;
 }
 
-bool lex_sort_descend(const double *y, const double *x, int *sorted_indices,
-                      int x_len) {
+bool lex_sort_descend(const double *y, const double *x, int *sorted_indices, int x_len) {
     lex_pair *elements = malloc(sizeof(lex_pair) * x_len);
     for (int i = 0; i < x_len; i++) {
         elements[i].first = x[i];
@@ -145,8 +141,7 @@ bool lex_sort_descend(const double *y, const double *x, int *sorted_indices,
     return true;
 }
 
-bool lex_sort_ascend(const double *y, const double *x,
-                     int *sorted_indices, int x_len) {
+bool lex_sort_ascend(const double *y, const double *x, int *sorted_indices, int x_len) {
     lex_pair *elements = malloc(sizeof(lex_pair) * x_len);
     for (int i = 0; i < x_len; i++) {
         elements[i].first = x[i];

@@ -4,7 +4,108 @@
 #include "sort.h"
 #include "algo_sparse_solam.h"
 
-bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *results){
+/**
+ * Please find the algorithm in the following paper:
+ * ---
+ * @article{floyd1975algorithm,
+ * title={Algorithm 489: the algorithm SELECT—for finding the ith
+ *        smallest of n elements [M1]},
+ * author={Floyd, Robert W and Rivest, Ronald L},
+ * journal={Communications of the ACM},
+ * volume={18}, number={3}, pages={173},
+ * year={1975},
+ * publisher={ACM}}
+ * @param array
+ * @param l
+ * @param r
+ * @param k
+ */
+void floyd_rivest_select(double *array, int l, int r, int k) {
+    register int n, i, j, s, sd, ll, rr;
+    register double z, t;
+    while (r > l) {
+        if (r - l > 600) {
+            /**
+             * use select() recursively on a sample of size s to get an
+             * estimate for the (k-l+1)-th smallest element into array[k],
+             * biased slightly so that the (k-l+1)-th element is expected to
+             * lie in the smaller set after partitioning.
+             */
+            n = r - l + 1;
+            i = k - l + 1;
+            z = log(n);
+            s = 0.5 * exp(2 * z / 3);
+            sd = 0.5 * sqrt(z * s * (n - s) / n) * sign(i - n / 2);
+            ll = max(l, k - i * s / n + sd);
+            rr = min(r, k + (n - i) * s / n + sd);
+            floyd_rivest_select(array, ll, rr, k);
+        }
+        t = array[k];
+        /**
+         * the following code partitions x[l:r] about t, it is similar to partition
+         * but will run faster on most machines since subscript range checking on i
+         * and j has been eliminated.
+         */
+        i = l;
+        j = r;
+        swap(array[l], array[k]);
+        if (array[r] < t) {
+            swap(array[r], array[l]);
+        }
+        while (i < j) {
+            swap(array[i], array[j]);
+            do i++; while (array[i] > t);
+            do j--; while (array[j] < t);
+        }
+        if (array[l] == t) {
+            swap(array[l], array[j]);
+        } else {
+            j++;
+            swap(array[j], array[r]);
+        }
+        /**
+         * New adjust l, r so they surround the subset containing the
+         * (k-l+1)-th smallest element.
+         */
+        if (j <= k) {
+            l = j + 1;
+        }
+        if (k <= j) {
+            r = j - 1;
+        }
+    }
+}
+
+/**
+ * Given the unsorted array, we threshold this array by using Floyd-Rivest algorithm.
+ * @param arr the unsorted array.
+ * @param n, the number of elements in this array.
+ * @param k, the number of k largest elements will be kept.
+ * @return 0, successfully project arr to a k-sparse vector.
+ */
+int hard_thresholding(double *arr, int n, int k) {
+    double *temp_arr = malloc(sizeof(double) * n), kth_largest;
+    for (int i = 0; i < n; i++) {
+        temp_arr[i] = fabs(arr[i]);
+    }
+    floyd_rivest_select(temp_arr, 0, n - 1, k - 1);
+    kth_largest = temp_arr[k - 1];
+    bool flag = false;
+    for (int i = 0; i < n; i++) {
+        if (fabs(arr[i]) < kth_largest) {
+            arr[i] = 0.0;
+        } else if ((fabs(arr[i]) == kth_largest) && (flag == false)) {
+            flag = true; // to handle the multiple cases.
+        } else if ((fabs(arr[i]) == kth_largest) && (flag == true)) {
+            arr[i] = 0.0;
+        }
+    }
+    free(temp_arr);
+    return 0;
+}
+
+
+bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -47,8 +148,6 @@ bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *resul
     double n_a_p1;
     double n_a_p1_;
     double n_p1_;
-    int *sorted_ind = malloc(sizeof(int)*para->para_s);
-    double *temp = malloc(sizeof(double)*n_dim);
     while (true) {
         if (n_cnt > n_pass) {
             break;
@@ -63,7 +162,8 @@ bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *resul
                 double n_a = n_v0[n_dim];
                 cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
                 double vt_dot = cblas_ddot(n_dim, v_wt, 1, t_feat, 1);
-                double weight = 2. * (1. - n_p1_) * (vt_dot - n_a) - 2. * (1. + n_a_p0) * (1. - n_p1_);
+                double weight =
+                        2. * (1. - n_p1_) * (vt_dot - n_a) - 2. * (1. + n_a_p0) * (1. - n_p1_);
                 cblas_daxpy(n_dim, weight, t_feat, 1, v_p_dv, 1);
                 v_p_dv[n_dim] = -2. * (1. - n_p1_) * (vt_dot - n_a);
                 v_p_dv[n_dim + 1] = 0.;
@@ -98,14 +198,8 @@ bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *resul
                 v_p_dv[n_dim + 1] = sr;
             }
             //----- sparse projection step
-            arg_magnitude_sort_top_k(v_p_dv,sorted_ind,para->para_s,n_dim);
-            cblas_dscal(n_dim,0.0,temp,1);
-            for(int ii = 0;ii< para->para_s;ii++){
-                temp[sorted_ind[ii]] = v_p_dv[sorted_ind[ii]];
-            }
-            cblas_dcopy(n_dim,temp,1,v_p_dv,1);
+            hard_thresholding(v_p_dv, n_dim, para->para_s);
             //----- sparse projection step
-
             cblas_dcopy(n_dim + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
             double n_ra = fabs(v_p_da);
             if (n_ra > 2. * sr) {
@@ -136,8 +230,6 @@ bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *resul
     cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
     results->a = n_v1_[n_dim];
     results->b = n_v1_[n_dim + 1];
-    free(temp);
-    free(sorted_ind);
     free(n_v1_);
     free(n_v1);
     free(n_v0);
@@ -148,3 +240,5 @@ bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *resul
     free(zero_v);
     return true;
 }
+
+
