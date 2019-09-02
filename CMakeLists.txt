@@ -19,7 +19,7 @@ include_directories(${OPENBLAS_INCLUDE_DIR})
 find_package(PythonLibs 2.7 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
-add_executable(test_main main.c)
+add_executable(test_main main.c algo_wrapper/sort.h algo_wrapper/sort.c)
 target_link_libraries(test_main python2.7 -std=c11 -Wall -Wextra -O3
         -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB} -lm -lpython2.7 -lopenblas -lpthread)
 
