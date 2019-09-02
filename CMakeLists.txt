@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
-include_directories(algo_wrapper)
+include_directories(algo_wrapper/)
 project(sparse-auc C)
 
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_FLAGS "-Wall -Wextra")
 set(CMAKE_C_FLAGS_DEBUG "-g")
 set(CMAKE_C_FLAGS_RELEASE "-O3")
-set(CMAKE_C_STANDARD 11)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c11 -O3 -fPIC -lpython2.7 -pthread")
 set(ROOT /network/rit/lab/ceashpc/bz383376/opt/)
 set(NUMPY env-python2.7.14/lib/python2.7/site-packages/numpy/core/include/)
@@ -18,6 +19,10 @@ set(PYTHON_INCLUDE "${ROOT}python-2.7.14/include/python2.7")
 include_directories(${OPENBLAS_INCLUDE_DIR})
 find_package(PythonLibs 2.7 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
+
+add_executable(test_kth_selection test_kth_selection.c
+        algo_wrapper/kth_selection.c algo_wrapper/kth_selection.h algo_wrapper/algo_base.h)
+target_link_libraries(test_kth_selection -Wall -O3 -lm)
 
 add_executable(test_main main.c algo_wrapper/sort.h algo_wrapper/sort.c)
 target_link_libraries(test_main python2.7 -std=c11 -Wall -Wextra -O3
