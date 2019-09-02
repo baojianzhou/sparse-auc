@@ -1,6 +1,14 @@
 # -*- coding: utf-8 -*-
-__all__ = ['algo_test', 'algo_solam', 'algo_solam_cv','algo_sparse_solam','algo_da_solam',
-           'fn_ep_solam_py', 'algo_sparse_solam_cv', 'algo_da_solam_cv']
+__all__ = ['algo_test',
+           'algo_solam',
+           'algo_solam_cv',
+           'algo_solam_py',
+           'algo_sparse_solam',
+           'algo_sparse_solam_cv',
+           'algo_da_solam',
+           'algo_da_solam_cv',
+           'fpr_tpr_auc']
+import time
 import numpy as np
 from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
@@ -30,8 +38,10 @@ def algo_test():
 
 def algo_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_n_pass, verbose):
     """
-    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
-    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
+
+    SOLAM: Stochastic Online AUC Maximization.
+
+    Parameters:
     :param x_tr: training samples (n,p) dimension. --double
     :param y_tr: training labels (n,1) dimension. --double
     :param para_rand_ind: random shuffle the training samples. --np.int32
@@ -40,32 +50,124 @@ def algo_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_n_pass, verbose)
     :param para_n_pass: number of pass. --int
     :param verbose: print out information. --int
     :return: statistical results
+    :return:
+
+    Reference:
+    @inproceedings{ying2016stochastic,
+    title={Stochastic online AUC maximization},
+    author={Ying, Yiming and Wen, Longyin and Lyu, Siwei},
+    booktitle={Advances in neural information processing systems},
+    pages={451--459},
+    year={2016}}
+    ---
     """
-    re = c_algo_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_n_pass, verbose)
+    t_start = time.time()
+    re = c_algo_solam(np.asarray(x_tr, dtype=float), np.asarray(y_tr, dtype=float),
+                      np.asarray(para_rand_ind, dtype=np.int32), float(para_r), float(para_xi),
+                      int(para_n_pass), int(verbose))
     wt = np.asarray(re[0])
     a = np.asarray(re[1])
     b = np.asanyarray(re[2])
-    return wt, a, b
+    return wt, a, b, time.time() - t_start
+
+
+def algo_solam_cv(x_tr, y_tr, para_n_pass, para_n_cv, verbose):
+    """
+    Model selection of SOLAM by checking AUC score.
+    Parameters:
+    :param x_tr: training samples (n,p) dimension. --double
+    :param y_tr: training labels (n,1) dimension. --double
+    :param para_n_pass: how many passes need to run.
+    :param para_n_cv: KFold cross validation of folding parameter.
+    :param verbose: print out information. --int
+    :return: model parameters.
+    """
+    max_auc = 0.0
+    opt = dict()
+    for para_xi in np.arange(1, 101, 9, dtype=float):
+        for para_r in 10. ** np.arange(-1, 5, 1, dtype=float):
+            cur_auc = np.zeros(para_n_cv)
+            kf = KFold(n_splits=para_n_cv, shuffle=True)
+            for ind, (tr_ind, te_ind) in enumerate(kf.split(x_tr)):
+                x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
+                y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
+                re = c_algo_solam(np.asarray(x_train, dtype=float),
+                                  np.asarray(y_train, dtype=float),
+                                  np.asarray(range(len(x_train)), dtype=np.int32),
+                                  float(para_r), float(para_xi), int(para_n_pass), int(verbose))
+                wt = np.asarray(re[0])
+                cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
+            mean_auc = np.mean(cur_auc)
+            if mean_auc > max_auc:
+                max_auc = mean_auc
+                opt['sc'] = para_xi
+                opt['sr'] = para_r
+                opt['n_pass'] = para_n_pass
+    return opt
 
 
 def algo_sparse_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_s, para_n_pass, verbose):
     """
-    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
-    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
+    Sparsity Projection with: Stochastic Online AUC Maximization
     :param x_tr: training samples (n,p) dimension. --double
     :param y_tr: training labels (n,1) dimension. --double
     :param para_rand_ind: random shuffle the training samples. --np.int32
     :param para_r: radius of w. --double
     :param para_xi: parameter to control the learning rate. --double
+    :param para_s: the sparsity parameter s.
     :param para_n_pass: number of pass. --int
     :param verbose: print out information. --int
     :return: statistical results
+    :return:
     """
-    re = c_algo_sparse_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi,para_s, para_n_pass, verbose)
+    t_start = time.time()
+    re = c_algo_sparse_solam(np.asarray(x_tr, dtype=float), np.asarray(y_tr, dtype=float),
+                             np.asarray(para_rand_ind, dtype=np.int32),
+                             float(para_r), float(para_xi), int(para_s), int(para_n_pass),
+                             int(verbose))
     wt = np.asarray(re[0])
     a = np.asarray(re[1])
     b = np.asanyarray(re[2])
-    return wt, a, b
+    return wt, a, b, time.time() - t_start
+
+
+def algo_sparse_solam_cv(x_tr, y_tr, para_n_pass, para_s, para_n_cv, verbose):
+    """
+    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
+    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
+    :param x_tr: training samples (n,p) dimension. --double
+    :param y_tr: training labels (n,1) dimension. --double
+    :param para_s: the sparsity parameter.
+    :param para_n_pass: radius of w. --double
+    :param para_n_cv: parameter to control the learning rate. --double
+    :param verbose: print out information. --int
+    :return: statistical results
+    """
+    max_auc = 0.0
+    opt = dict()
+    for para_xi in np.arange(1, 101, 9, dtype=float):
+        for para_r in 10. ** np.arange(-1, 5, 1, dtype=float):
+            cur_auc = np.zeros(para_n_cv)
+            kf = KFold(n_splits=para_n_cv, shuffle=True)
+            for ind, (tr_ind, te_ind) in enumerate(kf.split(x_tr)):
+                x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
+                y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
+                re = c_algo_sparse_solam(np.asarray(x_train, dtype=float),
+                                         np.asarray(y_train, dtype=float),
+                                         np.asarray(range(len(x_train)), dtype=np.int32),
+                                         para_r, para_xi, para_s, para_n_pass, verbose)
+                wt = np.asarray(re[0])
+                y_score = np.dot(x_test, wt)
+                cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=y_score)
+            mean_auc, std_auc = float(np.mean(cur_auc)), float(np.std(cur_auc))
+            print('mean: %.4f std: %.4f' % (mean_auc, std_auc), cur_auc)
+            if mean_auc > max_auc:
+                max_auc = mean_auc
+                opt['sc'] = para_xi
+                opt['sr'] = para_r
+                opt['n_pass'] = para_n_pass
+                opt['s'] = para_s
+    return opt
 
 
 def algo_da_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_s, para_n_pass, verbose):
@@ -86,82 +188,6 @@ def algo_da_solam(x_tr, y_tr, para_rand_ind, para_r, para_xi, para_s, para_n_pas
     a = np.asarray(re[1])
     b = np.asanyarray(re[2])
     return wt, a, b
-
-
-def algo_solam_cv(x_tr, y_tr, para_n_pass, para_n_cv, verbose):
-    """
-    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
-    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
-    :param x_tr: training samples (n,p) dimension. --double
-    :param y_tr: training labels (n,1) dimension. --double
-    :param para_n_pass: radius of w. --double
-    :param para_n_cv: parameter to control the learning rate. --double
-    :param verbose: print out information. --int
-    :return: statistical results
-    """
-    max_auc = 0.0
-    opt = dict()
-    for m in range(1, 101, 9):
-        para_xi = float(m * 1.0)
-        for n in np.arange(-1, 5):
-            para_r = float(10. ** n)
-            cur_auc = np.zeros(para_n_cv)
-            kf = KFold(n_splits=para_n_cv, shuffle=True)
-            for ind, (tr_ind, te_ind) in enumerate(kf.split(x_tr)):
-                x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
-                y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
-                re = c_algo_solam(np.asarray(x_train, dtype=float),
-                                  np.asarray(y_train, dtype=float),
-                                  np.asarray(range(len(x_train)), dtype=np.int32),
-                                  para_r, para_xi, para_n_pass, verbose)
-                wt = np.asarray(re[0])
-                cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
-            mean_auc = np.mean(cur_auc)
-            if mean_auc > max_auc:
-                max_auc = mean_auc
-                opt['sc'] = m
-                opt['sr'] = 10. ** n
-                opt['n_pass'] = para_n_pass
-    return opt
-
-
-def algo_sparse_solam_cv(x_tr, y_tr, para_n_pass, para_s, para_n_cv, verbose):
-    """
-    The enhanced l1-RDA method. Shown in Algorithm 2 of reference [1].
-    That is Equation (10) is equivalent to Equation (30) if rho=0.0.
-    :param x_tr: training samples (n,p) dimension. --double
-    :param y_tr: training labels (n,1) dimension. --double
-    :param para_s: the sparsity parameter.
-    :param para_n_pass: radius of w. --double
-    :param para_n_cv: parameter to control the learning rate. --double
-    :param verbose: print out information. --int
-    :return: statistical results
-    """
-    max_auc = 0.0
-    opt = dict()
-    for m in range(1, 101, 9):
-        para_xi = float(m * 1.0)
-        for n in np.arange(-1, 5):
-            para_r = float(10. ** n)
-            cur_auc = np.zeros(para_n_cv)
-            kf = KFold(n_splits=para_n_cv, shuffle=True)
-            for ind, (tr_ind, te_ind) in enumerate(kf.split(x_tr)):
-                x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
-                y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
-                re = c_algo_sparse_solam(np.asarray(x_train, dtype=float),
-                                  np.asarray(y_train, dtype=float),
-                                  np.asarray(range(len(x_train)), dtype=np.int32),
-                                  para_r, para_xi,para_s, para_n_pass, verbose)
-                wt = np.asarray(re[0])
-                cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
-            mean_auc = np.mean(cur_auc)
-            print(cur_auc)
-            if mean_auc > max_auc:
-                max_auc = mean_auc
-                opt['sc'] = m
-                opt['sr'] = 10. ** n
-                opt['n_pass'] = para_n_pass
-    return opt
 
 
 def algo_da_solam_cv(x_tr, y_tr, para_n_pass, para_s, para_n_cv, verbose):
@@ -188,9 +214,9 @@ def algo_da_solam_cv(x_tr, y_tr, para_n_pass, para_s, para_n_cv, verbose):
                 x_train, x_test = x_tr[tr_ind], x_tr[te_ind]
                 y_train, y_test = y_tr[tr_ind], y_tr[te_ind]
                 re = c_algo_da_solam(np.asarray(x_train, dtype=float),
-                                         np.asarray(y_train, dtype=float),
-                                         np.asarray(range(len(x_train)), dtype=np.int32),
-                                         para_r, para_xi, para_s, para_n_pass, verbose)
+                                     np.asarray(y_train, dtype=float),
+                                     np.asarray(range(len(x_train)), dtype=np.int32),
+                                     para_r, para_xi, para_s, para_n_pass, verbose)
                 wt = np.asarray(re[0])
                 cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
             mean_auc = np.mean(cur_auc)
@@ -203,7 +229,15 @@ def algo_da_solam_cv(x_tr, y_tr, para_n_pass, para_s, para_n_cv, verbose):
     return opt
 
 
-def fn_ep_solam_py(x_train, y_train, options, rand_id):
+def algo_solam_py(x_train, y_train, options, rand_id):
+    """
+    This is a Python version of SOLAM. It is pretty slow for large scale datasets.
+    :param x_train:
+    :param y_train:
+    :param options:
+    :param rand_id:
+    :return:
+    """
     sr = options['sr']
     sc = options['sc']
     n_pass = options['n_pass']
@@ -292,9 +326,10 @@ def fn_ep_solam_py(x_train, y_train, options, rand_id):
     return wt
 
 
-def evaluate(x_te, y_te, wt):
+def fpr_tpr_auc(x_te, y_te, wt):
     v_py = np.dot(x_te, wt)
     v_fpr, v_tpr, _ = roc_curve(y_true=y_te, y_score=v_py)
     n_auc = roc_auc_score(y_true=y_te, y_score=v_py)
-    n_auc_2 = auc(v_fpr, v_tpr)
-    return v_fpr, v_tpr, n_auc, n_auc_2
+    n_auc_alter = auc(v_fpr, v_tpr)
+    assert n_auc == n_auc_alter
+    return v_fpr, v_tpr, n_auc

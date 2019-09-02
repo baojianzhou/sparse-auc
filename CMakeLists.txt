@@ -13,7 +13,7 @@ set(NUMPY env-python2.7.14/lib/python2.7/site-packages/numpy/core/include/)
 set(OPENBLAS_INCLUDE_DIR "${ROOT}openblas-0.3.1/include")
 set(OPENBLAS_INCLUDE "${ROOT}openblas-0.3.1/include")
 set(OPENBLAS_LIB "${ROOT}openblas-0.3.1/lib/")
-set(NUMPY_INCLUDE "${ROOT}${NUMPY}")
+set(NUMPY_INCLUDE "/network/rit/lab/ceashpc/bz383376/opt/${NUMPY}")
 set(PYTHON_LIBRARY "${ROOT}python-2.7.14/lib/libpython2.7.so")
 set(PYTHON_INCLUDE "${ROOT}python-2.7.14/include/python2.7")
 include_directories(${OPENBLAS_INCLUDE_DIR})
@@ -26,11 +26,13 @@ target_link_libraries(test_kth_selection -Wall -O3 -lm)
 
 add_executable(test_main main.c algo_wrapper/sort.h algo_wrapper/sort.c)
 target_link_libraries(test_main python2.7 -std=c11 -Wall -Wextra -O3
-        -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB} -lm -lpython2.7 -lopenblas -lpthread)
+        -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB}
+        -lm -lpython2.7 -lopenblas -lpthread)
 
-set(ROOT algo_wrapper/)
-add_library(sparse_module SHARED ${ROOT}main_wrapper.c ${ROOT}algo_solam.c ${ROOT}algo_solam.h
-        ${ROOT}algo_sparse_solam.c ${ROOT}algo_sparse_solam.h ${ROOT}algo_da_solam.c
-        ${ROOT}algo_da_solam.h ${ROOT}sort.c ${ROOT}sort.h)
+add_library(sparse_module SHARED algo_wrapper/main_wrapper.c algo_wrapper/algo_solam.c
+        algo_wrapper/algo_solam.h algo_wrapper/algo_sparse_solam.c
+        algo_wrapper/algo_sparse_solam.h algo_wrapper/algo_da_solam.c algo_wrapper/algo_da_solam.h
+        algo_wrapper/sort.c algo_wrapper/sort.h)
 target_link_libraries(sparse_module python2.7 -std=c11 -Wall -Wextra -O3
-        -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB} -lm -lpython2.7 -lopenblas -lpthread)
+        -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB}
+        -lm -lpython2.7 -lopenblas -lpthread)
