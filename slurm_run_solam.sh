@@ -9,4 +9,4 @@
 # the environment variable SLURM_ARRAY_TASK_ID contains
 # the index corresponding to the current job step
 PYTHON="/network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python"
-PYTHON slurm_run_solam.py $SLURM_ARRAY_TASK_ID 100
+${PYTHON} slurm_run_solam.py ${SLURM_ARRAY_TASK_ID} 100
