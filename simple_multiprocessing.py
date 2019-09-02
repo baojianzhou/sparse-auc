@@ -1,9 +1,9 @@
-#!/network/rit/misc/software/Python-3.7.0/bin/python3
+#!/network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python
 from multiprocessing import Pool
 import os
 import time
 
-work = (["A", 5], ["B", 2], ["C", 1], ["D", 3], ["E", 4], ["F",5])
+work = (["A", 5], ["B", 2], ["C", 1], ["D", 3], ["E", 4], ["F", 5])
 
 
 def work_log(work_data):
@@ -19,8 +19,7 @@ def pool_handler():
 
 if __name__ == '__main__':
     print("""USER {user} was granted {cpus} cores and {mem} MB per node on {node}.
-The job is current running with job # {job}
-""".format(
+The job is current running with job # {job}""".format(
         user=os.getenv("SLURM_JOB_USER"),
         cpus=os.getenv("SLURM_CPUS_PER_TASK"),
         mem=os.getenv("SLURM_MEM_PER_CPU"),
