@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 2.8)
 include_directories(algo_wrapper/)
 project(sparse-auc C)
 
