@@ -25,6 +25,7 @@ target_link_libraries(test_main python2.7 -std=c11 -Wall -Wextra -O3
 
 set(ROOT algo_wrapper/)
 add_library(sparse_module SHARED ${ROOT}main_wrapper.c ${ROOT}algo_solam.c ${ROOT}algo_solam.h
-        ${ROOT}algo_sparse_solam.c ${ROOT}algo_sparse_solam.h ${ROOT}sort.c ${ROOT}sort.h)
+        ${ROOT}algo_sparse_solam.c ${ROOT}algo_sparse_solam.h ${ROOT}algo_da_solam.c
+        ${ROOT}algo_da_solam.h ${ROOT}sort.c ${ROOT}sort.h)
 target_link_libraries(sparse_module python2.7 -std=c11 -Wall -Wextra -O3
         -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB} -lm -lpython2.7 -lopenblas -lpthread)
