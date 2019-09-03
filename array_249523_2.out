@@ -1,0 +1,1 @@
+/tmp/slurmd/job249526/slurm_script: line 12: 42724 Illegal instruction     ${PYTHON} slurm_run_solam.py

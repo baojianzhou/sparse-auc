@@ -1,0 +1,1 @@
+/tmp/slurmd/job249550/slurm_script: line 12: 46229 Illegal instruction     (core dumped) ${PYTHON} slurm_run_solam.py
