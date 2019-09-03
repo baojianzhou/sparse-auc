@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
+
+sys.path.append(os.getcwd())
+
 import time
 import numpy as np
 import pickle as pkl
