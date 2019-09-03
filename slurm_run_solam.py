@@ -1,7 +1,5 @@
-#!bin/bash
-
+# -*- coding: utf-8 -*-
 import multiprocessing
 import sys
 import os
-
-print(sys.argv[1], sys.argv[2])
+print(os.environ['SLURM_ARRAY_TASK_ID'])
