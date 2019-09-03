@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=slurm-run-sparse
 #SBATCH --output=array_%A_%a.out
-#SBATCH --array=0-99
+#SBATCH --array=0-2
 #SBATCH --time=01:00:00
 #SBATCH --partition=batch
 #SBATCH --ntasks=1
