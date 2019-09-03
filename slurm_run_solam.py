@@ -60,6 +60,7 @@ def test_single(task_id):
     # set the results to zeros
     results_mat = dict()
     para_s = get_para_by_task_id(task_id)
+    print(para_s)
     for m in range(g_iters):
         kfold_ind = results['kfold_ind'][m]
         kf_split = []
@@ -95,4 +96,5 @@ def test_single(task_id):
     pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % task_id)
 
 
+print('test loading ...')
 test_single(task_id=os.environ['SLURM_ARRAY_TASK_ID'])
