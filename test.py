@@ -5,6 +5,8 @@ import time
 import pickle as pkl
 import numpy as np
 import scipy.io
+
+sys.path.append(os.getcwd())
 from algo_wrapper.algo_wrapper import fpr_tpr_auc
 from algo_wrapper.algo_wrapper import algo_sparse_solam
 from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
@@ -27,9 +29,10 @@ def load_results():
     return re
 
 
-sys.path.append(os.getcwd())
+# task_id = os.environ['SLURM_ARRAY_TASK_ID']
+task_id = 10
 print('test')
-print(len(load_results()), os.environ['SLURM_ARRAY_TASK_ID'])
+print(len(load_results()), task_id)
 results_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
 results = load_results()
 g_pass = 1
@@ -55,7 +58,7 @@ for k in range(1, g_data['data_num']):
 
 # set the results to zeros
 results_mat = dict()
-para_s = 10 * int(os.environ['SLURM_ARRAY_TASK_ID']) + 123
+para_s = 10 * int(task_id) + 123
 print(para_s)
 for m in range(g_iters):
     kfold_ind = results['kfold_ind'][m]
@@ -72,23 +75,23 @@ for m in range(g_iters):
             wt_.append(_[0])
         wt_ = np.asarray(wt_)
         print(np.linalg.norm(wt_))
-        if False:
-            s_t = time.time()
-            opt_solam = algo_sparse_solam_cv(
-                x_tr=x_tr, y_tr=y_tr, para_s=para_s,
-                para_n_pass=g_pass, para_n_cv=5, verbose=0)
-            print('run time for model selection: %.4f' % (time.time() - s_t))
-            wt, a, b, run_time = algo_sparse_solam(x_tr=x_tr, y_tr=y_tr,
-                                                   para_rand_ind=range(len(x_tr)),
-                                                   para_r=opt_solam['sr'],
-                                                   para_xi=opt_solam['sc'],
-                                                   para_s=opt_solam['s'],
-                                                   para_n_pass=opt_solam['n_pass'], verbose=0)
-            v_fpr, v_tpr, n_auc = fpr_tpr_auc(x_te=x_te, y_te=y_te, wt=wt)
-            print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
-            print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
-            print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
-            print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
-            results_mat[(para_s, m, j)] = {'fpr': v_fpr, 'tpr': v_tpr, 'auc': n_auc,
-                                           'optimal_opts': opt_solam}
-pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % os.environ['SLURM_ARRAY_TASK_ID'])
+        s_t = time.time()
+        opt_solam = algo_sparse_solam_cv(
+            x_tr=x_tr, y_tr=y_tr, para_s=para_s,
+            para_n_pass=g_pass, para_n_cv=5, verbose=0)
+        print('run time for model selection: %.4f' % (time.time() - s_t))
+        wt, a, b, run_time = algo_sparse_solam(x_tr=x_tr, y_tr=y_tr,
+                                               para_rand_ind=range(len(x_tr)),
+                                               para_r=opt_solam['sr'],
+                                               para_xi=opt_solam['sc'],
+                                               para_s=opt_solam['s'],
+                                               para_n_pass=opt_solam['n_pass'], verbose=0)
+        v_fpr, v_tpr, n_auc = fpr_tpr_auc(x_te=x_te, y_te=y_te, wt=wt)
+        print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+        print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
+        print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
+        print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
+        results_mat[(para_s, m, j)] = {'fpr': v_fpr, 'tpr': v_tpr, 'auc': n_auc,
+                                       'optimal_opts': opt_solam}
+
+pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % int(task_id))

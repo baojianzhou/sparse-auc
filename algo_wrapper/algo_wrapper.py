@@ -8,6 +8,8 @@ __all__ = ['algo_test',
            'algo_da_solam',
            'algo_da_solam_cv',
            'fpr_tpr_auc']
+import os
+import sys
 import time
 import numpy as np
 from sklearn.metrics import auc
@@ -16,6 +18,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
 
 try:
+    sys.path.append(os.getcwd())
     import sparse_module
 
     try:
