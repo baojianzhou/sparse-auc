@@ -186,5 +186,8 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    cur = os.path.abspath(os.path.dirname(__file__))
+    lib = ctypes.cdll.LoadLibrary(os.path.join(cur, ".", "sparse_module.so"))
+    print(lib.main())
+    print lib.c_test(np.random.rand(12).reshape((3, 4)))
     pass
