@@ -71,22 +71,24 @@ for m in range(g_iters):
         for _ in list(results['wt'][m][j]):
             wt_.append(_[0])
         wt_ = np.asarray(wt_)
-        s_t = time.time()
-        opt_solam = algo_sparse_solam_cv(
-            x_tr=x_tr, y_tr=y_tr, para_s=para_s,
-            para_n_pass=g_pass, para_n_cv=5, verbose=0)
-        print('run time for model selection: %.4f' % (time.time() - s_t))
-        wt, a, b, run_time = algo_sparse_solam(x_tr=x_tr, y_tr=y_tr,
-                                               para_rand_ind=range(len(x_tr)),
-                                               para_r=opt_solam['sr'],
-                                               para_xi=opt_solam['sc'],
-                                               para_s=opt_solam['s'],
-                                               para_n_pass=opt_solam['n_pass'], verbose=0)
-        v_fpr, v_tpr, n_auc = fpr_tpr_auc(x_te=x_te, y_te=y_te, wt=wt)
-        print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
-        print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
-        print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
-        print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
-        results_mat[(para_s, m, j)] = {'fpr': v_fpr, 'tpr': v_tpr, 'auc': n_auc,
-                                       'optimal_opts': opt_solam}
+        print(np.linalg.norm(wt_))
+        if False:
+            s_t = time.time()
+            opt_solam = algo_sparse_solam_cv(
+                x_tr=x_tr, y_tr=y_tr, para_s=para_s,
+                para_n_pass=g_pass, para_n_cv=5, verbose=0)
+            print('run time for model selection: %.4f' % (time.time() - s_t))
+            wt, a, b, run_time = algo_sparse_solam(x_tr=x_tr, y_tr=y_tr,
+                                                   para_rand_ind=range(len(x_tr)),
+                                                   para_r=opt_solam['sr'],
+                                                   para_xi=opt_solam['sc'],
+                                                   para_s=opt_solam['s'],
+                                                   para_n_pass=opt_solam['n_pass'], verbose=0)
+            v_fpr, v_tpr, n_auc = fpr_tpr_auc(x_te=x_te, y_te=y_te, wt=wt)
+            print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+            print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
+            print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
+            print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
+            results_mat[(para_s, m, j)] = {'fpr': v_fpr, 'tpr': v_tpr, 'auc': n_auc,
+                                           'optimal_opts': opt_solam}
 pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % os.environ['SLURM_ARRAY_TASK_ID'])
