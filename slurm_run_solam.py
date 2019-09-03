@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
 import time
 import numpy as np
 import pickle as pkl
 from algo_wrapper.algo_wrapper import fpr_tpr_auc
 from algo_wrapper.algo_wrapper import algo_sparse_solam
 from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
-
-results_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
 
 
 def load_results():
@@ -33,7 +30,7 @@ def get_para_by_task_id(task_id):
     return 10 * int(task_id) + s_para
 
 
-def test_single(task_id):
+def test_single(task_id, results_path):
     results = load_results()
     g_pass = 1
     g_iters = 5
@@ -96,5 +93,11 @@ def test_single(task_id):
     pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % task_id)
 
 
-print('test loading ...')
-test_single(task_id=os.environ['SLURM_ARRAY_TASK_ID'])
+def main():
+    print('test loading ...')
+    results_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
+    test_single(task_id=os.environ['SLURM_ARRAY_TASK_ID'], results_path=results_path)
+
+
+if __name__ == '__main__':
+    main()
