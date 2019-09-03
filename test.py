@@ -57,7 +57,6 @@ for k in range(1, g_data['data_num']):
 results_mat = dict()
 para_s = 10 * int(os.environ['SLURM_ARRAY_TASK_ID']) + 123
 print(para_s)
-exit(0)
 for m in range(g_iters):
     kfold_ind = results['kfold_ind'][m]
     kf_split = []
