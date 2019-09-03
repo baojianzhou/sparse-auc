@@ -2,7 +2,6 @@
 import os
 import sys
 import time
-import ctypes
 import pickle as pkl
 import numpy as np
 import scipy.io
