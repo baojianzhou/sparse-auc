@@ -94,4 +94,5 @@ def test_single(task_id):
                                            'optimal_opts': opt_solam}
     pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % task_id)
 
-test_single(task_id=os.environ['SLURM_ARRAY_TASK_ID'])
+
+test_single(task_id=1)
