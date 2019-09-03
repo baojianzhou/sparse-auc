@@ -9,6 +9,7 @@ from algo_wrapper.algo_wrapper import fpr_tpr_auc
 from algo_wrapper.algo_wrapper import algo_sparse_solam
 from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
 
+
 def load_results():
     import scipy.io
     results = scipy.io.loadmat('baselines/nips16_solam/EP_a9a_SOLAM.mat')['data']
@@ -25,9 +26,10 @@ def load_results():
     re['kfold_ind'] = np.asarray(k_fold_ind, dtype=int)
     return re
 
+
 sys.path.append(os.getcwd())
 print('test')
-print(len(load_results()),os.environ['SLURM_ARRAY_TASK_ID'])
+print(len(load_results()), os.environ['SLURM_ARRAY_TASK_ID'])
 results_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
 results = load_results()
 g_pass = 1
@@ -53,8 +55,9 @@ for k in range(1, g_data['data_num']):
 
 # set the results to zeros
 results_mat = dict()
-para_s = get_para_by_task_id(os.environ['SLURM_ARRAY_TASK_ID'])
+para_s = 10 * int(os.environ['SLURM_ARRAY_TASK_ID']) + 123
 print(para_s)
+exit(0)
 for m in range(g_iters):
     kfold_ind = results['kfold_ind'][m]
     kf_split = []
@@ -87,4 +90,4 @@ for m in range(g_iters):
         print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
         results_mat[(para_s, m, j)] = {'fpr': v_fpr, 'tpr': v_tpr, 'auc': n_auc,
                                        'optimal_opts': opt_solam}
-pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % task_id)
+pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % os.environ['SLURM_ARRAY_TASK_ID'])
