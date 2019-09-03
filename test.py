@@ -181,7 +181,7 @@ def test():
             print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
             results_mat[(para_s, m, j)] = {'fpr': v_fpr, 'tpr': v_tpr, 'auc': n_auc,
                                            'optimal_opts': opt_solam}
-    pkl.dump(results_mat, results_path + 'results_mat_a9a_%d.pkl' % int(task_id))
+    pkl.dump(results_mat, open(results_path + 'results_mat_a9a_%d.pkl' % int(task_id), 'wb'))
 
 
 if __name__ == '__main__':
