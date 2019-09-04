@@ -77,7 +77,8 @@ for i = 1:gSeqNum
         %% positive class
         pIdx = [];
         for k = 1:floor(uNum/2)
-            tI = find(orgLabel == uLab(uSort(1, k), 1));
+            
+            
             pIdx = [pIdx, tI'];
         end
         %% negative class
