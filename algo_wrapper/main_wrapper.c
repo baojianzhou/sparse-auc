@@ -185,3 +185,21 @@ PyMODINIT_FUNC initsparse_module() {
 int main() {
     printf("test of main wrapper!\n");
 }
+
+int main_2(PyObject *args){
+    double sum = 0.0;
+    PyArrayObject *x_tr_;
+    if (!PyArg_ParseTuple(args, "O!", &PyArray_Type, &x_tr_)) { return NULL; }
+    int n = (int) (x_tr_->dimensions[0]);     // number of samples
+    int p = (int) (x_tr_->dimensions[1]);     // number of features
+    printf("%d %d\n", n, p);
+    double *x_tr = PyArray_DATA(x_tr_);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < p; j++) {
+            printf("%.2f ", x_tr[i * p + j]);
+            sum += x_tr[i * p + j];
+        }
+        printf("\n");
+    }
+    return 0;
+}

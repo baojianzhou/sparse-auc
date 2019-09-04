@@ -185,4 +185,8 @@ def test():
 
 
 if __name__ == '__main__':
-    test()
+    import ctypes as ct
+
+    test = ct.CDLL('./sparse_module.so')
+    dat = np.random.rand(12).reshape((3, 4))
+    test.main_2(np.asarray(dat, dtype=float))
