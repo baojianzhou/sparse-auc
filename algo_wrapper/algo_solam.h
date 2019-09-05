@@ -5,7 +5,7 @@
 #ifndef SPARSE_AUC_ALGO_SOLAM_H
 #define SPARSE_AUC_ALGO_SOLAM_H
 
-#include "algo_base.h"
+#include <stdbool.h>
 
 typedef struct {
     double *x_tr;

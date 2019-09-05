@@ -1,10 +1,12 @@
 //
 // Created by baojian on 8/29/19.
 //
+#include "algo_base.h"
 #include "algo_stoht_am.h"
 
 
-double _sparse_dot(const int *x_indices, const double *x_values, int x_len, const double *y) {
+
+double __sparse_dot(const int *x_indices, const double *x_values, int x_len, const double *y) {
     double result = 0.0;
     for (int i = 0; i < x_len; i++) {
         result += x_values[i] * y[x_indices[i]];
@@ -13,8 +15,8 @@ double _sparse_dot(const int *x_indices, const double *x_values, int x_len, cons
 }
 
 
-void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
-                         double alpha, double *y) {
+void __sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
+                          double alpha, double *y) {
     for (int i = 0; i < x_len; i++) {
         y[x_indices[i]] += alpha * x_values[i];
     }
@@ -334,14 +336,14 @@ bool algo_stoht_am_sparse_func(stoht_am_sparse_para *para, stoht_am_results *res
                 int *cur_indices = t_feat_indices + para->max_nonzero * jj + 1;
                 double *cur_values = t_feat_values + para->max_nonzero * jj + 1;
                 int s_len = cur_indices[0];
-                double vt_dot = _sparse_dot(cur_indices, cur_values, s_len, v_wt);
+                double vt_dot = __sparse_dot(cur_indices, cur_values, s_len, v_wt);
                 double weight;
                 if (*cur_label > 0) {
                     double n_a = n_v0[n_dim];
                     weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
                     weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
                     // gradient of w
-                    _sparse_cblas_daxpy(cur_indices, cur_values, s_len, weight, v_p_dv);
+                    __sparse_cblas_daxpy(cur_indices, cur_values, s_len, weight, v_p_dv);
                     // gradient of a
                     v_p_dv[n_dim] = -2. * (1. - n_p1_) * (vt_dot - n_a);
                     // gradient of b
@@ -352,7 +354,7 @@ bool algo_stoht_am_sparse_func(stoht_am_sparse_para *para, stoht_am_results *res
                     double n_b = n_v0[n_dim + 1];
                     weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
                     // gradient of w
-                    _sparse_cblas_daxpy(cur_indices, cur_values, s_len, weight, v_p_dv);
+                    __sparse_cblas_daxpy(cur_indices, cur_values, s_len, weight, v_p_dv);
                     // gradient of a
                     v_p_dv[n_dim] = 0.;
                     // gradient of b

@@ -286,7 +286,7 @@ def run_task_stoht_am():
 
 
 def result_analysis():
-    results = pkl.load(open(data_path + 'model_select_0000_2100_1.pkl', 'rb'))
+    results = pkl.load(open(data_path + 'model_select_0000_2100_5.pkl', 'rb'))
     max_auc_dict = dict()
     for result in results:
         run_id, fold_id, para_xi, para_r = result['algo_para']
@@ -303,7 +303,7 @@ def result_analysis():
 
 
 def main():
-    run_task_stoht_am()
+    result_analysis()
 
 
 if __name__ == '__main__':

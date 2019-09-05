@@ -5,7 +5,7 @@
 #ifndef SPARSE_AUC_ALGO_SPARSE_SOLAM_H
 #define SPARSE_AUC_ALGO_SPARSE_SOLAM_H
 
-#include "algo_base.h"
+#include <stdbool.h>
 
 #define sign(x) (x > 0) - (x < 0)
 #define max(a, b) ((a) > (b) ? (a) : (b))

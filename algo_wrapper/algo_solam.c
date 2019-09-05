@@ -1,7 +1,9 @@
 //
 // Created by baojian on 8/24/19.
 //
+#include "algo_base.h"
 #include "algo_solam.h"
+
 
 double _sparse_dot(const int *x_indices, const double *x_values, int x_len, const double *y) {
     double result = 0.0;
@@ -11,12 +13,14 @@ double _sparse_dot(const int *x_indices, const double *x_values, int x_len, cons
     return result;
 }
 
+
 void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
-                         double alpha, double *y) {
+                          double alpha, double *y) {
     for (int i = 0; i < x_len; i++) {
         y[x_indices[i]] += alpha * x_values[i];
     }
 }
+
 
 /**
  * SOLAM: Stochastic Online AUC Maximization
