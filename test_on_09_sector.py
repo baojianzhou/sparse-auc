@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 import csv
 import time
 import numpy as np
@@ -7,9 +8,21 @@ import pickle as pkl
 from itertools import product
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
-from algo_wrapper.algo_wrapper import fpr_tpr_auc
-from algo_wrapper.algo_wrapper import algo_sparse_solam
-from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
+
+try:
+    sys.path.append(os.getcwd())
+    import sparse_module
+
+    try:
+        from sparse_module import c_test
+        from sparse_module import c_algo_solam
+        from sparse_module import c_algo_sparse_solam
+        from sparse_module import c_algo_da_solam
+    except ImportError:
+        print('cannot find some function(s) in sparse_module')
+        exit(0)
+except ImportError:
+    print('cannot find the module: sparse_module')
 
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/09_sector/lib-svm-data/'
 
@@ -21,8 +34,8 @@ def load_dataset():
     :return:
     """
 
-    # if os.path.exists(data_path + 'processed_sector.pkl'):
-    #    return pkl.load(open(data_path + 'processed_sector.pkl', 'rb'))
+    if os.path.exists(data_path + 'processed_sector.pkl'):
+        return pkl.load(open(data_path + 'processed_sector.pkl', 'rb'))
     data = dict()
     data['x_tr'] = []
     data['y_tr'] = []
@@ -103,11 +116,12 @@ def get_run_fold_index_by_task_id(task_id):
 
 
 def transform_tr():
+    pass
 
 
 def test_single_model_selection(task_id):
+    run_id, fold_id, para_ix, para_r = get_run_fold_index_by_task_id(task_id)
     data = load_dataset()
-    exit()
     para_spaces = {'global_pass': 1,
                    'global_runs': 5,
                    'global_cv': 5,
@@ -115,7 +129,16 @@ def test_single_model_selection(task_id):
                    'data_name': '09_sector',
                    'data_dim': data['p'],
                    'data_num': data['n']}
-    run_id, fold_id, para_ix, para_r = get_run_fold_index_by_task_id(task_id)
+    x_tr_indices = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=np.int32)
+    x_tr_values = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=float)
+    for i in range(data['x_tr']):
+        indices = [_[0] for _ in data['x_tr'][i]]
+        values = np.asarray([_[1] for _ in data['x_tr'][i]])
+        values /= np.linalg.norm(values)
+        x_tr_indices[i][0] = len(indices)
+        x_tr_indices[i][1:] = indices
+        x_tr_values[i][0] = len(values)
+        x_tr_values[i][1:] = values
     tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
 
@@ -125,8 +148,6 @@ def test_single_model_selection(task_id):
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
         sub_x_train, sub_x_test = tr_index[sub_tr_ind], tr_index[sub_te_ind]
         sub_y_train, sub_y_test = tr_index[sub_tr_ind], tr_index[sub_te_ind]
-        x_tr_indices = np.zeros(shape=(len(sub_tr_ind), data['max_nonzero'] + 1), dtype=np.int32)
-        x_tr_values = np.zeros(shape=(len(sub_tr_ind), data['max_nonzero'] + 1), dtype=np.int32)
         re = c_algo_solam(np.asarray(x_train, dtype=float),
                           np.asarray(y_train, dtype=float),
                           np.asarray(range(len(x_train)), dtype=np.int32),
