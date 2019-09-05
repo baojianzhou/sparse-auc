@@ -34,8 +34,8 @@ void floyd_rivest_select(double *array, int l, int r, int k) {
             n = r - l + 1;
             i = k - l + 1;
             z = log(n);
-            s = 0.5 * exp(2 * z / 3);
-            sd = 0.5 * sqrt(z * s * (n - s) / n) * sign(i - n / 2);
+            s = (int) (0.5 * exp(2 * z / 3));
+            sd = (int) (0.5 * sqrt(z * s * (n - s) / n) * sign(i - n / 2));
             ll = max(l, k - i * s / n + sd);
             rr = min(r, k + (n - i) * s / n + sd);
             floyd_rivest_select(array, ll, rr, k);
@@ -105,7 +105,7 @@ int hard_thresholding(double *arr, int n, int k) {
 }
 
 
-bool algo_sparse_solam_func(sparse_solam_para *para, sparse_solam_results *results) {
+bool algo_stoht_am_func(stoht_am_para *para, stoht_am_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);

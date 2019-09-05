@@ -125,7 +125,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
 }
 
 
-static PyObject *wrap_algo_sparse_solam(PyObject *self, PyObject *args) {
+static PyObject *wrap_algo_stoht_am(PyObject *self, PyObject *args) {
     /*
      * Wrapper of the SOLAM algorithm
      */
@@ -133,7 +133,7 @@ static PyObject *wrap_algo_sparse_solam(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    sparse_solam_para *para = malloc(sizeof(sparse_solam_para));
+    stoht_am_para *para = malloc(sizeof(stoht_am_para));
     PyArrayObject *x_tr_, *y_tr_, *rand_ind_;
     if (!PyArg_ParseTuple(args, "O!O!O!ddiii",
                           &PyArray_Type, &x_tr_,
@@ -149,12 +149,62 @@ static PyObject *wrap_algo_sparse_solam(PyObject *self, PyObject *args) {
     para->x_tr = (double *) PyArray_DATA(x_tr_);
     para->y_tr = (double *) PyArray_DATA(y_tr_);
     para->para_rand_ind = (int *) PyArray_DATA(rand_ind_);
-    sparse_solam_results *result = malloc(sizeof(sparse_solam_results));
+    stoht_am_results *result = malloc(sizeof(stoht_am_results));
     result->wt = malloc(sizeof(double) * para->p);
     result->a = 0.0;
     result->b = 0.0;
     //call SOLAM algorithm
-    algo_sparse_solam_func(para, result);
+    algo_stoht_am_func(para, result);
+    PyObject *results = PyTuple_New(3);
+    PyObject *wt = PyList_New(para->p);
+    PyObject *a = PyFloat_FromDouble(result->a);
+    PyObject *b = PyFloat_FromDouble(result->b);
+    for (int i = 0; i < para->p; i++) {
+        PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
+    }
+    PyTuple_SetItem(results, 0, wt);
+    PyTuple_SetItem(results, 1, a);
+    PyTuple_SetItem(results, 2, b);
+    free(para);
+    free(result->wt);
+    free(result);
+    return results;
+}
+
+
+static PyObject *wrap_algo_stoht_am_sparse(PyObject *self, PyObject *args) {
+    /*
+     * Wrapper of the SOLAM algorithm
+     */
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    stoht_am_sparse_para *para = malloc(sizeof(stoht_am_sparse_para));
+    PyArrayObject *x_tr_indices, *x_tr_values, *y_tr, *rand_ind;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!iddiii",
+                          &PyArray_Type, &x_tr_indices,
+                          &PyArray_Type, &x_tr_values,
+                          &PyArray_Type, &y_tr,
+                          &PyArray_Type, &rand_ind,
+                          &para->p,
+                          &para->para_r,
+                          &para->para_xi,
+                          &para->para_s,
+                          &para->para_num_pass,
+                          &para->verbose)) { return NULL; }
+    para->num_tr = (int) x_tr_indices->dimensions[0];
+    para->max_nonzero = (int) x_tr_values->dimensions[1];
+    para->x_tr_indices = (int *) PyArray_DATA(x_tr_indices);
+    para->x_tr_values = (double *) PyArray_DATA(x_tr_values);
+    para->y_tr = (double *) PyArray_DATA(y_tr);
+    para->para_rand_ind = (int *) PyArray_DATA(rand_ind);
+    stoht_am_results *result = malloc(sizeof(stoht_am_results));
+    result->wt = malloc(sizeof(double) * para->p);
+    result->a = 0.0;
+    result->b = 0.0;
+    //call SOLAM algorithm
+    algo_stoht_am_sparse_func(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);
@@ -219,11 +269,12 @@ static PyObject *wrap_algo_da_solam(PyObject *self, PyObject *args) {
 
 // wrap_algo_solam_sparse
 static PyMethodDef sparse_methods[] = {
-        {"c_test",              (PyCFunction) test,                   METH_VARARGS, "test docs"},
-        {"c_algo_solam",        (PyCFunction) wrap_algo_solam,        METH_VARARGS, "wrap_algo_solam docs"},
-        {"c_algo_solam_sparse", (PyCFunction) wrap_algo_solam_sparse, METH_VARARGS, "wrap_algo_solam_sparse docs"},
-        {"c_algo_sparse_solam", (PyCFunction) wrap_algo_sparse_solam, METH_VARARGS, "wrap_algo_sparse_solam docs"},
-        {"c_algo_da_solam",     (PyCFunction) wrap_algo_da_solam,     METH_VARARGS, "wrap_algo_da_solam docs"},
+        {"c_test",                 (PyCFunction) test,                      METH_VARARGS, "docs"},
+        {"c_algo_solam",           (PyCFunction) wrap_algo_solam,           METH_VARARGS, "docs"},
+        {"c_algo_solam_sparse",    (PyCFunction) wrap_algo_solam_sparse,    METH_VARARGS, "docs"},
+        {"c_algo_stoht_am",        (PyCFunction) wrap_algo_stoht_am,        METH_VARARGS, "docs"},
+        {"c_algo_stoht_am_sparse", (PyCFunction) wrap_algo_stoht_am_sparse, METH_VARARGS, "docs"},
+        {"c_algo_da_solam",        (PyCFunction) wrap_algo_da_solam,        METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */
@@ -234,22 +285,4 @@ PyMODINIT_FUNC initsparse_module() {
 
 int main() {
     printf("test of main wrapper!\n");
-}
-
-int main_2(PyObject *args) {
-    double sum = 0.0;
-    PyArrayObject *x_tr_;
-    if (!PyArg_ParseTuple(args, "O!", &PyArray_Type, &x_tr_)) { return NULL; }
-    int n = (int) (x_tr_->dimensions[0]);     // number of samples
-    int p = (int) (x_tr_->dimensions[1]);     // number of features
-    printf("%d %d\n", n, p);
-    double *x_tr = PyArray_DATA(x_tr_);
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < p; j++) {
-            printf("%.2f ", x_tr[i * p + j]);
-            sum += x_tr[i * p + j];
-        }
-        printf("\n");
-    }
-    return 0;
 }
