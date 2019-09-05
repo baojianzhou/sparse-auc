@@ -28,7 +28,7 @@ int array_simulate_most_zeros(double *arr, int n, double proportion) {
 int main() {
     srand48(time(0));
     clock_t begin = clock(), begin_kth;
-    int n = 5000, k = 100;
+    int n = 1000, k = 100;
     double *arr = malloc(sizeof(double) * n);
     double total_v1 = 0.0, total_run_time_v1 = 0.0;
     double total_v2 = 0.0, total_run_time_v2 = 0.0;
