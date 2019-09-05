@@ -109,16 +109,14 @@ def load_dataset():
     return data
 
 
-def get_run_fold_index_by_task_id(task_id):
-    para_space = dict()
-    index = 0
+def get_run_fold_index_by_task_id(task_start, task_end):
+    para_space = []
     for run_id in range(5):
         for fold_id in range(5):
             for para_xi in np.arange(1, 101, 9, dtype=float):
-                for para_r in 10. ** np.arange(-1, 5, 1, dtype=float):
-                    para_space[index] = (run_id, fold_id, para_xi, para_r)
-                    index += 1
-    return para_space[int(task_id)]
+                for para_r in 10. ** np.arange(-1, 6, 1, dtype=float):
+                    para_space.append((run_id, fold_id, para_xi, para_r))
+    return para_space[task_start:task_end]
 
 
 def sparse_dot(x_indices, x_values, wt):
@@ -129,8 +127,7 @@ def sparse_dot(x_indices, x_values, wt):
     return y_score
 
 
-def test_single_model_selection(task_id):
-    run_id, fold_id, para_xi, para_r = get_run_fold_index_by_task_id(task_id)
+def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, task_end):
     data = load_dataset()
     para_spaces = {'global_pass': 1,
                    'global_runs': 5,
@@ -155,7 +152,6 @@ def test_single_model_selection(task_id):
 
     # cross validate based on tr_index
     list_auc = np.zeros(para_spaces['global_cv'])
-    list_wt = np.zeros(shape=(para_spaces['global_cv'], data['p']))
     kf = KFold(n_splits=para_spaces['global_cv'], shuffle=False)
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
         sub_x_tr_indices = x_tr_indices[tr_index[sub_tr_ind]]
@@ -175,18 +171,20 @@ def test_single_model_selection(task_id):
         wt = np.asarray(re[0])
         y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
-        list_wt[ind] = wt
     print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
     print('list_auc:', list_auc)
+    file_name = data_path + 'model_select_%04d_%04d.pkl' % (task_start, task_end)
     pkl.dump({'algo_para': [run_id, fold_id, para_xi, para_r],
-              'para_spaces': para_spaces,
-              'list_auc': list_auc,
-              'list_wt': list_wt},
-             open(data_path + 'model_select_%04d.pkl' % int(task_id), 'wb'))
+              'para_spaces': para_spaces, 'list_auc': list_auc}, open(file_name, 'wb'))
 
 
 def main():
-    test_single_model_selection(task_id=os.environ['SLURM_ARRAY_TASK_ID'])
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    task_start, task_end = int(task_id) * 100, int(task_id) * 100 + 100
+    list_tasks = get_run_fold_index_by_task_id(task_start, task_end)
+    for task_para in list_tasks:
+        (run_id, fold_id, para_xi, para_r) = task_para
+        test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, task_end)
 
 
 if __name__ == '__main__':
