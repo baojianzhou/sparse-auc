@@ -225,7 +225,7 @@ def result_analysis():
 
 
 def main():
-    result_analysis()
+    run_task()
 
 
 if __name__ == '__main__':
