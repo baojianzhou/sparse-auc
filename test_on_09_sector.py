@@ -187,7 +187,7 @@ def result_summary():
         f_name = data_path + 'model_select_%04d_%04d.pkl' % (task_start, task_end)
         results = pkl.load(open(f_name, 'rb'))
         all_results.extend(results)
-    file_name = data_path + 'model_select_0000_2100.pkl'
+    file_name = data_path + 'model_select_0000_2100_2.pkl'
     pkl.dump(all_results, open(file_name, 'wb'))
 
 
@@ -225,7 +225,7 @@ def result_analysis():
 
 
 def main():
-    run_task()
+    result_summary()
 
 
 if __name__ == '__main__':
