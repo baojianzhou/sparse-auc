@@ -257,11 +257,6 @@ bool algo_stoht_am_func(stoht_am_para *para, stoht_am_results *results) {
     return true;
 }
 
-
-bool block_gradient_posi() {
-    return true;
-}
-
 bool algo_stoht_am_sparse_func(stoht_am_sparse_para *para, stoht_am_results *results) {
 
     // make sure openblas uses only one cpu at a time.
