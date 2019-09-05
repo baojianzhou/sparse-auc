@@ -208,7 +208,7 @@ def run_task():
 
 
 def result_analysis():
-    results = pkl.load(open(data_path + 'model_select_0000_2100.pkl', 'rb'))
+    results = pkl.load(open(data_path + 'model_select_0000_2100_2.pkl', 'rb'))
     max_auc_dict = dict()
     for result in results:
         run_id, fold_id, para_xi, para_r = result['algo_para']
@@ -225,7 +225,7 @@ def result_analysis():
 
 
 def main():
-    result_summary()
+    result_analysis()
 
 
 if __name__ == '__main__':
