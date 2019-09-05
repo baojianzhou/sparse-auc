@@ -130,7 +130,7 @@ def sparse_dot(x_indices, x_values, wt):
 def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, task_end):
     s_time = time.time()
     data = load_dataset()
-    para_spaces = {'global_pass': 2,
+    para_spaces = {'global_pass': 5,
                    'global_runs': 5,
                    'global_cv': 5,
                    'data_id': 5,
@@ -174,7 +174,7 @@ def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, ta
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
     print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
     print('list_auc:', list_auc)
-    run_time = time.time()
+    run_time = time.time() - s_time
     return {'algo_para': [run_id, fold_id, para_xi, para_r],
             'para_spaces': para_spaces,
             'list_auc': list_auc, 'run_time': run_time}
@@ -203,11 +203,11 @@ def run_task():
         result = test_single_model_selection(
             run_id, fold_id, para_xi, para_r, task_start, task_end)
         list_results.append(result)
-    file_name = data_path + 'model_select_%04d_%04d.pkl' % (task_start, task_end)
+    file_name = data_path + 'model_select_%04d_%04d_5.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
-def main():
+def result_analysis():
     results = pkl.load(open(data_path + 'model_select_0000_2100.pkl', 'rb'))
     max_auc_dict = dict()
     for result in results:
@@ -224,5 +224,9 @@ def main():
     print('mean_auc: %.4f std_auc: %.4f' % (np.mean(list_best_auc), np.std(list_best_auc)))
 
 
-if __name__ == '__main__':
+def main():
     run_task()
+
+
+if __name__ == '__main__':
+    main()
