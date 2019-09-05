@@ -341,7 +341,8 @@ def result_summary():
 
 
 def run_task_solam():
-    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    # task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    task_id = 1
     num_sub_tasks = 21
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks

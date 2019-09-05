@@ -218,7 +218,7 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
     cblas_dscal(n_dim, sqrt(sr * sr / (n_dim * 1.0)), n_v0, 1);
     n_v0[n_dim] = sr;
     n_v0[n_dim + 1] = sr;
-    printf("n_v0: %.4f\n", sqrt(cblas_ddot(n_dim + 2, n_v0, 1, n_v0, 1)));
+    // printf("n_v0: %.4f\n", sqrt(cblas_ddot(n_dim + 2, n_v0, 1, n_v0, 1)));
     double n_a_p0 = 2. * sr;
     // iteration time.
     double n_t = 1.;
