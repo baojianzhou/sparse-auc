@@ -130,7 +130,7 @@ def sparse_dot(x_indices, x_values, wt):
 def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, task_end):
     s_time = time.time()
     data = load_dataset()
-    para_spaces = {'global_pass': 1,
+    para_spaces = {'global_pass': 2,
                    'global_runs': 5,
                    'global_cv': 5,
                    'data_id': 5,
@@ -208,8 +208,21 @@ def run_task():
 
 
 def main():
-    result_summary()
+    results = pkl.load(open(data_path + 'model_select_0000_2100.pkl', 'rb'))
+    max_auc_dict = dict()
+    for result in results:
+        run_id, fold_id, para_xi, para_r = result['algo_para']
+        mean_auc = np.mean(result['list_auc'])
+        if (run_id, fold_id) not in max_auc_dict:
+            max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+        if mean_auc > max_auc_dict[(run_id, fold_id)][0]:
+            max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+    list_best_auc = []
+    for key in max_auc_dict:
+        print(key, max_auc_dict[key])
+        list_best_auc.append(max_auc_dict[key][0])
+    print('mean_auc: %.4f std_auc: %.4f' % (np.mean(list_best_auc), np.std(list_best_auc)))
 
 
 if __name__ == '__main__':
-    main()
+    run_task()
