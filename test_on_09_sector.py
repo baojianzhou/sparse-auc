@@ -31,7 +31,7 @@ def load_dataset():
     number of features: 55,197 (notice: some features are all zeros.)
     :return:
     """
-
+    # TODO there is a bug in the index.
     if os.path.exists(data_path + 'processed_sector.pkl'):
         return pkl.load(open(data_path + 'processed_sector.pkl', 'rb'))
     data = dict()
@@ -110,6 +110,89 @@ def load_dataset():
     return data
 
 
+def load_dataset_normalized():
+    """
+    number of samples: 9,619
+    number of features: 55,197 (notice: some features are all zeros.)
+    :return:
+    """
+    if os.path.exists(data_path + 'processed_sector_normalized.pkl'):
+        return pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
+    data = dict()
+    data['x_tr'] = []
+    data['y_tr'] = []
+    max_id, max_nonzero = 0, 0
+    words_freq = dict()
+    # training part
+    with open(data_path + 'sector.scale', 'rb') as f:
+        for row in f.readlines():
+            items = row.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
+            # each feature value pair.
+            data['x_tr'].append(items)
+            max_id = max(max([item[0] for item in items]), max_id)
+            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            for item in items:
+                word = item[0]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+
+    assert len(data['y_tr']) == 6412  # total samples in train
+    # testing part
+    with open(data_path + 'sector.t.scale', 'rb') as f:
+        for row in f.readlines():
+            items = row.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
+            # each feature value pair.
+            data['x_tr'].append(items)
+            max_id = max(max([item[0] for item in items]), max_id)
+            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            for item in items:
+                word = item[0]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+
+    print('maximal length is: %d' % max_nonzero)
+    data['y_tr'] = np.asarray(data['y_tr'])
+    assert len(data['y_tr']) == 9619  # total samples in the dataset
+    data['n'] = 9619
+    data['p'] = 55197
+    data['max_nonzero'] = max_nonzero  # maximal number of nonzero features.
+    print(max_id)
+    assert (max_id + 1) == data['p']  # to make sure the number of features is p
+    assert len(np.unique(data['y_tr'])) == 105  # we have total 105 classes.
+    rand_ind = np.random.permutation(len(np.unique(data['y_tr'])))
+    posi_classes = rand_ind[:len(np.unique(data['y_tr'])) / 2]
+    nega_classes = rand_ind[len(np.unique(data['y_tr'])) / 2:]
+    posi_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in posi_classes]
+    nega_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in nega_classes]
+    data['y_tr'][posi_indices] = 1
+    data['y_tr'][nega_indices] = -1
+    print('number of positive: %d' % len(posi_indices))
+    print('number of negative: %d' % len(nega_indices))
+    print('%d features frequency is less than 10!' %
+          len([word for word in words_freq if words_freq[word] <= 10]))
+    data['num_posi'] = len(posi_indices)
+    data['num_nega'] = len(nega_indices)
+    # randomly permute the datasets 100 times for future use.
+    data['num_runs'] = 5
+    data['num_k_fold'] = 5
+    for run_index in range(data['num_runs']):
+        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
+        fake_x = np.zeros(shape=(data['n'], 1))  # just need the number of training samples
+        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
+            # since original data is ordered, we need to shuffle it!
+            rand_perm = np.random.permutation(data['n'])
+            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
+                                                                'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(data_path + 'processed_sector_normalized.pkl', 'wb'))
+    return data
+
+
 def get_run_fold_index_by_task_id(method, task_start, task_end):
     if method == 'solam':
         para_space = []
@@ -139,10 +222,8 @@ def sparse_dot(x_indices, x_values, wt):
 
 
 def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
-    run_id, fold_id, para_xi, para_r = 1, 1, 19., 10.
-
     s_time = time.time()
-    data = load_dataset()
+    data = load_dataset_normalized()
     para_spaces = {'global_pass': 5,
                    'global_runs': 5,
                    'global_cv': 5,
@@ -156,7 +237,6 @@ def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
     for i in range(data['n']):
         indices = [_[0] for _ in data['x_tr'][i]]
         values = np.asarray([_[1] for _ in data['x_tr'][i]], dtype=float)
-        values /= np.linalg.norm(values)
         x_tr_indices[i][0] = len(indices)  # the first entry is to save len of nonzeros.
         x_tr_indices[i][1:len(indices) + 1] = indices
         x_tr_values[i][0] = len(values)  # the first entry is to save len of nonzeros.
@@ -186,7 +266,7 @@ def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
         y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
         print(list_auc[ind])
-        return
+        print(time.time() - s_time)
     print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
     print('list_auc:', list_auc)
     run_time = time.time() - s_time
@@ -263,7 +343,7 @@ def result_summary():
 
 
 def run_task_solam():
-    task_id = 1
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
     num_sub_tasks = 21
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
@@ -273,8 +353,7 @@ def run_task_solam():
         (run_id, fold_id, para_xi, para_r) = task_para
         result = test_single_model_select_solam(run_id, fold_id, para_xi, para_r)
         list_results.append(result)
-        return
-    file_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
+    file_name = data_path + 'model_select_solam_%04d_%04d_50.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
@@ -312,7 +391,7 @@ def result_analysis():
 
 
 def main():
-    run_task_stoht_am()
+    run_task_solam()
 
 
 if __name__ == '__main__':
