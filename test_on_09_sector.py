@@ -265,8 +265,6 @@ def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
         wt = np.asarray(re[0])
         y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
-        print(list_auc[ind])
-        print(time.time() - s_time)
     print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
     print('list_auc:', list_auc)
     run_time = time.time() - s_time
@@ -353,7 +351,7 @@ def run_task_solam():
         (run_id, fold_id, para_xi, para_r) = task_para
         result = test_single_model_select_solam(run_id, fold_id, para_xi, para_r)
         list_results.append(result)
-    file_name = data_path + 'model_select_solam_%04d_%04d_50.pkl' % (task_start, task_end)
+    file_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
