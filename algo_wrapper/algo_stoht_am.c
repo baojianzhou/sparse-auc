@@ -299,7 +299,7 @@ bool algo_stoht_am_sparse_func(stoht_am_sparse_para *para, stoht_am_results *res
     cblas_dscal(n_dim, sqrt(sr * sr / (n_dim * 1.0)), n_v0, 1);
     n_v0[n_dim] = sr;
     n_v0[n_dim + 1] = sr;
-    printf("n_v0: %.4f\n", sqrt(cblas_ddot(n_dim + 2, n_v0, 1, n_v0, 1)));
+    // printf("n_v0: %.4f\n", sqrt(cblas_ddot(n_dim + 2, n_v0, 1, n_v0, 1)));
     double n_a_p0 = 2. * sr;
     // iteration time.
     double n_t = 1.;
@@ -389,13 +389,13 @@ bool algo_stoht_am_sparse_func(stoht_am_sparse_para *para, stoht_am_results *res
             cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, block_grad_v, 1);
             cblas_dcopy(n_dim + 2, block_grad_v, 1, v_p_dv, 1);
             v_p_da = n_a_p0 + n_ga * block_grad_alpha;
-
-            if (j % 50 == 0) {
-                printf("lr: %.4f alpha: %.4f sr: %.4f sc:%.4f n_p1: %.4f label: %.1f, norm: %.4f\n",
-                       n_ga, v_p_da, sr, sc, n_p1_, para->y_tr[j],
-                       sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
+            if(false){
+                if (j % 50 == 0) {
+                    printf("lr: %.4f alpha: %.4f sr: %.4f sc:%.4f n_p1: %.4f label: %.1f, norm: %.4f\n",
+                           n_ga, v_p_da, sr, sc, n_p1_, para->y_tr[j],
+                           sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
+                }
             }
-
             // normalization -- the projection step.
             double n_rv = sqrt(cblas_ddot(n_dim, v_p_dv, 1, v_p_dv, 1));
             if (n_rv > sr) {
