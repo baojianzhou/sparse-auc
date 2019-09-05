@@ -227,6 +227,7 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
     double n_a_p1;
     double n_a_p1_;
     double n_p1_;
+    //printf("n_dim: %d\n", n_dim);
     while (true) {
         if (n_cnt > n_pass) {
             break;
@@ -237,6 +238,7 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
             int s_len = t_feat_indices[0];
             double *t_label = y_train + rand_id[j];
             double n_ga = sc / sqrt(n_t);
+            //printf("j: %d s_len: %d\n", j, s_len);
             if (*t_label > 0) { // if it is positive case
                 n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
                 cblas_dcopy(n_dim, n_v0, 1, v_wt, 1);

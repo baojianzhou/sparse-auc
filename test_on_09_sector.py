@@ -14,10 +14,7 @@ try:
     import sparse_module
 
     try:
-        from sparse_module import c_test
-        from sparse_module import c_algo_solam
-        from sparse_module import c_algo_sparse_solam
-        from sparse_module import c_algo_da_solam
+        from sparse_module import c_algo_solam_sparse
     except ImportError:
         print('cannot find some function(s) in sparse_module')
         exit(0)
@@ -57,7 +54,7 @@ def load_dataset():
                 if word not in words_freq:
                     words_freq[word] = 0
                 words_freq[word] += 1
-    print('maximal length is: %d' % max_nonzero)
+
     assert len(data['y_tr']) == 6412  # total samples in train
     # testing part
     with open(data_path + 'sector.t', 'rb') as csv_file:
@@ -68,6 +65,15 @@ def load_dataset():
             indices = range(0, len(raw_row[2:]), 2)
             # each feature value pair.
             data['x_tr'].append([(raw_row[i], raw_row[i + 1]) for i in indices])
+            max_id = max(max([raw_row[i] for i in indices]), max_id)
+            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            for i in indices:
+                word = raw_row[i]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+
+    print('maximal length is: %d' % max_nonzero)
     data['y_tr'] = np.asarray(data['y_tr'])
     assert len(data['y_tr']) == 9619  # total samples in the dataset
     data['n'] = 9619
@@ -115,12 +121,16 @@ def get_run_fold_index_by_task_id(task_id):
     return para_space[int(task_id)]
 
 
-def transform_tr():
-    pass
+def sparse_dot(x_indices, x_values, wt):
+    y_score = np.zeros(len(x_values))
+    for i in range(len(x_values)):
+        for j in range(1, x_indices[i][0] + 1):
+            y_score[i] += wt[x_indices[i][j]] * x_values[i][j]
+    return y_score
 
 
 def test_single_model_selection(task_id):
-    run_id, fold_id, para_ix, para_r = get_run_fold_index_by_task_id(task_id)
+    run_id, fold_id, para_xi, para_r = get_run_fold_index_by_task_id(task_id)
     data = load_dataset()
     para_spaces = {'global_pass': 1,
                    'global_runs': 5,
@@ -128,38 +138,55 @@ def test_single_model_selection(task_id):
                    'data_id': 5,
                    'data_name': '09_sector',
                    'data_dim': data['p'],
-                   'data_num': data['n']}
+                   'data_num': data['n'],
+                   'verbose': 0}
     x_tr_indices = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=np.int32)
     x_tr_values = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=float)
-    for i in range(data['x_tr']):
+    for i in range(data['n']):
         indices = [_[0] for _ in data['x_tr'][i]]
-        values = np.asarray([_[1] for _ in data['x_tr'][i]])
+        values = np.asarray([_[1] for _ in data['x_tr'][i]], dtype=float)
         values /= np.linalg.norm(values)
-        x_tr_indices[i][0] = len(indices)
-        x_tr_indices[i][1:] = indices
-        x_tr_values[i][0] = len(values)
-        x_tr_values[i][1:] = values
+        x_tr_indices[i][0] = len(indices)  # the first entry is to save len of nonzeros.
+        x_tr_indices[i][1:len(indices) + 1] = indices
+        x_tr_values[i][0] = len(values)  # the first entry is to save len of nonzeros.
+        x_tr_values[i][1:len(indices) + 1] = values
     tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
 
     # cross validate based on tr_index
-    cur_auc = np.zeros(para_spaces['global_cv'])
+    list_auc = np.zeros(para_spaces['global_cv'])
+    list_wt = np.zeros(shape=(para_spaces['global_cv'], data['p']))
     kf = KFold(n_splits=para_spaces['global_cv'], shuffle=False)
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
-        sub_x_train, sub_x_test = tr_index[sub_tr_ind], tr_index[sub_te_ind]
-        sub_y_train, sub_y_test = tr_index[sub_tr_ind], tr_index[sub_te_ind]
-        re = c_algo_solam(np.asarray(x_train, dtype=float),
-                          np.asarray(y_train, dtype=float),
-                          np.asarray(range(len(x_train)), dtype=np.int32),
-                          float(para_r), float(para_xi), int(para_n_pass), int(verbose))
+        sub_x_tr_indices = x_tr_indices[tr_index[sub_tr_ind]]
+        sub_x_tr_values = x_tr_values[tr_index[sub_tr_ind]]
+        sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
+
+        sub_x_te_indices = x_tr_indices[tr_index[sub_te_ind]]
+        sub_x_te_values = x_tr_values[tr_index[sub_te_ind]]
+        sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+        re = c_algo_solam_sparse(np.asarray(sub_x_tr_indices, dtype=np.int32),
+                                 np.asarray(sub_x_tr_values, dtype=float),
+                                 np.asarray(sub_y_tr, dtype=float),
+                                 np.asarray(range(len(sub_x_tr_indices)), dtype=np.int32),
+                                 int(data['p']), float(para_r), float(para_xi),
+                                 int(para_spaces['global_pass']),
+                                 int(para_spaces['verbose']))
         wt = np.asarray(re[0])
-        cur_auc[ind] = roc_auc_score(y_true=y_test, y_score=np.dot(x_test, wt))
+        y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
+        list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
+        list_wt[ind] = wt
+    print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
+    print('list_auc:', list_auc)
+    pkl.dump({'algo_para': [run_id, fold_id, para_xi, para_r],
+              'para_spaces': para_spaces,
+              'list_auc': list_auc,
+              'list_wt': list_wt},
+             open(data_path + 'model_select_%04d.pkl' % int(task_id), 'wb'))
 
 
 def main():
-    # os.environ['SLURM_ARRAY_TASK_ID']
-    test_single_model_selection(task_id=1)
-    pass
+    test_single_model_selection(task_id=os.environ['SLURM_ARRAY_TASK_ID'])
 
 
 if __name__ == '__main__':

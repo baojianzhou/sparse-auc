@@ -89,7 +89,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
                           &PyArray_Type, &x_tr_values,
                           &PyArray_Type, &y_tr_,
                           &PyArray_Type, &rand_ind_,
-                          &PyArray_Type, &para->p,
+                          &para->p,
                           &para->para_r,
                           &para->para_xi,
                           &para->para_num_pass,
@@ -100,6 +100,8 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     para->x_tr_values = (double *) PyArray_DATA(x_tr_values);
     para->y_tr = (double *) PyArray_DATA(y_tr_);
     para->para_rand_ind = (int *) PyArray_DATA(rand_ind_);
+    //printf("num_tr: %d max_nonzero: %d p: %d\n", para->num_tr, para->max_nonzero, para->p);
+    //printf("len: %d 5th: %d\n", para->x_tr_indices[0], para->x_tr_indices[5]);
     solam_results *result = malloc(sizeof(solam_results));
     result->wt = malloc(sizeof(double) * para->p);
     result->a = 0.0;
