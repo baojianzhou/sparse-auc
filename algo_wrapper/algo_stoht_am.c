@@ -1,8 +1,24 @@
 //
 // Created by baojian on 8/29/19.
 //
-#include "sort.h"
 #include "algo_stoht_am.h"
+
+
+double _sparse_dot(const int *x_indices, const double *x_values, int x_len, const double *y) {
+    double result = 0.0;
+    for (int i = 0; i < x_len; i++) {
+        result += x_values[i] * y[x_indices[i]];
+    }
+    return result;
+}
+
+
+void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
+                         double alpha, double *y) {
+    for (int i = 0; i < x_len; i++) {
+        y[x_indices[i]] += alpha * x_values[i];
+    }
+}
 
 /**
  * Please find the algorithm in the following paper:
@@ -230,6 +246,182 @@ bool algo_stoht_am_func(stoht_am_para *para, stoht_am_results *results) {
     cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
     results->a = n_v1_[n_dim];
     results->b = n_v1_[n_dim + 1];
+    free(n_v1_);
+    free(n_v1);
+    free(n_v0);
+    free(n_v0_);
+    free(v_p_dv);
+    free(v_wt);
+    free(one_v);
+    free(zero_v);
+    return true;
+}
+
+
+bool block_gradient_posi() {
+    return true;
+}
+
+bool algo_stoht_am_sparse_func(stoht_am_sparse_para *para, stoht_am_results *results) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+    int *rand_id = para->para_rand_ind;
+    int num_tr = para->num_tr;
+    double *zero_v = malloc(sizeof(double) * (para->p + 2));
+    double *one_v = malloc(sizeof(double) * (para->p + 2));
+    for (int i = 0; i < para->p + 2; i++) {
+        zero_v[i] = 0.0;
+        one_v[i] = 1.0;
+    }
+    int *x_train_indices = para->x_tr_indices;
+    double *x_train_values = para->x_tr_values;
+    double *y_train = para->y_tr;
+
+    // start of the algorithm
+    double sr = para->para_r;
+    double sc = para->para_xi;
+    int n_pass = para->para_num_pass;
+    int n_dim = para->p;
+    double n_p0_ = 0.; // number of positive
+    double *n_v0_ = malloc(sizeof(double) * (n_dim + 2));
+    cblas_dcopy(n_dim + 2, zero_v, 1, n_v0_, 1);
+    double n_a_p0_ = 0.;
+    double n_g_a0_ = 0.;
+    // initial vector
+    double *n_v0 = malloc(sizeof(double) * (n_dim + 2));
+    cblas_dcopy(n_dim, one_v, 1, n_v0, 1);
+    cblas_dscal(n_dim, sqrt(sr * sr / (n_dim * 1.0)), n_v0, 1);
+    n_v0[n_dim] = sr;
+    n_v0[n_dim + 1] = sr;
+    double n_a_p0 = 2. * sr;
+    // iteration time.
+    double n_t = 1.;
+    int n_cnt = 1;
+    double *v_wt = malloc(sizeof(double) * n_dim);
+    double *v_p_dv = malloc(sizeof(double) * (n_dim + 2));
+    double *n_v1 = malloc(sizeof(double) * (n_dim + 2));
+    double *n_v1_ = malloc(sizeof(double) * (n_dim + 2));
+    double *block_grad_v = malloc(sizeof(double) * (n_dim + 2));
+    double v_p_da;
+    double n_a_p1;
+    double n_a_p1_;
+    double n_p1_ = n_p0_;
+    int block_size = 50;
+    while (true) {
+        if (n_cnt > n_pass) {
+            break;
+        }
+        for (int j = 0; j < num_tr / block_size; j++) {
+            int *t_feat_indices = x_train_indices + rand_id[j] * para->max_nonzero * block_size;
+            double *t_feat_values = x_train_values + rand_id[j] * para->max_nonzero * block_size;
+
+            double n_ga = sc / sqrt(n_t);
+
+            // update number of positive samples first by using a block of samples.
+            for (int jj = 0; jj < block_size; jj++) {
+                double *cur_label = y_train + rand_id[j] + jj;
+                if (*cur_label > 0) {
+                    n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
+                } else {
+                    n_p1_ = ((n_t - 1.) * n_p0_) / n_t;
+                }
+            }
+            cblas_dcopy(n_dim, n_v0, 1, v_wt, 1);
+
+            // update gradient
+            cblas_dcopy(n_dim + 2, zero_v, 1, block_grad_v, 1);
+            double block_grad_alpha = 0.0;
+            for (int jj = 0; jj < block_size; jj++) {
+                // gradient of w
+                cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
+                double *cur_label = y_train + rand_id[j] + jj;
+                int *cur_indices = t_feat_indices + para->max_nonzero * jj + 1;
+                double *cur_values = t_feat_values + para->max_nonzero * jj + 1;
+                int s_len = cur_indices[0];
+                double vt_dot = _sparse_dot(cur_indices, cur_values, s_len, v_wt);
+                double weight;
+                if (*cur_label > 0) {
+                    double n_a = n_v0[n_dim];
+                    weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
+                    weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
+                    // gradient of w
+                    _sparse_cblas_daxpy(cur_indices, cur_values, s_len, weight, v_p_dv);
+                    // gradient of a
+                    v_p_dv[n_dim] = -2. * (1. - n_p1_) * (vt_dot - n_a);
+                    // gradient of b
+                    v_p_dv[n_dim + 1] = 0.;
+                    // gradient of alpha
+                    v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
+                } else {
+                    double n_b = n_v0[n_dim + 1];
+                    weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
+                    // gradient of w
+                    _sparse_cblas_daxpy(cur_indices, cur_values, s_len, weight, v_p_dv);
+                    // gradient of a
+                    v_p_dv[n_dim] = 0.;
+                    // gradient of b
+                    v_p_dv[n_dim + 1] = -2. * n_p1_ * (vt_dot - n_b);
+                    // gradient of alpha
+                    v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
+
+                }
+                cblas_daxpy(n_dim + 2, 1., v_p_dv, 1, block_grad_v, 1);
+                block_grad_alpha += v_p_da;
+            }
+            //gradient descent step of alpha
+            cblas_dscal(n_dim + 2, -n_ga, block_grad_v, 1);
+            cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, block_grad_v, 1);
+            v_p_da = n_a_p0 + n_ga * block_grad_alpha;
+
+            //
+            cblas_dcopy(n_dim + 2, v_p_dv, 1, block_grad_v, 1);
+
+            // normalization -- the projection step.
+            double n_rv = sqrt(cblas_ddot(n_dim, v_p_dv, 1, v_p_dv, 1));
+            if (n_rv > sr) {
+                cblas_dscal(n_dim, 1. / n_rv * sr, v_p_dv, 1);
+            }
+            if (v_p_dv[n_dim] > sr) {
+                v_p_dv[n_dim] = sr;
+            }
+            if (v_p_dv[n_dim + 1] > sr) {
+                v_p_dv[n_dim + 1] = sr;
+            }
+            //----- sparse projection step
+            hard_thresholding(v_p_dv, n_dim, para->para_s);
+            //----- sparse projection step
+            cblas_dcopy(n_dim + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
+            double n_ra = fabs(v_p_da);
+            if (n_ra > 2. * sr) {
+                n_a_p1 = v_p_da / n_ra * (2. * sr);
+            } else {
+                n_a_p1 = v_p_da;
+            }
+            // update gamma_
+            double n_g_a1_ = n_g_a0_ + n_ga;
+            // update v_
+            cblas_dcopy(n_dim + 2, n_v0, 1, n_v1_, 1);
+            cblas_dscal(n_dim + 2, n_ga / n_g_a1_, n_v1_, 1);
+            cblas_daxpy(n_dim + 2, n_g_a0_ / n_g_a1_, n_v0_, 1, n_v1_, 1);
+            // update alpha_
+            n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
+            // update the information
+            n_p0_ = n_p1_;
+            cblas_dcopy(n_dim + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
+            n_a_p0_ = n_a_p1_;
+            n_g_a0_ = n_g_a1_;
+            cblas_dcopy(n_dim + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
+            n_a_p0 = n_a_p1;
+            // update the counts
+            n_t = n_t + 1. * block_size;
+        }
+        n_cnt += 1;
+    }
+    cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
+    results->a = n_v1_[n_dim];
+    results->b = n_v1_[n_dim + 1];
+    free(block_grad_v);
     free(n_v1_);
     free(n_v1);
     free(n_v0);

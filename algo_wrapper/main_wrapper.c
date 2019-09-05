@@ -174,7 +174,7 @@ static PyObject *wrap_algo_stoht_am(PyObject *self, PyObject *args) {
 
 static PyObject *wrap_algo_stoht_am_sparse(PyObject *self, PyObject *args) {
     /*
-     * Wrapper of the SOLAM algorithm
+     * Wrapper of the StoIHT for AUC algorithm
      */
     if (self != NULL) {
         printf("error: unknown error !!\n");

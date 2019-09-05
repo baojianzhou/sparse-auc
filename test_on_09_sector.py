@@ -15,6 +15,7 @@ try:
 
     try:
         from sparse_module import c_algo_solam_sparse
+        from sparse_module import c_algo_stoht_am_sparse
     except ImportError:
         print('cannot find some function(s) in sparse_module')
         exit(0)
@@ -109,14 +110,24 @@ def load_dataset():
     return data
 
 
-def get_run_fold_index_by_task_id(task_start, task_end):
-    para_space = []
-    for run_id in range(5):
-        for fold_id in range(5):
-            for para_xi in np.arange(1, 101, 9, dtype=float):
-                for para_r in 10. ** np.arange(-1, 6, 1, dtype=float):
-                    para_space.append((run_id, fold_id, para_xi, para_r))
-    return para_space[task_start:task_end]
+def get_run_fold_index_by_task_id(method, task_start, task_end):
+    if method == 'solam':
+        para_space = []
+        for run_id in range(5):
+            for fold_id in range(5):
+                for para_xi in np.arange(1, 101, 9, dtype=float):
+                    for para_r in 10. ** np.arange(-1, 6, 1, dtype=float):
+                        para_space.append((run_id, fold_id, para_xi, para_r))
+        return para_space[task_start:task_end]
+    if method == 'stoht_am':
+        para_space = []
+        for run_id in range(5):
+            for fold_id in range(5):
+                for s in range(1000, 10001, 1000):
+                    for para_xi in np.arange(1, 50, 9, dtype=float):
+                        for para_r in 10. ** np.arange(-1, 4, 1, dtype=float):
+                            para_space.append((run_id, fold_id, s, para_xi, para_r))
+        return para_space[task_start:task_end]
 
 
 def sparse_dot(x_indices, x_values, wt):
@@ -127,7 +138,7 @@ def sparse_dot(x_indices, x_values, wt):
     return y_score
 
 
-def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, task_end):
+def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
     s_time = time.time()
     data = load_dataset()
     para_spaces = {'global_pass': 5,
@@ -180,6 +191,59 @@ def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, ta
             'list_auc': list_auc, 'run_time': run_time}
 
 
+def test_single_model_select_stoht_am(run_id, fold_id, s, para_xi, para_r):
+    s_time = time.time()
+    data = load_dataset()
+    para_spaces = {'global_pass': 2,
+                   'global_runs': 5,
+                   'global_cv': 5,
+                   'data_id': 5,
+                   'data_name': '09_sector',
+                   'data_dim': data['p'],
+                   'data_num': data['n'],
+                   'verbose': 0}
+    x_tr_indices = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=np.int32)
+    x_tr_values = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=float)
+    for i in range(data['n']):
+        indices = [_[0] for _ in data['x_tr'][i]]
+        values = np.asarray([_[1] for _ in data['x_tr'][i]], dtype=float)
+        values /= np.linalg.norm(values)
+        x_tr_indices[i][0] = len(indices)  # the first entry is to save len of nonzeros.
+        x_tr_indices[i][1:len(indices) + 1] = indices
+        x_tr_values[i][0] = len(values)  # the first entry is to save len of nonzeros.
+        x_tr_values[i][1:len(indices) + 1] = values
+    tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+
+    # cross validate based on tr_index
+    list_auc = np.zeros(para_spaces['global_cv'])
+    kf = KFold(n_splits=para_spaces['global_cv'], shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+        sub_x_tr_indices = x_tr_indices[tr_index[sub_tr_ind]]
+        sub_x_tr_values = x_tr_values[tr_index[sub_tr_ind]]
+        sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
+
+        sub_x_te_indices = x_tr_indices[tr_index[sub_te_ind]]
+        sub_x_te_values = x_tr_values[tr_index[sub_te_ind]]
+        sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+        re = c_algo_stoht_am_sparse(np.asarray(sub_x_tr_indices, dtype=np.int32),
+                                    np.asarray(sub_x_tr_values, dtype=float),
+                                    np.asarray(sub_y_tr, dtype=float),
+                                    np.asarray(range(len(sub_x_tr_indices)), dtype=np.int32),
+                                    int(data['p']), float(para_r), float(para_xi), int(s),
+                                    int(para_spaces['global_pass']),
+                                    int(para_spaces['verbose']))
+        wt = np.asarray(re[0])
+        y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
+        list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
+    print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
+    print('list_auc:', list_auc)
+    run_time = time.time() - s_time
+    return {'algo_para': [run_id, fold_id, para_xi, para_r],
+            'para_spaces': para_spaces,
+            'list_auc': list_auc, 'run_time': run_time}
+
+
 def result_summary():
     all_results = []
     for task_id in range(100):
@@ -191,24 +255,38 @@ def result_summary():
     pkl.dump(all_results, open(file_name, 'wb'))
 
 
-def run_task():
+def run_task_solam():
     task_id = os.environ['SLURM_ARRAY_TASK_ID']
     num_sub_tasks = 21
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
-    list_tasks = get_run_fold_index_by_task_id(task_start, task_end)
+    list_tasks = get_run_fold_index_by_task_id('solam', task_start, task_end)
     list_results = []
     for task_para in list_tasks:
         (run_id, fold_id, para_xi, para_r) = task_para
-        result = test_single_model_selection(
-            run_id, fold_id, para_xi, para_r, task_start, task_end)
+        result = test_single_model_select_solam(run_id, fold_id, para_xi, para_r)
+        list_results.append(result)
+    file_name = data_path + 'model_select_%04d_%04d_5.pkl' % (task_start, task_end)
+    pkl.dump(list_results, open(file_name, 'wb'))
+
+
+def run_task_stoht_am():
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    num_sub_tasks = 21
+    task_start = int(task_id) * num_sub_tasks
+    task_end = int(task_id) * num_sub_tasks + num_sub_tasks
+    list_tasks = get_run_fold_index_by_task_id('stoht_am', task_start, task_end)
+    list_results = []
+    for task_para in list_tasks:
+        (run_id, fold_id, s, para_xi, para_r) = task_para
+        result = test_single_model_select_stoht_am(run_id, fold_id, s, para_xi, para_r)
         list_results.append(result)
     file_name = data_path + 'model_select_%04d_%04d_5.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
 def result_analysis():
-    results = pkl.load(open(data_path + 'model_select_0000_2100_2.pkl', 'rb'))
+    results = pkl.load(open(data_path + 'model_select_0000_2100_1.pkl', 'rb'))
     max_auc_dict = dict()
     for result in results:
         run_id, fold_id, para_xi, para_r = result['algo_para']
@@ -225,7 +303,7 @@ def result_analysis():
 
 
 def main():
-    run_task()
+    run_task_stoht_am()
 
 
 if __name__ == '__main__':

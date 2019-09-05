@@ -222,7 +222,6 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
     double *v_p_dv = malloc(sizeof(double) * (n_dim + 2));
     double *n_v1 = malloc(sizeof(double) * (n_dim + 2));
     double *n_v1_ = malloc(sizeof(double) * (n_dim + 2));
-    double *t_full_feat = malloc(sizeof(double) * (n_dim + 2));
     double v_p_da;
     double n_a_p1;
     double n_a_p1_;
@@ -310,7 +309,6 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
     cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
     results->a = n_v1_[n_dim];
     results->b = n_v1_[n_dim + 1];
-    free(t_full_feat);
     free(n_v1_);
     free(n_v1);
     free(n_v0);
