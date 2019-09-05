@@ -203,7 +203,8 @@ static PyObject *wrap_algo_stoht_am_sparse(PyObject *self, PyObject *args) {
     result->wt = malloc(sizeof(double) * para->p);
     result->a = 0.0;
     result->b = 0.0;
-    //call SOLAM algorithm
+    printf("num_tr: %d max_nonzero: %d p: %d\n", para->num_tr, para->max_nonzero, para->p);
+    printf("len: %d 5th: %d\n", para->x_tr_indices[0], para->x_tr_indices[5]);
     algo_stoht_am_sparse_func(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);

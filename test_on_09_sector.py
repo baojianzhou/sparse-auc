@@ -139,6 +139,8 @@ def sparse_dot(x_indices, x_values, wt):
 
 
 def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
+    run_id, fold_id, para_xi, para_r = 1, 1, 19., 10.
+
     s_time = time.time()
     data = load_dataset()
     para_spaces = {'global_pass': 5,
@@ -183,6 +185,8 @@ def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
         wt = np.asarray(re[0])
         y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
+        print(list_auc[ind])
+        return
     print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
     print('list_auc:', list_auc)
     run_time = time.time() - s_time
@@ -194,7 +198,8 @@ def test_single_model_select_solam(run_id, fold_id, para_xi, para_r):
 def test_single_model_select_stoht_am(run_id, fold_id, s, para_xi, para_r):
     s_time = time.time()
     data = load_dataset()
-    para_spaces = {'global_pass': 2,
+    run_id, fold_id, s, para_xi, para_r = 1, 1, 30000, 19., 10.
+    para_spaces = {'global_pass': 5,
                    'global_runs': 5,
                    'global_cv': 5,
                    'data_id': 5,
@@ -236,12 +241,14 @@ def test_single_model_select_stoht_am(run_id, fold_id, s, para_xi, para_r):
         wt = np.asarray(re[0])
         y_score = sparse_dot(sub_x_te_indices, sub_x_te_values, wt)
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_score)
-    print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, para_xi, para_r)
+        print(list_auc[ind])
+        return
+
+    print('run_id, fold_id, s, para_xi, para_r: ', run_id, fold_id, s, para_xi, para_r)
     print('list_auc:', list_auc)
     run_time = time.time() - s_time
-    return {'algo_para': [run_id, fold_id, para_xi, para_r],
-            'para_spaces': para_spaces,
-            'list_auc': list_auc, 'run_time': run_time}
+    return {'algo_para': [run_id, fold_id, s, para_xi, para_r],
+            'para_spaces': para_spaces, 'list_auc': list_auc, 'run_time': run_time}
 
 
 def result_summary():
@@ -256,7 +263,7 @@ def result_summary():
 
 
 def run_task_solam():
-    task_id = os.environ['SLURM_ARRAY_TASK_ID']
+    task_id = 1
     num_sub_tasks = 21
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
@@ -266,13 +273,14 @@ def run_task_solam():
         (run_id, fold_id, para_xi, para_r) = task_para
         result = test_single_model_select_solam(run_id, fold_id, para_xi, para_r)
         list_results.append(result)
-    file_name = data_path + 'model_select_%04d_%04d_5.pkl' % (task_start, task_end)
+        return
+    file_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
 def run_task_stoht_am():
-    task_id = os.environ['SLURM_ARRAY_TASK_ID']
-    num_sub_tasks = 21
+    task_id = 1
+    num_sub_tasks = 75
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
     list_tasks = get_run_fold_index_by_task_id('stoht_am', task_start, task_end)
@@ -281,7 +289,8 @@ def run_task_stoht_am():
         (run_id, fold_id, s, para_xi, para_r) = task_para
         result = test_single_model_select_stoht_am(run_id, fold_id, s, para_xi, para_r)
         list_results.append(result)
-    file_name = data_path + 'model_select_%04d_%04d_5.pkl' % (task_start, task_end)
+        return
+    file_name = data_path + 'model_select_sht_am_%04d_%04d_2.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
@@ -303,7 +312,7 @@ def result_analysis():
 
 
 def main():
-    result_analysis()
+    run_task_stoht_am()
 
 
 if __name__ == '__main__':

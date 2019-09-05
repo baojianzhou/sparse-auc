@@ -15,7 +15,7 @@ double _sparse_dot(const int *x_indices, const double *x_values, int x_len, cons
 
 
 void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
-                          double alpha, double *y) {
+                         double alpha, double *y) {
     for (int i = 0; i < x_len; i++) {
         y[x_indices[i]] += alpha * x_values[i];
     }
@@ -218,6 +218,7 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
     cblas_dscal(n_dim, sqrt(sr * sr / (n_dim * 1.0)), n_v0, 1);
     n_v0[n_dim] = sr;
     n_v0[n_dim + 1] = sr;
+    printf("n_v0: %.4f\n", sqrt(cblas_ddot(n_dim + 2, n_v0, 1, n_v0, 1)));
     double n_a_p0 = 2. * sr;
     // iteration time.
     double n_t = 1.;
@@ -236,10 +237,10 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
             break;
         }
         for (int j = 0; j < num_tr; j++) {
-            int *t_feat_indices = x_train_indices + rand_id[j] * para->max_nonzero;
-            double *t_feat_values = x_train_values + rand_id[j] * para->max_nonzero;
+            int *t_feat_indices = x_train_indices + j * para->max_nonzero;
+            double *t_feat_values = x_train_values + j * para->max_nonzero;
             int s_len = t_feat_indices[0];
-            double *t_label = y_train + rand_id[j];
+            double *t_label = y_train + j;
             double n_ga = sc / sqrt(n_t);
             //printf("j: %d s_len: %d\n", j, s_len);
             if (*t_label > 0) { // if it is positive case
@@ -256,6 +257,12 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
                 cblas_dscal(n_dim + 2, -n_ga, v_p_dv, 1);
                 cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, v_p_dv, 1);
                 v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
+                if(false){
+                    printf("posi v_p_da: %.4f vt_dot: %.4f n_p1_:%.4f n_a_p0: %.4f n_t: %.4f,"
+                           "weight: %.4f ||v||: %.4f na: %.4f\n",
+                           v_p_da, vt_dot, n_p1_, n_a_p0, n_t, weight,
+                           sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)), n_a);
+                }
                 v_p_da = n_a_p0 + n_ga * v_p_da;
             } else {
                 n_p1_ = ((n_t - 1.) * n_p0_) / n_t;
@@ -264,14 +271,39 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
                 cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
                 double vt_dot = _sparse_dot(t_feat_indices + 1, t_feat_values + 1, s_len, v_wt);
                 double weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
+                if(false){
+                    printf("s_len: %d, cur_indices: %d cur_values: %.4f, ||v||: %.4f \n",
+                           s_len, *(t_feat_indices + 1), *(t_feat_values + 1),
+                           sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
+                }
                 _sparse_cblas_daxpy(t_feat_indices + 1, t_feat_values + 1, s_len, weight, v_p_dv);
+                if(false){
+                    printf("s_len: %d, cur_indices: %d cur_values: %.4f, ||v||: %.4f \n",
+                           s_len, *(t_feat_indices + 1), *(t_feat_values + 1),
+                           sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
+                }
                 v_p_dv[n_dim] = 0.;
                 v_p_dv[n_dim + 1] = -2. * n_p1_ * (vt_dot - n_b);
                 cblas_dscal(n_dim + 2, -n_ga, v_p_dv, 1);
                 cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, v_p_dv, 1);
                 v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
+                if(false){
+                    printf("nega v_p_da: %.4f vt_dot: %.4f n_p1_:%.4f n_a_p0: %.4f n_t: %.4f,"
+                           "weight: %.4f ||v||: %.4f nb: %.4f\n",
+                           v_p_da, vt_dot, n_p1_, n_a_p0, n_t, weight,
+                           sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)), n_b);
+                }
                 v_p_da = n_a_p0 + n_ga * v_p_da;
             }
+
+            if(false){
+                printf("lr: %.4f alpha: %.4f sr: %.4f sc:%.4f n_p1: %.4f label: %.1f\n",
+                       n_ga, v_p_da, sr, sc, n_p1_, *t_label);
+                if (j == 10) {
+                    return false;
+                }
+            }
+
             // normalization -- the projection step.
             double n_rv = sqrt(cblas_ddot(n_dim, v_p_dv, 1, v_p_dv, 1));
             if (n_rv > sr) {
@@ -284,20 +316,26 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
                 v_p_dv[n_dim + 1] = sr;
             }
             cblas_dcopy(n_dim + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
+
+
             double n_ra = fabs(v_p_da);
             if (n_ra > 2. * sr) {
                 n_a_p1 = v_p_da / n_ra * (2. * sr);
             } else {
                 n_a_p1 = v_p_da;
             }
+
             // update gamma_
             double n_g_a1_ = n_g_a0_ + n_ga;
+
             // update v_
             cblas_dcopy(n_dim + 2, n_v0, 1, n_v1_, 1);
             cblas_dscal(n_dim + 2, n_ga / n_g_a1_, n_v1_, 1);
             cblas_daxpy(n_dim + 2, n_g_a0_ / n_g_a1_, n_v0_, 1, n_v1_, 1);
+
             // update alpha_
             n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
+
             // update the information
             n_p0_ = n_p1_;
             cblas_dcopy(n_dim + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
@@ -305,6 +343,7 @@ bool algo_solam_sparse_func(solam_para_sparse *para, solam_results *results) {
             n_g_a0_ = n_g_a1_;
             cblas_dcopy(n_dim + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
             n_a_p0 = n_a_p1;
+
             // update the counts
             n_t = n_t + 1.;
         }
