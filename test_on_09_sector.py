@@ -206,7 +206,7 @@ def get_run_fold_index_by_task_id(method, task_start, task_end):
         para_space = []
         for run_id in range(5):
             for fold_id in range(5):
-                for s in range(1000, 10001, 1000):
+                for s in range(2000, 20001, 2000):
                     for para_xi in np.arange(1, 50, 9, dtype=float):
                         for para_r in 10. ** np.arange(-1, 4, 1, dtype=float):
                             para_space.append((run_id, fold_id, s, para_xi, para_r))
