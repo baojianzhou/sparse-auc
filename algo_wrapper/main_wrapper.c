@@ -2,7 +2,7 @@
 #include <numpy/arrayobject.h>
 #include "algo_solam.h"
 #include "algo_da_solam.h"
-#include "algo_sparse_solam.h"
+#include "algo_stoht_am.h"
 
 
 static PyObject *test(PyObject *self, PyObject *args) {

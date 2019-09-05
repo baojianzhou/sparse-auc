@@ -2,7 +2,7 @@
 // Created by baojian on 8/29/19.
 //
 #include "sort.h"
-#include "algo_sparse_solam.h"
+#include "algo_stoht_am.h"
 
 /**
  * Please find the algorithm in the following paper:

@@ -181,13 +181,17 @@ def test_single_model_selection(run_id, fold_id, para_xi, para_r, task_start, ta
 
 
 def result_summary():
-    for task_id in range(21):
-        task_start, task_end = int(task_id) * 100, int(task_id) * 100 + 100
+    all_results = []
+    for task_id in range(100):
+        task_start, task_end = int(task_id) * 21, int(task_id) * 21 + 21
         f_name = data_path + 'model_select_%04d_%04d.pkl' % (task_start, task_end)
         results = pkl.load(open(f_name, 'rb'))
+        all_results.extend(results)
+    file_name = data_path + 'model_select_0000_2100.pkl'
+    pkl.dump(all_results, open(file_name, 'wb'))
 
 
-def main():
+def run_task():
     task_id = os.environ['SLURM_ARRAY_TASK_ID']
     num_sub_tasks = 21
     task_start = int(task_id) * num_sub_tasks
@@ -201,6 +205,10 @@ def main():
         list_results.append(result)
     file_name = data_path + 'model_select_%04d_%04d.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
+
+
+def main():
+    result_summary()
 
 
 if __name__ == '__main__':
