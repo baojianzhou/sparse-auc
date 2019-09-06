@@ -533,7 +533,7 @@ def run_sht_am_by_selected_model():
     pkl.dump(results, open(data_path + 'result_sht_am_%3d_passes_5.pkl' % task_id, 'wb'))
 
 
-def final_result_analysis():
+def final_result_analysis_solam():
     list_auc = []
     list_time = []
     for (run_id, fold_id) in product(range(5), range(5)):
@@ -545,6 +545,28 @@ def final_result_analysis():
     print('mean: %.4f, std: %.4f' % (np.mean(list_auc), np.std(list_auc)))
     print('total run time in aveage: %.4f run time per-iteration: %.4f' %
           (np.mean(list_time), np.mean(list_time) / 5.))
+
+
+def final_result_analysis_sht_am():
+    auc_matrix = np.zeros(shape=(25, 10))
+    for ind, (run_id, fold_id) in enumerate(product(range(5), range(5))):
+        re = pkl.load(open(data_path + 'result_sht_am_%d_%d_passes_5.pkl' %
+                           (run_id, fold_id), 'rb'))
+        auc_matrix[ind] = re['auc_list']
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({'font.size': 14})
+    xx = ["{0:.0%}".format(_ / 55197.) for _ in np.asarray(range(2000, 20001, 2000))]
+    print(xx)
+    plt.figure(figsize=(5, 5))
+    plt.plot(range(10), np.mean(auc_matrix, axis=0), color='r', marker='D',
+             label='StoIHT+AUC')
+    plt.plot(range(10), [0.9601] * 10, color='b', marker='*', label='SOLAM')
+    plt.xticks(range(10), xx)
+    plt.ylim([0.95, 0.97])
+    plt.title('Sector Dataset')
+    plt.xlabel('Sparsity Level=k/d')
+    plt.legend()
+    plt.show()
 
 
 def main():
