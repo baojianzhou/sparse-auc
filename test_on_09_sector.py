@@ -399,7 +399,7 @@ def run_solam_by_selected_model():
     all_results = []
     for i in range(100):
         task_start, task_end = int(i) * 21, int(i) * 21 + 21
-        f_name = data_path + 'model_select_solam_%04d_%04d.pkl' % (task_start, task_end)
+        f_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
         results = pkl.load(open(f_name, 'rb'))
         all_results.extend(results)
     # selected model
@@ -413,8 +413,9 @@ def run_solam_by_selected_model():
             selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
 
     # select run_id and fold_id by task_id
-    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][3:]
-    selected_para_xi, selected_para_r = selected_model[(task_id / 5, task_id % 5)][3:]
+    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
+    selected_para_xi, selected_para_r = selected_model[(task_id / 5, task_id % 5)][3:5]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_r)
     # to test it
     data = load_dataset_normalized()
     para_spaces = {'global_pass': 5,
@@ -456,7 +457,9 @@ def run_solam_by_selected_model():
 
 
 def main():
-    run_task_stoht_am()
+    re = run_solam_by_selected_model()
+    run_id, fold_id = re['algo_para'][0], re['algo_para'][1]
+    pkl.dump(re, open(data_path + 'result_solam_%04d_%04d_passes_5.pkl' % (run_id, fold_id), 'wb'))
 
 
 if __name__ == '__main__':
