@@ -460,7 +460,7 @@ def run_solam_by_selected_model():
 def main():
     re = run_solam_by_selected_model()
     run_id, fold_id = re['algo_para'][0], re['algo_para'][1]
-    pkl.dump(re, open(data_path + 'result_solam_%04d_%04d_passes_5.pkl' % (run_id, fold_id), 'wb'))
+    pkl.dump(re, open(data_path + 'result_solam_%d_%d_passes_5.pkl' % (run_id, fold_id), 'wb'))
 
 
 if __name__ == '__main__':
