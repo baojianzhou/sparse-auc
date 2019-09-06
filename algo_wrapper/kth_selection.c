@@ -3,6 +3,45 @@
 //
 #include "kth_selection.h"
 
+
+typedef struct {
+    double val;
+    int index;
+} data_pair;
+
+typedef struct {
+    double first;
+    double second;
+    int index;
+} lex_pair;
+
+
+static inline int __comp_descend(const void *a, const void *b) {
+    if (((data_pair *) a)->val < ((data_pair *) b)->val) {
+        return 1;
+    } else {
+        return -1;
+    }
+}
+
+double kth_largest_quick_sort(const double *x, int *sorted_set, int k, int x_len) {
+    if (k > x_len) {
+        printf("Error: k should be <= x_len\n");
+        exit(EXIT_FAILURE);
+    }
+    data_pair *w_tmp = malloc(sizeof(data_pair) * x_len);
+    for (int i = 0; i < x_len; i++) {
+        w_tmp[i].val = fabs(x[i]);
+        w_tmp[i].index = i;
+    }
+    qsort(w_tmp, (size_t) x_len, sizeof(data_pair), &__comp_descend);
+    for (int i = 0; i < k; i++) {
+        sorted_set[i] = w_tmp[i].index;
+    }
+    free(w_tmp);
+    return x[sorted_set[k - 1]];
+}
+
 double kth_largest_quick_select_v1(const double *array, int n, int k) {
     int i, j, l = 0, r = n - 1, mid;
     double a, kth_largest;
@@ -317,13 +356,13 @@ double kth_largest_floyd_rivest_v2(const double *array, int n, int k) {
     int left = 0, right = n - 1;
     int left2 = 0, right2 = n - 1;
     while (left < right) {
-        if (arr[right2] > arr[left2]){
+        if (arr[right2] > arr[left2]) {
             swap(arr[left2], arr[right2]);
         }
-        if (arr[right2] > arr[(k - 1)]){
+        if (arr[right2] > arr[(k - 1)]) {
             swap(arr[(k - 1)], arr[right2]);
         }
-        if (arr[(k - 1)] > arr[left2]){
+        if (arr[(k - 1)] > arr[left2]) {
             swap(arr[left2], arr[(k - 1)]);
         }
         if ((right - left) < (k - 1)) {
@@ -371,13 +410,13 @@ double kth_largest_floyd_rivest_v3(const double *array, int n, int k) {
     int left = 0, right = n - 1;
     int left2 = 0, right2 = n - 1;
     while (left < right) {
-        if (arr[right2] > arr[left2]){
+        if (arr[right2] > arr[left2]) {
             swap(arr[left2], arr[right2]);
         }
-        if (arr[right2] > arr[(k - 1)]){
+        if (arr[right2] > arr[(k - 1)]) {
             swap(arr[(k - 1)], arr[right2]);
         }
-        if (arr[(k - 1)] > arr[left2]){
+        if (arr[(k - 1)] > arr[left2]) {
             swap(arr[left2], arr[(k - 1)]);
         }
         if ((right - left) < (k - 1)) {

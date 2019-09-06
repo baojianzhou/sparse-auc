@@ -18,6 +18,8 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define swap(a, b) { register double temp=(a);(a)=(b);(b)=temp; }
 
+double kth_largest_quick_sort(const double *x, int *sorted_set, int k, int x_len);
+
 /**
  * Quickselect algorithm is a kth selection algorithm based on quick sort.
  * This algorithm was developed by Sir Charles Antony Richard Hoare, the
