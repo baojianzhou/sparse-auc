@@ -26,31 +26,30 @@ run_time = {1: np.asarray(
         [48050835, 39885553, 102413292.0, 13181102, 40028054, 36642196, 39946229, 20375441,
          999201785])}
 x = [1, 10, 100, 1000, 2000, 5000, 8000, 10000]
-plt.subplot(1, 2, 1)
+fig, ax = plt.subplots(1, 2)
 for ind, name in enumerate(names):
     vals = np.asarray([run_time[_][ind] for _ in x],
                       dtype=float) / 1e6
-    plt.plot(x, vals, linewidth=2., label=name, color=colors[ind], alpha=alpha_list[ind],
-             marker='.')
-    plt.xlabel('iterations')
-    plt.ylabel('run time (seconds)')
-    plt.title('Total run time w.r.t iterations')
-    plt.grid(True)
-    plt.legend()
-
-plt.subplot(1, 2, 2)
+    ax[0].plot(x, vals, linewidth=2., label=name, color=colors[ind], alpha=alpha_list[ind],
+               marker='.')
+    ax[0].set_xlabel('iterations')
+    ax[0].set_ylabel('run time (seconds)')
+    ax[0].set_title('Total run time w.r.t iterations')
+    ax[0].grid(True)
+    ax[0].legend()
 for ind, name in enumerate(names):
     if name == 'QuickSort':
         continue
     vals = np.asarray([run_time[_][ind] for _ in x],
                       dtype=float) / 1e6
-    plt.plot(x, vals, linewidth=2., label=name, color=colors[ind], alpha=alpha_list[ind],
+    ax[1].plot(x, vals, linewidth=2., label=name, color=colors[ind], alpha=alpha_list[ind],
              marker='.')
-    plt.xlabel('iterations')
-    plt.ylabel('run time (seconds)')
-    plt.title('Total run time w.r.t iterations')
-    plt.grid(True)
-    plt.legend()
-
-plt.tight_layout()
+    ax[1].set_xlabel('iterations')
+    ax[1].set_ylabel('run time (seconds)')
+    ax[1].set_title('Total run time w.r.t iterations')
+    ax[1].grid(True)
+    ax[1].legend()
+plt.subplots_adjust(wspace=0.5, hspace=0.2)
+plt.savefig('/home/baojian/ht_run_time.png', dpi=400, bbox_inches='tight', pad_inches=0,
+            format='png')
 plt.show()
