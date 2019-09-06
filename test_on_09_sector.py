@@ -393,7 +393,7 @@ def result_analysis():
 def run_solam_by_selected_model():
     s_time = time.time()
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = os.environ['SLURM_ARRAY_TASK_ID']
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 1
     all_results = []
