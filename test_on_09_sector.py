@@ -337,9 +337,9 @@ def result_summary():
     pkl.dump(all_results, open(file_name, 'wb'))
 
 
-def run_task_solam():
+def run_model_selection_solam():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = os.environ['SLURM_ARRAY_TASK_ID']
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 1
     num_sub_tasks = 21
@@ -355,9 +355,9 @@ def run_task_solam():
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
-def run_task_stoht_am():
+def run_model_selection_stoht_am():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = os.environ['SLURM_ARRAY_TASK_ID']
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 1
     num_sub_tasks = 75
@@ -459,6 +459,81 @@ def run_solam_by_selected_model():
                       (selected_run_id, selected_fold_id), 'wb'))
 
 
+def run_sht_am_by_selected_model():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 1
+    all_results = []
+    for i in range(100):
+        task_start, task_end = int(i) * 21, int(i) * 21 + 21
+        f_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
+        results = pkl.load(open(f_name, 'rb'))
+        all_results.extend(results)
+
+    # selected model
+    selected_model = dict()
+    for result in all_results:
+        run_id, fold_id, para_xi, para_r = result['algo_para']
+        mean_auc = np.mean(result['list_auc'])
+        if (run_id, fold_id) not in selected_model:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+        if mean_auc > selected_model[(run_id, fold_id)][0]:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+
+    # select run_id and fold_id by task_id
+    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
+    selected_para_xi, selected_para_r = selected_model[(task_id / 5, task_id % 5)][3:5]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_r)
+    # to test it
+    data = load_dataset_normalized()
+    para_spaces = {'global_pass': 5,
+                   'global_runs': 5,
+                   'global_cv': 5,
+                   'data_id': 5,
+                   'data_name': '09_sector',
+                   'data_dim': data['p'],
+                   'data_num': data['n'],
+                   'verbose': 0}
+    x_indices = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=np.int32)
+    x_values = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=float)
+    for i in range(data['n']):
+        indices = [_[0] for _ in data['x_tr'][i]]
+        values = np.asarray([_[1] for _ in data['x_tr'][i]], dtype=float)
+        x_indices[i][0] = len(indices)  # the first entry is to save len of nonzeros.
+        x_indices[i][1:len(indices) + 1] = indices
+        x_values[i][0] = len(values)  # the first entry is to save len of nonzeros.
+        x_values[i][1:len(indices) + 1] = values
+    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
+    auc_list, run_time_list, s_list = [], [], []
+    for s in range(2000, 20001, 2000):
+        s_time = time.time()
+        re = c_algo_stoht_am_sparse(np.asarray(x_indices[tr_index], dtype=np.int32),
+                                    np.asarray(x_values[tr_index], dtype=float),
+                                    np.asarray(data['y_tr'][tr_index], dtype=float),
+                                    np.asarray(range(len(tr_index)), dtype=np.int32),
+                                    int(data['p']), float(selected_para_r),
+                                    float(selected_para_xi), int(s),
+                                    int(para_spaces['global_pass']),
+                                    int(para_spaces['verbose']))
+        run_time = time.time() - s_time
+        wt = np.asarray(re[0])
+        y_score = sparse_dot(x_indices[te_index], x_values[te_index], wt)
+        auc = roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_score)
+        print('run_id, fold_id, para_xi, para_r: ',
+              selected_run_id, selected_fold_id, selected_para_xi, selected_para_r)
+        auc_list.append(auc)
+        run_time_list.append(run_time)
+        s_list.append(s)
+        print('auc:', auc, 'run_time', run_time)
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_r],
+          'para_spaces': para_spaces, 's_list': s_list,
+          'auc_list': auc_list, 'run_time_list': run_time_list}
+    pkl.dump(re, open(data_path + 'result_sht_am_%d_%d_passes_5.pkl' %
+                      (selected_run_id, selected_fold_id), 'wb'))
+
+
 def final_result_analysis():
     list_auc = []
     list_time = []
@@ -474,7 +549,7 @@ def final_result_analysis():
 
 
 def main():
-    final_result_analysis()
+    run_sht_am_by_selected_model()
 
 
 if __name__ == '__main__':
