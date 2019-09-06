@@ -373,7 +373,7 @@ def run_task_stoht_am():
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
-def result_analysis():
+def model_result_analysis():
     results = pkl.load(open(data_path + 'model_select_0000_2100_5.pkl', 'rb'))
     max_auc_dict = dict()
     for result in results:
@@ -453,14 +453,28 @@ def run_solam_by_selected_model():
           selected_run_id, selected_fold_id, selected_para_xi, selected_para_r)
     run_time = time.time() - s_time
     print('auc:', auc, 'run_time', run_time)
-    return {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_r],
-            'para_spaces': para_spaces, 'auc': auc, 'run_time': run_time}
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_r],
+          'para_spaces': para_spaces, 'auc': auc, 'run_time': run_time}
+    pkl.dump(re, open(data_path + 'result_solam_%d_%d_passes_5.pkl' %
+                      (selected_run_id, selected_fold_id), 'wb'))
+
+
+def final_result_analysis():
+    list_auc = []
+    list_time = []
+    for (run_id, fold_id) in product(range(5), range(5)):
+        re = pkl.load(open(data_path + 'result_solam_%d_%d_passes_5.pkl' %
+                           (run_id, fold_id), 'rb'))
+        print(re['auc'], re['run_time'])
+        list_auc.append(re['auc'])
+        list_time.append(re['run_time'])
+    print('mean: %.4f, std: %.4f' % (np.mean(list_auc), np.std(list_auc)))
+    print('total run time in aveage: %.4f run time per-iteration: %.4f' %
+          (np.mean(list_time), np.mean(list_time) / 5.))
 
 
 def main():
-    re = run_solam_by_selected_model()
-    run_id, fold_id = re['algo_para'][0], re['algo_para'][1]
-    pkl.dump(re, open(data_path + 'result_solam_%d_%d_passes_5.pkl' % (run_id, fold_id), 'wb'))
+    final_result_analysis()
 
 
 if __name__ == '__main__':
