@@ -1,8 +1,6 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
-#include "algo_solam.h"
-#include "algo_da_solam.h"
-#include "algo_stoht_am.h"
+#include "auc_opt_methods.h"
 
 
 static PyObject *test(PyObject *self, PyObject *args) {
@@ -56,7 +54,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     result->a = 0.0;
     result->b = 0.0;
     //call SOLAM algorithm
-    algo_solam_func(para, result);
+    algo_solam(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);
@@ -107,7 +105,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     result->a = 0.0;
     result->b = 0.0;
     //call SOLAM algorithm
-    algo_solam_sparse_func(para, result);
+    algo_solam_sparse(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);
@@ -154,7 +152,7 @@ static PyObject *wrap_algo_stoht_am(PyObject *self, PyObject *args) {
     result->a = 0.0;
     result->b = 0.0;
     //call SOLAM algorithm
-    algo_stoht_am_func(para, result);
+    algo_stoht_am(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);
@@ -205,7 +203,7 @@ static PyObject *wrap_algo_stoht_am_sparse(PyObject *self, PyObject *args) {
     result->b = 0.0;
     //printf("num_tr: %d max_nonzero: %d p: %d\n", para->num_tr, para->max_nonzero, para->p);
     //printf("len: %d 5th: %d\n", para->x_tr_indices[0], para->x_tr_indices[5]);
-    algo_stoht_am_sparse_func(para, result);
+    algo_stoht_am_sparse(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);

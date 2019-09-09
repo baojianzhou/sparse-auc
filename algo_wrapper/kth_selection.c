@@ -202,8 +202,8 @@ double kth_largest_quick_select_v4(const double *array, int n, int k) {
 double kth_largest_wirth(const double *array, int n, int k) {
     double *arr = malloc(sizeof(double) * n), kth_largest;
     memcpy(arr, array, sizeof(double) * n);
-    register i, j, l = 0, m = n - 1;
-    register double x;
+    int i, j, l = 0, m = n - 1;
+    double x;
     while (l < m) {
         x = arr[k - 1];
         i = l;
@@ -285,7 +285,7 @@ double kth_largest_max_heap(const double *array, int n, int k) {
  * @param r
  * @param k
  */
-void floyd_rivest_select(double *array, int l, int r, int k) {
+void _floyd_rivest_select(double *array, int l, int r, int k) {
     register int n, i, j, s, sd, ll, rr;
     register double z, t;
     while (r > l) {
@@ -299,11 +299,11 @@ void floyd_rivest_select(double *array, int l, int r, int k) {
             n = r - l + 1;
             i = k - l + 1;
             z = log(n);
-            s = 0.5 * exp(2 * z / 3);
-            sd = 0.5 * sqrt(z * s * (n - s) / n) * sign(i - n / 2);
+            s = (int) (0.5 * exp(2 * z / 3));
+            sd = (int) (0.5 * sqrt(z * s * (n - s) / n) * sign(i - n / 2));
             ll = max(l, k - i * s / n + sd);
             rr = min(r, k + (n - i) * s / n + sd);
-            floyd_rivest_select(array, ll, rr, k);
+            _floyd_rivest_select(array, ll, rr, k);
         }
         t = array[k];
         /**
@@ -344,7 +344,7 @@ void floyd_rivest_select(double *array, int l, int r, int k) {
 double kth_largest_floyd_rivest(const double *array, int n, int k) {
     double *arr = malloc(sizeof(double) * n), kth_largest;
     memcpy(arr, array, sizeof(double) * n);
-    floyd_rivest_select(arr, 0, n - 1, k - 1);
+    _floyd_rivest_select(arr, 0, n - 1, k - 1);
     kth_largest = arr[k - 1];
     free(arr);
     return kth_largest;

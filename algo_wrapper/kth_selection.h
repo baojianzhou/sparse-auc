@@ -11,7 +11,12 @@
 #ifndef SPARSE_AUC_KTH_SELECTION_H
 #define SPARSE_AUC_KTH_SELECTION_H
 
-#include "algo_base.h"
+#include <stdio.h>
+#include <time.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
 #define sign(x) (x > 0) - (x < 0)
 #define max(a, b) ((a) > (b) ? (a) : (b))
