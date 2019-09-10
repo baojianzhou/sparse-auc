@@ -95,7 +95,7 @@ def load_dataset():
           len([word for word in words_freq if words_freq[word] <= 10]))
     data['num_posi'] = len(posi_indices)
     data['num_nega'] = len(nega_indices)
-    # randomly permute the datasets 100 times for future use.
+    # randomly permute the datasets 25 times for future use.
     data['num_runs'] = 5
     data['num_k_fold'] = 5
     for run_index in range(data['num_runs']):

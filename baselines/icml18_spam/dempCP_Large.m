@@ -62,6 +62,9 @@ gData(4).datEvaStep = 2000;
 
 for i = 1:gSeqNum
     
+    if i ~= 2
+        continue
+    end
     fig = figure;
     hold on;
     
@@ -69,7 +72,7 @@ for i = 1:gSeqNum
     
     %% get the path of the data
     if isunix
-        datPath = ['/home/mnatole/MATLAB/datasets/', gData(i).datName, '/', gData(i).datName];
+        datPath = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/usps';
     end
     
     if ismac
@@ -151,81 +154,8 @@ for i = 1:gSeqNum
     datTest = ppFeat(vIndices==1, :);
     labTest = ppLabel(vIndices==1);
         
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % SPDAM algorithm
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%     optSPDAM.batchSize = batchSize;
-%     optSPDAM.lambda = gData(i).lambda;
-%     optSPDAM.datEvaStep = gData(i).datEvaStep;
-%     
-%     % Run SPDAM
-%     [AUCs, ITs, TMs] = fnCP_SPDAM(datTrain,labTrain,optSPDAM, epochs,p);
-%     fprintf('Finish SPDAM!\n');
-%     
-%     % Get Data
-%     data.ITs = ITs;
-%     data.TMs = TMs;
-%     data.AUCs = AUCs;
-%     
-%     % Plot the Data
-%     plot(data.ITs,data.AUCs,'LineWidth',3)
+   
 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% regSOLAM algorithm
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    optSOLAM.lambda = gData(i).lambda;
-    optSOLAM.sC = 10;
-    optSOLAM.nPass = epochs;
-    optSOLAM.nStep = gData(i).datEvaStep;
-
-    ID = 1:size(datTrain,1);
-    
-    [TMs, AUCs, ITs] = fnCP_regSOLAM(datTrain, labTrain, optSOLAM, ID);
-    fprintf('Finish SOLAM!\n');
-    
-    data.ITs = ITs;
-    data.TMs = TMs;
-    data.AUCs = AUCs;
-    
-    plot(data.TMs,data.AUCs,'LineWidth',3)    
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% expSOLAM algorithm
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    optSOLAM.lambda = gData(i).lambda;
-    optSOLAM.sC = 10;
-    optSOLAM.nPass = epochs;
-    optSOLAM.nStep = gData(i).datEvaStep;
-
-    ID = 1:size(datTrain,1);
-    
-    [TMs, AUCs, ITs] = fnCP_expSOLAM(datTrain, labTrain, optSOLAM, ID);
-    fprintf('Finish SOLAM!\n');
-    
-    data.ITs = ITs;
-    data.TMs = TMs;
-    data.AUCs = AUCs;
-    
-    plot(data.TMs,data.AUCs,'LineWidth',3)  
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% exp2SOLAM algorithm
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    optSOLAM.lambda = gData(i).lambda;
-    optSOLAM.sC = 10;
-    optSOLAM.nPass = epochs;
-    optSOLAM.nStep = gData(i).datEvaStep;
-
-    ID = 1:size(datTrain,1);
-    
-    [TMs, AUCs, ITs] = fnCP_exp2SOLAM(datTrain, labTrain, optSOLAM, ID);
-    fprintf('Finish SOLAM!\n');
-    
-    data.ITs = ITs;
-    data.TMs = TMs;
-    data.AUCs = AUCs;
-    
-    plot(data.TMs,data.AUCs,'LineWidth',3)    
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Finish the Plots

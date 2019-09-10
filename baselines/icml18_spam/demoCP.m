@@ -1,20 +1,6 @@
 %% compare different methods
 clc
 clear all
-
-% add the useful path
-if isunix
-    addpath(genpath('./plotop'));
-end
-
-if ismac
-    addpath(genpath('./plotop'));
-end
-
-if ispc
-    addpath(genpath('.\plotop'));
-end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% some global parameters
 %% global pass of all the data
@@ -73,18 +59,12 @@ for i = 1:gSeqNum
     fig = figure;
     hold on;
     
+    if i~= 2
+        continue
+    end
+    
     %% get the path of the data
-    if isunix
-        datPath = ['/home/mnatole/MATLAB/datasets/', gData(i).datName, '/', gData(i).datName];
-    end
-    
-    if ismac
-        datPath = ['/Users/MNATOLE/MATLAB/DataSets/', gData(i).datName, '/', gData(i).datName];
-    end
-    
-    if ispc
-        datPath = ['C:\Users\mn572395\Documents\MATLAB\DataSets\', gData(i).datName, '\', gData(i).datName];
-    end
+    datPath = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/processed_usps.txt';
     
     %% load the data
     [orgFeat, orgLabel] = fnDatLoad(datPath, 1, gData(i).datNum, gData(i).datDim);
@@ -151,10 +131,10 @@ for i = 1:gSeqNum
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %options.param = fnEP_CV_SPAM_L2(datTrain,labTrain,options);
     %options.param2 = fnEP_CV_SPAM_NET(datTrain,labTrain,options);
-    options.param.beta = 0.01;
-    options.param2.beta1 = 0.01;
-    options.param2.beta2 = 0;
-    options.nStep = gData(i).datEvaStep;
+    options.beta = 0.001;
+    options.C = 15.;
+    options.nStep = 5000;
+    options.nPass = 25;
     
     %% Run SPAM_L2
     [TMs, AUCs, ITs] = fnCP_SPAM_L2(datTrain,labTrain,options);
@@ -166,53 +146,6 @@ for i = 1:gSeqNum
     data.AUCs = AUCs;
     
     % Plot the Data
-    plot(data.TMs,data.AUCs,'LineWidth',3)
-    
-    %% Run SPAM_NET
-%     [TMs, AUCs, ITs] = fnCP_SPAM_NET(datTrain,labTrain,options,ID);
-%     fprintf('Finish SPAM - NET!\n');
-%     
-%     % Get Data
-%     data.ITs = ITs;
-%     data.TMs = TMs;
-%     data.AUCs = AUCs;
-%     
-%     % Plot the Data
-%     plot(data.TMs,data.AUCs,'LineWidth',3)
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% SOLAM
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    optSOLAM.lambda = optL2.beta;
-    optSOLAM.sC = optL2.C;
-    
-    [TMs, AUCs, ITs] = fnCP_regSOLAM(datTrain, labTrain, options,optSOLAM);
-    
-    % Get Data
-    data.ITs = ITs;
-    data.TMs = TMs;
-    data.AUCs = AUCs;
-    
-    % Plot the Data
-    plot(data.TMs,data.AUCs,'LineWidth',3)
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% One-Pass algorithm (ICML 2013)
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    ID = 1:size(datTrain,1);
-    optOPAUC.nEta = 2^(-8);
-    optOPAUC.nLambda = optL2.beta;
-    optOPAUC.nTau = 50;
-    optOPAUC.nPass = nPass;
-    optOPAUC.nStep = gData(i).datEvaStep;
-    
-    [AUCs, ITs, TMs] = fnCP_OPAUC(datTrain, labTrain, optOPAUC, ID);
-    fprintf('Finish OPAUC!\n');
-    
-    data.ITs = ITs;
-    data.TMs = TMs;
-    data.AUCs = AUCs;
-    
     plot(data.TMs,data.AUCs,'LineWidth',3)
       
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -20,6 +20,10 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define swap(a, b) { register double temp=(a);(a)=(b);(b)=temp; }
 
+typedef struct {
+    double val;
+    int index;
+} data_pair;
 
 typedef struct {
     double *x_tr;
@@ -176,16 +180,24 @@ typedef struct {
 
     int p;
     int num_tr;
-    int num_passes; // number of epochs of the processing. default is one.
+    int num_classes;
+    double para_xi;     // the constant factor of the step size.
     double para_l2_reg; // regularization parameter for l2-norm
     double para_l1_reg; // regularization parameter for l1-norm
-    double para_xi;     // the constant factor of the step size.
+    int para_num_passes; // number of epochs of the processing. default is one.
+    int para_step_len;
+    int para_reg_opt; // option of regularization: 0: l2^2 1: l1/l2 mixed norm.
     int verbose;
 } spam_para;
 
 typedef struct {
     double *wt;
     double *wt_bar;
+    double *t_run_time;
+    double *t_auc;
+    double t_eval_time;
+    double *t_indices;
+    int t_index;
 } spam_results;
 
 /**

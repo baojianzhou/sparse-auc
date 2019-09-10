@@ -275,40 +275,71 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    da_solam_para *para = malloc(sizeof(da_solam_para));
-    PyArrayObject *x_tr_, *y_tr_, *rand_ind_;
-    if (!PyArg_ParseTuple(args, "O!O!O!ddiii",
+    spam_para *para = malloc(sizeof(spam_para));
+    PyArrayObject *x_tr_, *y_tr_;
+    if (!PyArg_ParseTuple(args, "O!O!dddiiiii",
                           &PyArray_Type, &x_tr_,
                           &PyArray_Type, &y_tr_,
-                          &PyArray_Type, &rand_ind_,
-                          &para->para_r,
                           &para->para_xi,
-                          &para->para_s,
-                          &para->para_num_pass,
+                          &para->para_l1_reg,
+                          &para->para_l2_reg,
+                          &para->para_reg_opt,
+                          &para->para_num_passes,
+                          &para->para_step_len,
+                          &para->is_sparse,
                           &para->verbose)) { return NULL; }
     para->num_tr = (int) x_tr_->dimensions[0];
     para->p = (int) x_tr_->dimensions[1];
     para->x_tr = (double *) PyArray_DATA(x_tr_);
     para->y_tr = (double *) PyArray_DATA(y_tr_);
-    para->para_rand_ind = (int *) PyArray_DATA(rand_ind_);
-    da_solam_results *result = malloc(sizeof(da_solam_results));
+    spam_results *result = malloc(sizeof(spam_results));
+
+    // printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
+
+    // printf("num_passes: %d step_len: %d\n",           para->para_num_passes, para->para_step_len);
+
+    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len
+                         + para->para_num_passes;
+    // printf("num_eval: %d\n", total_num_eval);
+    result->t_eval_time = 0.0;
     result->wt = malloc(sizeof(double) * para->p);
-    result->a = 0.0;
-    result->b = 0.0;
+    result->wt_bar = malloc(sizeof(double) * para->p);
+    result->t_indices = malloc(sizeof(int) * total_num_eval);
+    result->t_run_time = malloc(sizeof(double) * total_num_eval);
+    result->t_auc = malloc(sizeof(double) * total_num_eval);
+    result->t_index = 0;
+
+    // summary of the data
+
     //call SOLAM algorithm
-    algo_da_solam_func(para, result);
-    PyObject *results = PyTuple_New(3);
+    algo_spam(para, result);
+    PyObject *results = PyTuple_New(5);
+
     PyObject *wt = PyList_New(para->p);
-    PyObject *a = PyFloat_FromDouble(result->a);
-    PyObject *b = PyFloat_FromDouble(result->b);
+    PyObject *wt_bar = PyList_New(para->p);
+    PyObject *t_run_time = PyList_New(result->t_index);
+    PyObject *t_auc = PyList_New(result->t_index);
+
     for (int i = 0; i < para->p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
+        PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
+    }
+
+    for (int i = 0; i < result->t_index; i++) {
+        PyList_SetItem(t_run_time, i, PyFloat_FromDouble(result->t_run_time[i]));
+        PyList_SetItem(t_auc, i, PyFloat_FromDouble(result->t_auc[i]));
     }
     PyTuple_SetItem(results, 0, wt);
-    PyTuple_SetItem(results, 1, a);
-    PyTuple_SetItem(results, 2, b);
+    PyTuple_SetItem(results, 1, wt_bar);
+    PyTuple_SetItem(results, 2, t_run_time);
+    PyTuple_SetItem(results, 3, t_auc);
+    PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
     free(para);
     free(result->wt);
+    free(result->wt_bar);
+    free(result->t_indices);
+    free(result->t_run_time);
+    free(result->t_auc);
     free(result);
     return results;
 }
@@ -321,7 +352,7 @@ static PyMethodDef sparse_methods[] = {
         {"c_algo_stoht_am",        (PyCFunction) wrap_algo_stoht_am,        METH_VARARGS, "docs"},
         {"c_algo_stoht_am_sparse", (PyCFunction) wrap_algo_stoht_am_sparse, METH_VARARGS, "docs"},
         {"c_algo_da_solam",        (PyCFunction) wrap_algo_da_solam,        METH_VARARGS, "docs"},
-        {"c_algo_spam",        (PyCFunction) wrap_algo_spam,        METH_VARARGS, "docs"},
+        {"c_algo_spam",            (PyCFunction) wrap_algo_spam,            METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */

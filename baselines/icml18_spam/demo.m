@@ -2,19 +2,6 @@
 clc
 clear all
 
-% add the useful path
-if isunix
-    addpath(genpath('./plotop'));
-end
-
-if ismac
-    addpath(genpath('./plotop'));
-end
-
-if ispc
-    addpath(genpath('.\plotop'));
-end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% global pass of the data
 global nPass
@@ -26,7 +13,7 @@ C = 100;
 options.C = C;
 
 global nFeat;
-nFeat = 2;
+nFeat = 256;
 
 %% sequence number
 global gSeqNum
@@ -98,20 +85,9 @@ end
 for i = 1:gSeqNum
     
     % get the path of the data
-    if isunix
-        datPath = ['/home/mnatole/MATLAB/datasets/', gData(i).datName, '/', gData(i).datName];
-    end
-    
-    if ismac
-        datPath = ['/Users/MNATOLE/MATLAB/DataSets/', gData(i).datName, '/', gData(i).datName];
-    end
-    
-    if ispc
-        datPath = ['C:\Users\mn572395\Documents\MATLAB\DataSets\', gData(i).datName, '\', gData(i).datName];
-    end
-    
+    datPath = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/processed_usps.txt';
     % load the data
-    [orgFeat, orgLabel] = fnDatLoad(datPath, 1, gData(i).datNum, gData(i).datDim);
+    [orgFeat, orgLabel] = fnDatLoad(datPath, 1, 9298, gData(i).datDim);
     
     fprintf('Successfully loaded the data.\n');
     
@@ -141,26 +117,15 @@ for i = 1:gSeqNum
     end
         
     %% post-processing the data
-    %ppFeat = zeros(gData(i).datNum, gData(i).datDim + nFeat);
-    ppFeat = zeros(gData(i).datNum, gData(i).datDim);
-    
-%     for k = 1:gData(i).datNum
-%         tDat = full([orgFeat(k,:) randn(1,nFeat)]);
-%         %tDat = tDat - mean(tDat);
-%         if (norm(tDat) > 0)
-%             tDat = tDat / norm(tDat);
-%         end
-%         ppFeat(k, :) = tDat;
-%     end
-    
-        for k = 1:gData(i).datNum
-            tDat = full(orgFeat(k,:));
-            %tDat = tDat - mean(tDat);
-            if (norm(tDat) > 0)
-                tDat = tDat / norm(tDat);
-            end
-            ppFeat(k, :) = tDat;
+    ppFeat = zeros(gData(i).datNum, gData(i).datDim);    
+    for k = 1:gData(i).datNum
+        tDat = full(orgFeat(k,:));
+        %tDat = tDat - mean(tDat);
+        if (norm(tDat) > 0)
+            tDat = tDat / norm(tDat);
         end
+        ppFeat(k, :) = tDat;
+    end
     
     
     %% INITIAL SETUP

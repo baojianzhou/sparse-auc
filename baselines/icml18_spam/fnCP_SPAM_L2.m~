@@ -19,8 +19,8 @@ ITs = [];
 eTM = 0;
 
 % Options
-beta = options.beta;
-C = options.C;
+beta = optL2.beta;
+C = optL2.C;
 nStep = options.nStep;
 nPass = options.nPass;
 
