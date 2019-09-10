@@ -20,18 +20,6 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define swap(a, b) { register double temp=(a);(a)=(b);(b)=temp; }
 
-/**
- * Define a sparse vector as a tuple of three elements.
- */
-typedef struct {
-    double *x_vals;
-    int *x_indices;
-    int x_len;
-} sparse_vector;
-
-sparse_vector *_malloc_sparse_vector(double *x_vals, int *x_indices, int x_len);
-
-void _free_sparse_vector(sparse_vector *sv);
 
 typedef struct {
     double *x_tr;
@@ -66,82 +54,6 @@ typedef struct {
     double alpha;
 } solam_results;
 
-
-/**
- * A full vector y dot product with a sparse vector x.
- *
- * ---
- * x is presented as three elements:
- * 1. x_indices: the nonzero indices.
- * 2. x_values: the nonzeros.
- * 3. x_len: the number of nonzeros.
- * For example,
- * x = {0, 1.0, 0, 0, 0, 0.1, 0.5}, then
- * x_indices = {1,5,6}
- * x_values = {1.0,0.1,0.5}
- * x_len = 3.
- * ---
- *
- * @param x_indices: the nonzero indices of the sparse vector x. starts from 0 index.
- * @param x_values: the nonzeros values of the sparse vector x.
- * @param x_len: the number of nonzeros in sparse vector x.
- * @param y
- * @return
- */
-double _sparse_dot(const int *x_indices, const double *x_values, int x_len, const double *y);
-
-
-/**
- * A full vector y + a scaled sparse vector x, i.e., alpha*x + y --> y
- *
- * ---
- * x is presented as three elements:
- * 1. x_indices: the nonzero indices.
- * 2. x_values: the nonzeros.
- * 3. x_len: the number of nonzeros.
- * For example,
- * x = {0, 1.0, 0, 0, 0, 0.1, 0.5}, then
- * x_indices = {1,5,6}
- * x_values = {1.0,0.1,0.5}
- * x_len = 3.
- * ---
- *
- * @param x_indices: the nonzero indices of the sparse vector x. starts from 0 index.
- * @param x_values: the nonzeros values of the sparse vector x.
- * @param x_len: the number of nonzeros in sparse vector x.
- * @param y
- * @return
- */
-void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
-                         double alpha, double *y);
-
-/**
- * Given the unsorted array, we threshold this array by using Floyd-Rivest algorithm.
- * @param arr the unsorted array.
- * @param n, the number of elements in this array.
- * @param k, the number of k largest elements will be kept.
- * @return 0, successfully project arr to a k-sparse vector.
- */
-int _hard_thresholding(double *arr, int n, int k);
-
-
-/**
- * Please find the algorithm in the following paper:
- * ---
- * @article{floyd1975algorithm,
- * title={Algorithm 489: the algorithm SELECT—for finding the ith
- *        smallest of n elements [M1]},
- * author={Floyd, Robert W and Rivest, Ronald L},
- * journal={Communications of the ACM},
- * volume={18}, number={3}, pages={173},
- * year={1975},
- * publisher={ACM}}
- * @param array
- * @param l
- * @param r
- * @param k
- */
-void _floyd_rivest_select(double *array, int l, int r, int k);
 
 /**
  * SOLAM: Stochastic Online AUC Maximization

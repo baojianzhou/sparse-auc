@@ -4,18 +4,27 @@
 #include "auc_opt_methods.h"
 
 
-sparse_vector *_malloc_sparse_vector(double *x_vals, int *x_indices, int x_len) {
-    sparse_vector *sv = malloc(sizeof(sparse_vector));
-    sv->x_vals = x_vals;
-    sv->x_indices = x_indices;
-    sv->x_len = x_len;
-    return sv;
-}
-
-void _free_sparse_vector(sparse_vector *sv) {
-    free(sv);
-}
-
+/**
+ * A full vector y dot product with a sparse vector x.
+ *
+ * ---
+ * x is presented as three elements:
+ * 1. x_indices: the nonzero indices.
+ * 2. x_values: the nonzeros.
+ * 3. x_len: the number of nonzeros.
+ * For example,
+ * x = {0, 1.0, 0, 0, 0, 0.1, 0.5}, then
+ * x_indices = {1,5,6}
+ * x_values = {1.0,0.1,0.5}
+ * x_len = 3.
+ * ---
+ *
+ * @param x_indices: the nonzero indices of the sparse vector x. starts from 0 index.
+ * @param x_values: the nonzeros values of the sparse vector x.
+ * @param x_len: the number of nonzeros in sparse vector x.
+ * @param y
+ * @return
+ */
 double _sparse_dot(const int *x_indices, const double *x_values, int x_len, const double *y) {
     double result = 0.0;
     for (int i = 0; i < x_len; i++) {
@@ -24,7 +33,27 @@ double _sparse_dot(const int *x_indices, const double *x_values, int x_len, cons
     return result;
 }
 
-
+/**
+ * A full vector y + a scaled sparse vector x, i.e., alpha*x + y --> y
+ *
+ * ---
+ * x is presented as three elements:
+ * 1. x_indices: the nonzero indices.
+ * 2. x_values: the nonzeros.
+ * 3. x_len: the number of nonzeros.
+ * For example,
+ * x = {0, 1.0, 0, 0, 0, 0.1, 0.5}, then
+ * x_indices = {1,5,6}
+ * x_values = {1.0,0.1,0.5}
+ * x_len = 3.
+ * ---
+ *
+ * @param x_indices: the nonzero indices of the sparse vector x. starts from 0 index.
+ * @param x_values: the nonzeros values of the sparse vector x.
+ * @param x_len: the number of nonzeros in sparse vector x.
+ * @param y
+ * @return
+ */
 void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len,
                          double alpha, double *y) {
     for (int i = 0; i < x_len; i++) {
@@ -33,6 +62,22 @@ void _sparse_cblas_daxpy(const int *x_indices, const double *x_values, int x_len
 }
 
 
+/**
+ * Please find the algorithm in the following paper:
+ * ---
+ * @article{floyd1975algorithm,
+ * title={Algorithm 489: the algorithm SELECT—for finding the ith
+ *        smallest of n elements [M1]},
+ * author={Floyd, Robert W and Rivest, Ronald L},
+ * journal={Communications of the ACM},
+ * volume={18}, number={3}, pages={173},
+ * year={1975},
+ * publisher={ACM}}
+ * @param array
+ * @param l
+ * @param r
+ * @param k
+ */
 void _floyd_rivest_select(double *array, int l, int r, int k) {
     register int n, i, j, s, sd, ll, rr;
     register double z, t;
@@ -89,6 +134,14 @@ void _floyd_rivest_select(double *array, int l, int r, int k) {
     }
 }
 
+
+/**
+ * Given the unsorted array, we threshold this array by using Floyd-Rivest algorithm.
+ * @param arr the unsorted array.
+ * @param n, the number of elements in this array.
+ * @param k, the number of k largest elements will be kept.
+ * @return 0, successfully project arr to a k-sparse vector.
+ */
 int _hard_thresholding(double *arr, int n, int k) {
     double *temp_arr = malloc(sizeof(double) * n), kth_largest;
     for (int i = 0; i < n; i++) {
@@ -926,34 +979,105 @@ bool _algo_spam(const double *x_tr,
     // zero vector
     double *zero_vector = malloc(sizeof(double) * p);
     memset(zero_vector, 0, p * sizeof(double)); //set to zero.
+    // unit vector
+    double *unit_vector = malloc(sizeof(double) * p);
+    for (int i = 0; i < p; i++) {
+        unit_vector[i] = 1.0;
+    }
 
     // initialize w1
-    double *w1 = malloc(sizeof(double) * p);
+    double *wt = malloc(sizeof(double) * p); // wt --> 0.0
+    double *wt_bar = malloc(sizeof(double) * p); // wt_bar --> 0.0
+    double *grad_wt = malloc(sizeof(double) * p);
+
+    //TODO need to update it accordingly.
+    cblas_dcopy(p, unit_vector, 1, wt, 1);
+    cblas_dscal(p, sqrt(1. / (p * 1.0)), wt, 1);
+    cblas_dcopy(p, wt, 1, wt_bar, 1);
 
     // initialize the estimate of probability p=Pr(y=1)
-    double est_prob_p = 0.0;
+    double prob_p = 0.0;
 
-    // initialize the estimate of the expectation of positive sample x., i.e. E[x|y=1]
-    double *est_e_posi_x = malloc(sizeof(double) * p);
+    // initialize the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=1]
+    double a_wt = 0.0; // initialize to zero.
+    double *posi_x = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, posi_x, 1);
 
-    // initialize the estimate of the expectation of positive sample x., i.e. E[x|y=-1]
-    double *est_e_nega_x = malloc(sizeof(double) * p);
+
+    // initialize the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=-1]
+    double b_wt = 0.0; // initialize to zero.
+    double *nega_x = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, nega_x, 1);
+
+    // initialize alpha_wt (initialize to zero.)
+    double alpha_wt;
+
+    // learning rate
+    double eta_t;
 
     //for each epoch i.
+    double t = 1.0; // initial start time is zero=0.0
+    double posi_t = 0.0;
+    double nega_t = 0.0;
     for (int i = 0; i < num_passes; i++) {
         // for each training sample j
         for (int j = 0; j < n; j++) {
+            //current learning rate
+            eta_t = para_xi / sqrt(t);
             // receive training sample zt=(xt,yt)
-            double *cur_xt = x_tr + j * p;
+            const double *cur_xt = x_tr + j * p;
             double cur_yt = y_tr[j];
-            // compute a(wt), b(wt), and alpha(wt) by (8) and (9).
-            if (cur_yt > 0) {
 
+            double weight;
+            double dot_prod = cblas_ddot(p, wt, 1, cur_xt, 1);
+            prob_p = ((t - 1.) * prob_p) / t;
+            cblas_dscal(p, (t - 1.) / t, posi_x, 1);
+            cblas_dscal(p, (t - 1.) / t, nega_x, 1);
+            if (cur_yt > 0) {
+                // update the probability: Pr(y=1)
+                prob_p += 1. / t;
+                // update positive estimate E[x|y=1]
+                cblas_daxpy(p, 1. / t, cur_xt, 1, posi_x, 1);
+                // compute a(wt), b(wt), and alpha(wt) by (8) and (9).
+                a_wt = cblas_ddot(p, wt, 1, posi_x, 1);
+                alpha_wt = b_wt - a_wt;
+                weight = 2. * (1.0 - prob_p) * (dot_prod - a_wt);
+                weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
+            } else {
+                // update negative estimate E[x|y=-1]
+                cblas_daxpy(p, 1. / t, cur_xt, 1, nega_x, 1);
+                b_wt = cblas_ddot(p, wt, 1, nega_x, 1);
+                alpha_wt = b_wt - a_wt;
+                weight = 2.0 * prob_p * (dot_prod - b_wt);
+                weight += 2.0 * (1.0 + alpha_wt) * prob_p;
             }
+            //calculate the gradient
+            cblas_dcopy(p, cur_xt, 1, grad_wt, 1);
+            cblas_dscal(p, weight, grad_wt, 1);
+            cblas_daxpy(p, -eta_t, grad_wt, 1, wt, 1);
+            // currently, wt is the \hat{wt_{t+1}}, next is prox_operator
+            // The following part of the code is the proximal operator for elastic norm.
+            // Please see Equation (6.9) of Page 188 in
+            // [1] N. Parikh and S. Boyd, Proximal Algorithms
+            cblas_dscal(p, 1. / (eta_t * para_l2_reg + 1.0), wt, 1);
+            double lambda = (eta_t * para_l1_reg) / (eta_t * para_l2_reg + 1.);
+            for (int kk = 0; kk < p; kk++) {
+                wt[kk] = fmax(0.0, wt[kk] - lambda) - fmax(0.0, -wt[kk] - lambda);
+            }
+            t++;
+            cblas_dscal(p, (t - 1.) / t, wt_bar, 1);
+            cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
         }
     }
-    free(est_e_posi_x);
-    free(w1);
+    cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
+    cblas_dcopy(p, wt, 1, results->wt, 1);
+    free(nega_x);
+    free(posi_x);
+    free(grad_wt);
+    free(wt_bar);
+    free(wt);
+    free(unit_vector);
+    free(zero_vector);
     return true;
 }
 
