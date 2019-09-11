@@ -190,7 +190,7 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_passes, num_runs, k_fold = 1, 5, 5
+    num_passes, num_runs, k_fold = 40, 5, 5
     all_para_space = []
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
         for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
