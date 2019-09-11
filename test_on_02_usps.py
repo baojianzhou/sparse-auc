@@ -235,7 +235,7 @@ def model_result_analysis():
         float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
 
 
-def run_spam_l2_by_selected_model(id_=None):
+def run_spam_l2_by_selected_model(id_=None, model='wt'):
     """
     25 tasks to finish
     :return:
@@ -248,10 +248,18 @@ def run_spam_l2_by_selected_model(id_=None):
             task_id = 1
         else:
             task_id = id_
-    num_passes = 50
+    num_passes, num_runs, k_fold = 5, 5, 5
+    all_para_space = []
+    for run_id, fold_id in product(range(num_runs), range(k_fold)):
+        for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
+            for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
+                para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
+                all_para_space.append(para_row)
+    # only run sub-tasks for parallel
+    num_sub_tasks = len(all_para_space) / 100
     all_results = []
     for i in range(100):
-        task_start, task_end = int(i) * 30, int(i) * 30 + 30
+        task_start, task_end = int(i) * num_sub_tasks, int(i) * num_sub_tasks + num_sub_tasks
         f_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
         results = pkl.load(open(f_name, 'rb'))
         all_results.extend(results)
@@ -260,7 +268,7 @@ def run_spam_l2_by_selected_model(id_=None):
     selected_model = dict()
     for result in all_results:
         run_id, fold_id, num_passes, para_xi, para_beta = result['algo_para']
-        mean_auc = np.mean(result['list_auc'])
+        mean_auc = np.mean(result['list_auc_%s' % model])
         if (run_id, fold_id) not in selected_model:
             selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
         if mean_auc > selected_model[(run_id, fold_id)][0]:
@@ -272,33 +280,47 @@ def run_spam_l2_by_selected_model(id_=None):
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
     data = load_dataset()
-    para_spaces = {'global_pass': num_passes,
-                   'global_runs': 5,
-                   'global_cv': 5,
-                   'data_id': 5,
-                   'data_name': '09_sector',
-                   'data_dim': data['p'],
-                   'data_num': data['n'],
-                   'verbose': 0}
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': selected_para_beta,
+                   'para_l1_reg': 0.0,  # no l1 regularization needed.
+                   'para_xi': selected_para_xi,
+                   'para_fold_id': selected_fold_id,
+                   'para_run_id': selected_run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 0,
+                   'para_step_len': 2000,
+                   'para_reg_opt': 1,
+                   'data_id': 02,
+                   'data_name': '02_usps'}
     tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
-    verbose, step_len, l1_reg, l2_reg, = 0, 2000, 0.0, selected_para_beta
-    reg_opt, is_sparse = 1, 0
     re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
                      np.asarray(data['y_tr'][tr_index], dtype=float),
-                     float(selected_para_xi), float(l1_reg), float(selected_para_beta),
-                     int(reg_opt), int(num_passes), int(step_len), int(is_sparse), int(verbose))
+                     para_spaces['para_xi'],
+                     para_spaces['para_l1_reg'],
+                     para_spaces['para_beta'],
+                     para_spaces['para_reg_opt'],
+                     para_spaces['para_num_passes'],
+                     para_spaces['para_step_len'],
+                     para_spaces['para_is_sparse'],
+                     para_spaces['para_verbose'])
+    wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
-    auc = roc_auc_score(y_true=data['y_tr'][te_index],
-                        y_score=np.dot(data['x_tr'][te_index], wt_bar))
+    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
+                           y_score=np.dot(data['x_tr'][te_index], wt))
+    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
+                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
     print('run_id, fold_id, para_xi, para_r: ',
           selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     run_time = time.time() - s_time
-    print('auc:', auc, 'run_time', run_time)
+    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
-          'para_spaces': para_spaces, 'auc': auc, 'run_time': run_time}
-    pkl.dump(re, open(data_path + 'result_spam_l2_%d_%d_passes_%02d.pkl' %
-                      (selected_run_id, selected_fold_id, num_passes), 'wb'))
+          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+          'run_time': run_time}
+    pkl.dump(re, open(data_path + 'result_spam_l2_%d_%d_%04d_%s.pkl' %
+                      (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
 
 
 def final_result_analysis_spam_l2():
@@ -343,4 +365,5 @@ def main():
 
 
 if __name__ == '__main__':
-    run_model_selection_spam_l2()
+    run_spam_l2_by_selected_model(id_=None, model='wt')
+    run_spam_l2_by_selected_model(id_=None, model='wt_bar')
