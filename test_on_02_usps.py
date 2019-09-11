@@ -342,4 +342,4 @@ def main():
 
 
 if __name__ == '__main__':
-    model_result_analysis()
+    run_model_selection_spam_l2()
