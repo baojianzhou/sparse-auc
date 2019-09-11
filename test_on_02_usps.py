@@ -235,7 +235,7 @@ def model_result_analysis():
         float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
 
 
-def run_spam_l2_by_selected_model(id_=None):
+def run_spam_l2_by_selected_model(id_=None, model='wt'):
     """
     25 tasks to finish
     :return:
@@ -268,7 +268,7 @@ def run_spam_l2_by_selected_model(id_=None):
     selected_model = dict()
     for result in all_results:
         run_id, fold_id, num_passes, para_xi, para_beta = result['algo_para']
-        mean_auc = np.mean(result['list_auc_wt'])
+        mean_auc = np.mean(result['list_auc_%s' % model])
         if (run_id, fold_id) not in selected_model:
             selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
         if mean_auc > selected_model[(run_id, fold_id)][0]:
@@ -319,8 +319,8 @@ def run_spam_l2_by_selected_model(id_=None):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 'result_spam_l2_%d_%d_passes_%02d.pkl' %
-                      (selected_run_id, selected_fold_id, num_passes), 'wb'))
+    pkl.dump(re, open(data_path + 'result_spam_l2_%d_%d_%04d_%s.pkl' %
+                      (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
 
 
 def final_result_analysis_spam_l2():
@@ -365,4 +365,5 @@ def main():
 
 
 if __name__ == '__main__':
-    run_model_selection_spam_l2()
+    run_spam_l2_by_selected_model(id_=None, model='wt')
+    run_spam_l2_by_selected_model(id_=None, model='wt_bar')
