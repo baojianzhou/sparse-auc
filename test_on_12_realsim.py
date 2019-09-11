@@ -9,6 +9,8 @@ from itertools import product
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 
+from data_preprocess import load_dataset
+
 try:
     sys.path.append(os.getcwd())
     import sparse_module
@@ -20,59 +22,6 @@ try:
         exit(0)
 except ImportError:
     print('cannot find the module: sparse_module')
-
-data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/'
-
-
-def load_dataset():
-    """
-    number of samples: 9,298
-    number of features: 256
-    :return:
-    """
-    if os.path.exists(data_path + 'processed_usps.pkl'):
-        return pkl.load(open(data_path + 'processed_usps.pkl', 'rb'))
-    data = dict()
-    data['x_tr'] = []
-    data['y_tr'] = []
-    with open(data_path + 'processed_usps.txt') as f:
-        for each_line in f.readlines():
-            items = each_line.lstrip().rstrip().split(' ')
-            data['y_tr'].append(int(items[0]) - 1)
-            cur_x = [float(_.split(':')[1]) for _ in items[1:]]
-            # normalize the data.
-            data['x_tr'].append(cur_x / np.linalg.norm(cur_x))
-    data['x_tr'] = np.asarray(data['x_tr'], dtype=float)
-    data['y_tr'] = np.asarray(data['y_tr'], dtype=float)
-    assert len(data['y_tr']) == 9298  # total samples in train
-    data['n'] = 9298
-    data['p'] = 256
-    assert len(np.unique(data['y_tr'])) == 10  # we have total 10 classes.
-    rand_ind = np.random.permutation(len(np.unique(data['y_tr'])))
-    posi_classes = rand_ind[:len(np.unique(data['y_tr'])) / 2]
-    nega_classes = rand_ind[len(np.unique(data['y_tr'])) / 2:]
-    posi_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in posi_classes]
-    nega_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in nega_classes]
-    data['y_tr'][posi_indices] = 1
-    data['y_tr'][nega_indices] = -1
-    print('number of positive: %d' % len(posi_indices))
-    print('number of negative: %d' % len(nega_indices))
-    data['num_posi'] = len(posi_indices)
-    data['num_nega'] = len(nega_indices)
-    # randomly permute the datasets 25 times for future use.
-    data['num_runs'] = 5
-    data['num_k_fold'] = 5
-    for run_index in range(data['num_runs']):
-        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
-        # just need the number of training samples
-        fake_x = np.zeros(shape=(data['n'], 1))
-        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
-            # since original data is ordered, we need to shuffle it!
-            rand_perm = np.random.permutation(data['n'])
-            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
-                                                                'te_index': rand_perm[test_index]}
-    pkl.dump(data, open(data_path + 'processed_usps.pkl', 'wb'))
-    return data
 
 
 def get_run_fold_index_by_task_id(method, task_start, task_end, num_passes, num_runs, k_fold):
@@ -213,85 +162,101 @@ def run_model_selection_spam_l2():
 
 def model_result_analysis():
     all_results = []
-    num_runs, k_fold, num_tasks = 5, 5, 25
-    for task_id in range(num_runs * k_fold):
-        results = pkl.load(open(data_path + 'spam/ms_spam_l2_%02d.pkl' % task_id, 'rb'))
+    for task_id in range(100):
+        task_start, task_end = int(task_id) * 30, int(task_id) * 30 + 30
+        f_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, 50)
+        results = pkl.load(open(f_name, 'rb'))
         all_results.extend(results)
-    max_auc_wt = dict()
-    max_auc_wt_bar = dict()
-    for result in all_results:
-        run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
-        cur_auc = np.mean(result['list_auc_wt'])
-        if (run_id, fold_id, num_passes) not in max_auc_wt:
-            max_auc_wt[(run_id, fold_id, num_passes)] = (cur_auc, para_xi, para_beta)
-        if cur_auc > max_auc_wt[(run_id, fold_id, num_passes)][0]:
-            max_auc_wt[(run_id, fold_id, num_passes)] = (cur_auc, para_xi, para_beta)
-    for result in all_results:
-        run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
-        cur_auc = np.mean(result['list_auc_wt_bar'])
-        if (run_id, fold_id, num_passes) not in max_auc_wt_bar:
-            max_auc_wt_bar[(run_id, fold_id, num_passes)] = (cur_auc, para_xi, para_beta)
-        if cur_auc > max_auc_wt_bar[(run_id, fold_id, num_passes)][0]:
-            max_auc_wt_bar[(run_id, fold_id, num_passes)] = (cur_auc, para_xi, para_beta)
-    return {'wt': max_auc_wt, 'wt_bar': max_auc_wt_bar}
+    results = all_results
+    max_auc_dict = dict()
+    for result in results:
+        run_id, fold_id, num_passes, para_xi, para_r = result['algo_para']
+        mean_auc = np.mean(result['list_auc'])
+        if (run_id, fold_id) not in max_auc_dict:
+            max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+        if mean_auc > max_auc_dict[(run_id, fold_id)][0]:
+            max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+    list_best_auc = []
+    for key in max_auc_dict:
+        print(key, max_auc_dict[key])
+        list_best_auc.append(max_auc_dict[key][0])
+    print('mean_auc: %.4f std_auc: %.4f' % (
+        float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
 
 
-def run_spam_l2_by_selected_model():
+def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
     """
     25 tasks to finish
     :return:
     """
     s_time = time.time()
-    sm = model_result_analysis()
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        if id_ is None:
+            task_id = 1
+        else:
+            task_id = id_
+
     num_runs, k_fold = 5, 5
-    list_num_passes = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    results = dict()
-    for run_id, fold_id, num_passes in product(range(num_runs), range(k_fold), list_num_passes):
-        # select run_id and fold_id by task_id
-        result = dict()
-        for model in ['wt', 'wt_bar']:
-            sm_para_xi, sm_para_beta = sm[model][(run_id, fold_id, num_passes)][1:3]
-            data = load_dataset()
-            para_spaces = {'conf_num_runs': num_runs,
-                           'conf_k_fold': k_fold,
-                           'para_num_passes': num_passes,
-                           'para_beta': sm_para_beta,
-                           'para_l1_reg': 0.0,  # no l1 regularization needed.
-                           'para_xi': sm_para_xi,
-                           'para_fold_id': fold_id,
-                           'para_run_id': run_id,
-                           'para_verbose': 0,
-                           'para_is_sparse': 0,
-                           'para_step_len': 2000,
-                           'para_reg_opt': 1,
-                           'data_id': 02,
-                           'data_name': '02_usps'}
-            tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-            te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
-            re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                             np.asarray(data['y_tr'][tr_index], dtype=float),
-                             para_spaces['para_xi'],
-                             para_spaces['para_l1_reg'],
-                             para_spaces['para_beta'],
-                             para_spaces['para_reg_opt'],
-                             para_spaces['para_num_passes'],
-                             para_spaces['para_step_len'],
-                             para_spaces['para_is_sparse'],
-                             para_spaces['para_verbose'])
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
-            auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
-                                   y_score=np.dot(data['x_tr'][te_index], wt))
-            auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
-                                       y_score=np.dot(data['x_tr'][te_index], wt_bar))
-            print('run_id, fold_id, para_xi, para_r: ', run_id, fold_id, sm_para_xi, sm_para_beta)
-            run_time = time.time() - s_time
-            print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
-            result[model] = {'algo_para': [run_id, fold_id, sm_para_xi, sm_para_beta],
-                             'para_spaces': para_spaces, 'auc_wt': auc_wt,
-                             'auc_wt_bar': auc_wt_bar, 'run_time': run_time}
-        results[(run_id, fold_id, num_passes)] = result
-    pkl.dump(results, open(data_path + 're_spam_l2.pkl', 'wb'))
+    all_results = pkl.load(open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'rb'))
+    # selected model
+    selected_model = dict()
+    for result in all_results:
+        run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
+        mean_auc = np.mean(result['list_auc_%s' % model])
+        if (run_id, fold_id) not in selected_model:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
+        if mean_auc > selected_model[(run_id, fold_id)][0]:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
+
+    # select run_id and fold_id by task_id
+    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
+    selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    # to test it
+    data = load_dataset()
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': selected_para_beta,
+                   'para_l1_reg': 0.0,  # no l1 regularization needed.
+                   'para_xi': selected_para_xi,
+                   'para_fold_id': selected_fold_id,
+                   'para_run_id': selected_run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 0,
+                   'para_step_len': 2000,
+                   'para_reg_opt': 1,
+                   'data_id': 02,
+                   'data_name': '02_usps'}
+    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
+    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                     np.asarray(data['y_tr'][tr_index], dtype=float),
+                     para_spaces['para_xi'],
+                     para_spaces['para_l1_reg'],
+                     para_spaces['para_beta'],
+                     para_spaces['para_reg_opt'],
+                     para_spaces['para_num_passes'],
+                     para_spaces['para_step_len'],
+                     para_spaces['para_is_sparse'],
+                     para_spaces['para_verbose'])
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
+                           y_score=np.dot(data['x_tr'][te_index], wt))
+    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
+                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
+    print('run_id, fold_id, para_xi, para_r: ',
+          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    run_time = time.time() - s_time
+    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
+          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+          'run_time': run_time}
+    pkl.dump(re, open(data_path + 're_spam_l2_%d_%d_%04d_%s.pkl' %
+                      (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
 
 
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
@@ -330,7 +295,9 @@ def show_graph():
 
 
 def run_test():
-    run_spam_l2_by_selected_model()
+    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
+        run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=num_passes)
+        run_spam_l2_by_selected_model(id_=None, model='wt_bar', num_passes=num_passes)
 
 
 def run_test_result():
@@ -340,7 +307,7 @@ def run_test_result():
 
 
 def main():
-    run_test()
+    load_dataset(root_path='/network/rit/lab/ceashpc/bz383376/data/icml2020/', name='realsim')
 
 
 if __name__ == '__main__':
