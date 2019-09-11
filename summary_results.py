@@ -25,5 +25,5 @@ def result_summary(num_passes):
     pkl.dump(all_results, open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'wb'))
 
 
-for i in [1, 5, 10, 20, 30, 50]:
+for i in [1, 5, 10, 20, 30, 40, 50]:
     result_summary(i)
