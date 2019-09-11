@@ -188,7 +188,13 @@ def run_model_selection_spam_l2():
 
 
 def model_result_analysis():
-    results = pkl.load(open(data_path + 'ms_spam_l2_0000_3000_50.pkl', 'rb'))
+    all_results = []
+    for task_id in range(100):
+        task_start, task_end = int(task_id) * 30, int(task_id) * 30 + 30
+        f_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, 50)
+        results = pkl.load(open(f_name, 'rb'))
+        all_results.extend(results)
+    results = all_results
     max_auc_dict = dict()
     for result in results:
         run_id, fold_id, num_passes, para_xi, para_r = result['algo_para']
@@ -201,7 +207,8 @@ def model_result_analysis():
     for key in max_auc_dict:
         print(key, max_auc_dict[key])
         list_best_auc.append(max_auc_dict[key][0])
-    print('mean_auc: %.4f std_auc: %.4f' % (np.mean(list_best_auc), np.std(list_best_auc)))
+    print('mean_auc: %.4f std_auc: %.4f' % (
+        float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
 
 
 def run_solam_by_selected_model():
@@ -273,33 +280,6 @@ def run_solam_by_selected_model():
                       (selected_run_id, selected_fold_id), 'wb'))
 
 
-def get_paras():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 1
-    all_results = []
-    for _ in range(100):
-        task_start, task_end = int(_) * 21, int(_) * 21 + 21
-        f_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
-        results = pkl.load(open(f_name, 'rb'))
-        all_results.extend(results)
-
-    # selected model
-    selected_model = dict()
-    for result in all_results:
-        run_id, fold_id, para_xi, para_r = result['algo_para']
-        mean_auc = np.mean(result['list_auc'])
-        if (run_id, fold_id) not in selected_model:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
-        if mean_auc > selected_model[(run_id, fold_id)][0]:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
-    paras = []
-    for run_id, fold_id, s in product(range(5), range(5), range(2000, 40001, 2000)):
-        paras.append((run_id, fold_id, s, selected_model[(run_id, fold_id)]))
-    return task_id, paras[task_id * 5:task_id * 5 + 5]
-
-
 def final_result_analysis_solam():
     list_auc = []
     list_time = []
@@ -342,4 +322,4 @@ def main():
 
 
 if __name__ == '__main__':
-    run_model_selection_spam_l2()
+    model_result_analysis()
