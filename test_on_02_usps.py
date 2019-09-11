@@ -77,12 +77,14 @@ def load_dataset():
 
 def get_run_fold_index_by_task_id(method, task_start, task_end):
     if method == 'spam':
+        num_passes, num_runs, k_fold = 50, 5, 5
         para_space = []
         for run_id in range(5):
             for fold_id in range(5):
                 for para_xi in np.arange(1, 61, 5, dtype=float):
                     for para_beta in 10. ** np.arange(-5, 5, 1, dtype=float):
-                        para_space.append((run_id, fold_id, para_xi, para_beta))
+                        para_space.append((run_id, fold_id, para_xi, para_beta,
+                                           num_passes, num_runs, k_fold))
         return para_space[task_start:task_end]
     if method == 'solam':
         para_space = []
@@ -111,28 +113,32 @@ def sparse_dot(x_indices, x_values, wt):
     return y_score
 
 
-def test_single_ms_spam_l2(run_id, fold_id, para_xi, para_beta, num_passes):
+def test_single_ms_spam_l2(para):
     """
     Model selection of SPAM-l2
-    :param run_id:
-    :param fold_id:
-    :param para_xi:
-    :param para_beta: l2-regularization
-    :param num_passes:
     :return:
     """
+    run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
+
     s_time = time.time()
     data = load_dataset()
-    para_spaces = {'global_pass': num_passes,
-                   'global_runs': 5,
-                   'global_cv': 5,
-                   'data_id': 5,
-                   'data_name': '02_usps',
-                   'data_dim': data['p'],
-                   'data_num': data['n'],
-                   'verbose': 0}
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': para_beta,
+                   'para_l1_reg': 0.0,  # no l1 regularization needed.
+                   'para_xi': para_xi,
+                   'para_fold_id': fold_id,
+                   'para_run_id': run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 0,
+                   'para_step_len': 2000,
+                   'para_reg_opt': 1,
+                   'data_id': 02,
+                   'data_name': '02_usps'}
     tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+    print('number of tr: %d number of te: %d' % (len(tr_index), len(te_index)))
     # cross validate based on tr_index
     list_auc = np.zeros(para_spaces['global_cv'])
     kf = KFold(n_splits=para_spaces['global_cv'], shuffle=False)
@@ -141,14 +147,17 @@ def test_single_ms_spam_l2(run_id, fold_id, para_xi, para_beta, num_passes):
         sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
         sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
         sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-        verbose, step_len, l1_reg, l2_reg, = 0, 2000, 0.0, para_beta
-        reg_opt, is_sparse = 1, 0
         re = c_algo_spam(np.asarray(sub_x_tr, dtype=float),
                          np.asarray(sub_y_tr, dtype=float),
-                         float(para_xi), float(l1_reg), float(para_beta),
-                         int(reg_opt), int(num_passes), int(step_len),
-                         int(is_sparse), int(verbose))
-        wt_bar = np.asarray(re[1])
+                         para_spaces['para_xi'],
+                         para_spaces['para_l1_reg'],
+                         para_spaces['para_beta'],
+                         para_spaces['para_reg_opt'],
+                         para_spaces['para_num_passes'],
+                         para_spaces['para_step_len'],
+                         para_spaces['para_is_sparse'],
+                         para_spaces['para_verbose'])
+        wt_bar = np.asarray(re[0])  # use wt_bar as the output
         list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
     print('run_id, fold_id, para_xi, para_beta: ', run_id, fold_id, para_xi, para_beta)
     print('list_auc:', list_auc)
@@ -173,14 +182,15 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_sub_tasks, num_passes = 30, 50
+    num_sub_tasks = 30
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
     list_tasks = get_run_fold_index_by_task_id('spam', task_start, task_end)
     list_results = []
     for task_para in list_tasks:
-        (run_id, fold_id, para_xi, para_beta) = task_para
-        result = test_single_ms_spam_l2(run_id, fold_id, para_xi, para_beta, num_passes)
+        (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold) = task_para
+        result = test_single_ms_spam_l2(run_id, fold_id, para_xi, para_beta, num_passes, num_runs,
+                                        k_fold)
         list_results.append(result)
     # model selection of spam-l2
     file_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
@@ -319,4 +329,4 @@ def main():
 
 
 if __name__ == '__main__':
-    final_result_analysis_spam_l2()
+    run_model_selection_spam_l2()
