@@ -314,7 +314,7 @@ def final_result_analysis_spam_l2(num_passes=1, model='wt'):
     list_auc = []
     list_time = []
     for (run_id, fold_id) in product(range(5), range(5)):
-        re = pkl.load(open(data_path + 'result_spam_l2_%d_%d_%04d_%s.pkl' %
+        re = pkl.load(open(data_path + 're_spam_l2_%d_%d_%04d_%s.pkl' %
                            (run_id, fold_id, num_passes, model), 'rb'))
         list_auc.append(re['auc_%s' % model])
         list_time.append(re['run_time'])
