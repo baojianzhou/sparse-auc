@@ -211,36 +211,44 @@ def model_result_analysis():
         float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
 
 
-def run_solam_by_selected_model():
+def run_spam_l2_by_selected_model(id_=None):
+    """
+    25 tasks to finish
+    :return:
+    """
     s_time = time.time()
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
-        task_id = 1
+        if id_ is None:
+            task_id = 1
+        else:
+            task_id = id_
+    num_passes = 50
     all_results = []
     for i in range(100):
-        task_start, task_end = int(i) * 21, int(i) * 21 + 21
-        f_name = data_path + 'model_select_solam_%04d_%04d_5.pkl' % (task_start, task_end)
+        task_start, task_end = int(i) * 30, int(i) * 30 + 30
+        f_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
         results = pkl.load(open(f_name, 'rb'))
         all_results.extend(results)
 
     # selected model
     selected_model = dict()
     for result in all_results:
-        run_id, fold_id, para_xi, para_r = result['algo_para']
+        run_id, fold_id, num_passes, para_xi, para_beta = result['algo_para']
         mean_auc = np.mean(result['list_auc'])
         if (run_id, fold_id) not in selected_model:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
         if mean_auc > selected_model[(run_id, fold_id)][0]:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
 
     # select run_id and fold_id by task_id
     selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
-    selected_para_xi, selected_para_r = selected_model[(task_id / 5, task_id % 5)][3:5]
-    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_r)
+    selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
-    data = load_dataset_normalized()
-    para_spaces = {'global_pass': 5,
+    data = load_dataset()
+    para_spaces = {'global_pass': num_passes,
                    'global_runs': 5,
                    'global_cv': 5,
                    'data_id': 5,
@@ -248,44 +256,33 @@ def run_solam_by_selected_model():
                    'data_dim': data['p'],
                    'data_num': data['n'],
                    'verbose': 0}
-    x_indices = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=np.int32)
-    x_values = np.zeros(shape=(data['n'], data['max_nonzero'] + 1), dtype=float)
-    for i in range(data['n']):
-        indices = [_[0] for _ in data['x_tr'][i]]
-        values = np.asarray([_[1] for _ in data['x_tr'][i]], dtype=float)
-        x_indices[i][0] = len(indices)  # the first entry is to save len of nonzeros.
-        x_indices[i][1:len(indices) + 1] = indices
-        x_values[i][0] = len(values)  # the first entry is to save len of nonzeros.
-        x_values[i][1:len(indices) + 1] = values
     tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
-
-    re = c_algo_solam_sparse(np.asarray(x_indices[tr_index], dtype=np.int32),
-                             np.asarray(x_values[tr_index], dtype=float),
-                             np.asarray(data['y_tr'][tr_index], dtype=float),
-                             np.asarray(range(len(tr_index)), dtype=np.int32),
-                             int(data['p']), float(selected_para_r), float(selected_para_xi),
-                             int(para_spaces['global_pass']),
-                             int(para_spaces['verbose']))
-    wt = np.asarray(re[0])
-    y_score = sparse_dot(x_indices[te_index], x_values[te_index], wt)
-    auc = roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_score)
+    verbose, step_len, l1_reg, l2_reg, = 0, 2000, 0.0, selected_para_beta
+    reg_opt, is_sparse = 1, 0
+    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                     np.asarray(data['y_tr'][tr_index], dtype=float),
+                     float(selected_para_xi), float(l1_reg), float(selected_para_beta),
+                     int(reg_opt), int(num_passes), int(step_len), int(is_sparse), int(verbose))
+    wt_bar = np.asarray(re[1])
+    auc = roc_auc_score(y_true=data['y_tr'][te_index],
+                        y_score=np.dot(data['x_tr'][te_index], wt_bar))
     print('run_id, fold_id, para_xi, para_r: ',
-          selected_run_id, selected_fold_id, selected_para_xi, selected_para_r)
+          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     run_time = time.time() - s_time
     print('auc:', auc, 'run_time', run_time)
-    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_r],
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc': auc, 'run_time': run_time}
-    pkl.dump(re, open(data_path + 'result_solam_%d_%d_passes_5.pkl' %
-                      (selected_run_id, selected_fold_id), 'wb'))
+    pkl.dump(re, open(data_path + 'result_spam_l2_%d_%d_passes_%02d.pkl' %
+                      (selected_run_id, selected_fold_id, num_passes), 'wb'))
 
 
-def final_result_analysis_solam():
+def final_result_analysis_spam_l2():
     list_auc = []
     list_time = []
     for (run_id, fold_id) in product(range(5), range(5)):
-        re = pkl.load(open(data_path + 'result_solam_%d_%d_passes_5.pkl' %
-                           (run_id, fold_id), 'rb'))
+        re = pkl.load(open(data_path + 'result_spam_l2_%d_%d_passes_%02d.pkl' %
+                           (run_id, fold_id, 50), 'rb'))
         print(re['auc'], re['run_time'])
         list_auc.append(re['auc'])
         list_time.append(re['run_time'])
@@ -322,4 +319,4 @@ def main():
 
 
 if __name__ == '__main__':
-    model_result_analysis()
+    final_result_analysis_spam_l2()
