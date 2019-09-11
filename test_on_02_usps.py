@@ -318,7 +318,8 @@ def final_result_analysis_spam_l2(num_passes=1, model='wt'):
                            (run_id, fold_id, num_passes, model), 'rb'))
         list_auc.append(re['auc_%s' % model])
         list_time.append(re['run_time'])
-    print('mean: %.4f, std: %.4f' % (float(np.mean(list_auc)), float(np.std(list_auc))))
+    print('num_passes: %d %s mean: %.4f, std: %.4f' %
+          (num_passes, model, float(np.mean(list_auc)), float(np.std(list_auc))))
 
 
 def show_graph():
