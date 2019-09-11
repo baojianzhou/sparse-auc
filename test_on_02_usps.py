@@ -77,12 +77,12 @@ def load_dataset():
 
 def get_run_fold_index_by_task_id(method, task_start, task_end):
     if method == 'spam':
-        num_passes, num_runs, k_fold = 50, 5, 5
+        num_passes, num_runs, k_fold = 1, 5, 5
         para_space = []
         for run_id in range(5):
             for fold_id in range(5):
                 for para_xi in np.arange(1, 61, 5, dtype=float):
-                    for para_beta in 10. ** np.arange(-5, 5, 1, dtype=float):
+                    for para_beta in 10. ** np.arange(-5, 1, 1, dtype=float):
                         para_space.append((run_id, fold_id, para_xi, para_beta,
                                            num_passes, num_runs, k_fold))
         return para_space[task_start:task_end]
@@ -140,8 +140,9 @@ def test_single_ms_spam_l2(para):
     te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
     print('number of tr: %d number of te: %d' % (len(tr_index), len(te_index)))
     # cross validate based on tr_index
-    list_auc = np.zeros(para_spaces['global_cv'])
-    kf = KFold(n_splits=para_spaces['global_cv'], shuffle=False)
+    list_auc_wt = np.zeros(para_spaces['conf_k_fold'])
+    list_auc_wt_bar = np.zeros(para_spaces['conf_k_fold'])
+    kf = KFold(n_splits=para_spaces['conf_k_fold'], shuffle=False)
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
         sub_x_tr = data['x_tr'][tr_index[sub_tr_ind]]
         sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
@@ -157,13 +158,20 @@ def test_single_ms_spam_l2(para):
                          para_spaces['para_step_len'],
                          para_spaces['para_is_sparse'],
                          para_spaces['para_verbose'])
-        wt_bar = np.asarray(re[0])  # use wt_bar as the output
-        list_auc[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+        wt = np.asarray(re[0])
+        wt_bar = np.asarray(re[1])
+        list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+        list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
     print('run_id, fold_id, para_xi, para_beta: ', run_id, fold_id, para_xi, para_beta)
-    print('list_auc:', list_auc)
+    print('list_auc_wt:', list_auc_wt)
+    print('list_auc_wt_bar:', list_auc_wt_bar)
     run_time = time.time() - s_time
-    return {'algo_para': [run_id, fold_id, num_passes, para_xi, para_beta],
-            'para_spaces': para_spaces, 'list_auc': list_auc, 'run_time': run_time}
+    return {'algo_para_name_list': ['run_id', 'fold_id', 'para_xi', 'para_beta',
+                                    'num_passes', 'num_runs', 'k_fold'],
+            'algo_para': para, 'para_spaces': para_spaces,
+            'list_auc_wt': list_auc_wt,
+            'list_auc_wt_bar': list_auc_wt_bar,
+            'run_time': run_time}
 
 
 def result_summary():
