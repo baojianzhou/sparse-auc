@@ -594,333 +594,6 @@ bool algo_solam_sparse(solam_para_sparse *para, solam_results *results) {
 }
 
 
-bool algo_stoht_am(stoht_am_para *para, stoht_am_results *results) {
-
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
-    int *rand_id = para->para_rand_ind;
-    int num_tr = para->num_tr;
-    double *zero_v = malloc(sizeof(double) * (para->p + 2));
-    double *one_v = malloc(sizeof(double) * (para->p + 2));
-    for (int i = 0; i < para->p + 2; i++) {
-        zero_v[i] = 0.0;
-        one_v[i] = 1.0;
-    }
-    double *x_train = para->x_tr;
-    double *y_train = para->y_tr;
-
-    // start of the algorithm
-    double sr = para->para_r;
-    double sc = para->para_xi;
-    int n_pass = para->para_num_pass;
-    int n_dim = para->p;
-    double n_p0_ = 0.; // number of positive
-    double *n_v0_ = malloc(sizeof(double) * (n_dim + 2));
-    cblas_dcopy(n_dim + 2, zero_v, 1, n_v0_, 1);
-    double n_a_p0_ = 0.;
-    double n_g_a0_ = 0.;
-    // initial vector
-    double *n_v0 = malloc(sizeof(double) * (n_dim + 2));
-    cblas_dcopy(n_dim, one_v, 1, n_v0, 1);
-    cblas_dscal(n_dim, sqrt(sr * sr / (n_dim * 1.0)), n_v0, 1);
-    n_v0[n_dim] = sr;
-    n_v0[n_dim + 1] = sr;
-    double n_a_p0 = 2. * sr;
-    // iteration time.
-    double n_t = 1.;
-    int n_cnt = 1;
-    double *v_wt = malloc(sizeof(double) * n_dim);
-    double *v_p_dv = malloc(sizeof(double) * (n_dim + 2));
-    double *n_v1 = malloc(sizeof(double) * (n_dim + 2));
-    double *n_v1_ = malloc(sizeof(double) * (n_dim + 2));
-    double v_p_da;
-    double n_a_p1;
-    double n_a_p1_;
-    double n_p1_;
-    while (true) {
-        if (n_cnt > n_pass) {
-            break;
-        }
-        for (int j = 0; j < num_tr; j++) {
-            double *t_feat = x_train + rand_id[j] * n_dim;
-            double *t_label = y_train + rand_id[j];
-            double n_ga = sc / sqrt(n_t);
-            if (*t_label > 0) { // if it is positive case
-                n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
-                cblas_dcopy(n_dim, n_v0, 1, v_wt, 1);
-                double n_a = n_v0[n_dim];
-                cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = cblas_ddot(n_dim, v_wt, 1, t_feat, 1);
-                double weight =
-                        2. * (1. - n_p1_) * (vt_dot - n_a) - 2. * (1. + n_a_p0) * (1. - n_p1_);
-                cblas_daxpy(n_dim, weight, t_feat, 1, v_p_dv, 1);
-                v_p_dv[n_dim] = -2. * (1. - n_p1_) * (vt_dot - n_a);
-                v_p_dv[n_dim + 1] = 0.;
-                cblas_dscal(n_dim + 2, -n_ga, v_p_dv, 1);
-                cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, v_p_dv, 1);
-                v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                v_p_da = n_a_p0 + n_ga * v_p_da;
-            } else {
-                n_p1_ = ((n_t - 1.) * n_p0_) / n_t;
-                cblas_dcopy(n_dim, n_v0, 1, v_wt, 1);
-                double n_b = n_v0[n_dim + 1];
-                cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = cblas_ddot(n_dim, v_wt, 1, t_feat, 1);
-                double weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
-                cblas_daxpy(n_dim, weight, t_feat, 1, v_p_dv, 1);
-                v_p_dv[n_dim] = 0.;
-                v_p_dv[n_dim + 1] = -2. * n_p1_ * (vt_dot - n_b);
-                cblas_dscal(n_dim + 2, -n_ga, v_p_dv, 1);
-                cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, v_p_dv, 1);
-                v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                v_p_da = n_a_p0 + n_ga * v_p_da;
-            }
-            // normalization -- the projection step.
-            double n_rv = sqrt(cblas_ddot(n_dim, v_p_dv, 1, v_p_dv, 1));
-            if (n_rv > sr) {
-                cblas_dscal(n_dim, 1. / n_rv * sr, v_p_dv, 1);
-            }
-            if (v_p_dv[n_dim] > sr) {
-                v_p_dv[n_dim] = sr;
-            }
-            if (v_p_dv[n_dim + 1] > sr) {
-                v_p_dv[n_dim + 1] = sr;
-            }
-            //----- sparse projection step
-            _hard_thresholding(v_p_dv, n_dim, para->para_s);
-            //----- sparse projection step
-            cblas_dcopy(n_dim + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
-            double n_ra = fabs(v_p_da);
-            if (n_ra > 2. * sr) {
-                n_a_p1 = v_p_da / n_ra * (2. * sr);
-            } else {
-                n_a_p1 = v_p_da;
-            }
-            // update gamma_
-            double n_g_a1_ = n_g_a0_ + n_ga;
-            // update v_
-            cblas_dcopy(n_dim + 2, n_v0, 1, n_v1_, 1);
-            cblas_dscal(n_dim + 2, n_ga / n_g_a1_, n_v1_, 1);
-            cblas_daxpy(n_dim + 2, n_g_a0_ / n_g_a1_, n_v0_, 1, n_v1_, 1);
-            // update alpha_
-            n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
-            // update the information
-            n_p0_ = n_p1_;
-            cblas_dcopy(n_dim + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
-            n_a_p0_ = n_a_p1_;
-            n_g_a0_ = n_g_a1_;
-            cblas_dcopy(n_dim + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
-            n_a_p0 = n_a_p1;
-            // update the counts
-            n_t = n_t + 1.;
-        }
-        n_cnt += 1;
-    }
-    cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
-    results->a = n_v1_[n_dim];
-    results->b = n_v1_[n_dim + 1];
-    free(n_v1_);
-    free(n_v1);
-    free(n_v0);
-    free(n_v0_);
-    free(v_p_dv);
-    free(v_wt);
-    free(one_v);
-    free(zero_v);
-    return true;
-}
-
-bool algo_stoht_am_sparse(stoht_am_sparse_para *para, stoht_am_results *results) {
-
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
-    int *rand_id = para->para_rand_ind;
-    int num_tr = para->num_tr;
-    double *zero_v = malloc(sizeof(double) * (para->p + 2));
-    double *one_v = malloc(sizeof(double) * (para->p + 2));
-    for (int i = 0; i < para->p + 2; i++) {
-        zero_v[i] = 0.0;
-        one_v[i] = 1.0;
-    }
-    int *x_train_indices = para->x_tr_indices;
-    double *x_train_values = para->x_tr_values;
-    double *y_train = para->y_tr;
-
-    // start of the algorithm
-    double sr = para->para_r;
-    double sc = para->para_xi;
-    int n_pass = para->para_num_pass;
-    int n_dim = para->p;
-    double n_p0_ = 0.; // number of positive
-    double *n_v0_ = malloc(sizeof(double) * (n_dim + 2));
-    cblas_dcopy(n_dim + 2, zero_v, 1, n_v0_, 1);
-    double n_a_p0_ = 0.;
-    double n_g_a0_ = 0.;
-    // initial vector
-    double *n_v0 = malloc(sizeof(double) * (n_dim + 2));
-    cblas_dcopy(n_dim, one_v, 1, n_v0, 1);
-    cblas_dscal(n_dim, sqrt(sr * sr / (n_dim * 1.0)), n_v0, 1);
-    n_v0[n_dim] = sr;
-    n_v0[n_dim + 1] = sr;
-    // printf("n_v0: %.4f\n", sqrt(cblas_ddot(n_dim + 2, n_v0, 1, n_v0, 1)));
-    double n_a_p0 = 2. * sr;
-    // iteration time.
-    double n_t = 1.;
-    int n_cnt = 1;
-    double *v_wt = malloc(sizeof(double) * n_dim);
-    double *v_p_dv = malloc(sizeof(double) * (n_dim + 2));
-    double *n_v1 = malloc(sizeof(double) * (n_dim + 2));
-    double *n_v1_ = malloc(sizeof(double) * (n_dim + 2));
-    double *block_grad_v = malloc(sizeof(double) * (n_dim + 2));
-    double v_p_da;
-    double n_a_p1;
-    double n_a_p1_;
-    double n_p1_ = n_p0_;
-    int block_size = 1;
-    while (true) {
-        if (n_cnt > n_pass) {
-            break;
-        }
-        for (int j = 0; j < num_tr / block_size; j++) {
-            int *t_feat_indices = x_train_indices + j * para->max_nonzero * block_size;
-            double *t_feat_values = x_train_values + j * para->max_nonzero * block_size;
-            double n_ga = sc / sqrt(n_t);
-
-            cblas_dcopy(n_dim, n_v0, 1, v_wt, 1);
-
-            // update gradient
-            cblas_dcopy(n_dim + 2, zero_v, 1, block_grad_v, 1);
-            double block_grad_alpha = 0.0;
-            for (int jj = 0; jj < block_size; jj++) {
-                double *cur_label = y_train + j * block_size + jj;
-                int *cur_indices = t_feat_indices + para->max_nonzero * jj;
-                double *cur_values = t_feat_values + para->max_nonzero * jj;
-                int s_len = cur_indices[0];
-                double vt_dot = _sparse_dot(cur_indices + 1, cur_values + 1, s_len, v_wt);
-                double weight;
-                if (*cur_label > 0) {
-                    cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
-                    n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
-                    double n_a = n_v0[n_dim];
-                    weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
-                    weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
-                    // gradient of w
-                    _sparse_cblas_daxpy(cur_indices + 1, cur_values + 1, s_len, weight, v_p_dv);
-                    // gradient of a
-                    v_p_dv[n_dim] = -2. * (1. - n_p1_) * (vt_dot - n_a);
-                    // gradient of b
-                    v_p_dv[n_dim + 1] = 0.;
-                    // gradient of alpha
-                    v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                    if (false) {
-                        printf("posi v_p_da: %.4f vt_dot: %.4f n_p1_:%.4f n_a_p0: %.4f n_t: %.4f,"
-                               "weight: %.4f ||v||: %.4f na: %.4f\n",
-                               v_p_da, vt_dot, n_p1_, n_a_p0, n_t, weight,
-                               sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)), n_a);
-                    }
-                } else {
-                    cblas_dcopy(n_dim + 2, zero_v, 1, v_p_dv, 1);
-                    n_p1_ = ((n_t - 1.) * n_p0_) / n_t;
-                    double n_b = n_v0[n_dim + 1];
-                    weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
-                    // gradient of w
-                    if (false) {
-                        printf("s_len: %d, cur_indices: %d cur_values: %.4f, ||v||: %.4f \n",
-                               s_len, *(cur_indices + 1), *(cur_values + 1),
-                               sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
-                    }
-                    _sparse_cblas_daxpy(cur_indices + 1, cur_values + 1, s_len, weight, v_p_dv);
-                    if (false) {
-                        printf("s_len: %d, cur_indices: %d cur_values: %.4f, ||v||: %.4f \n",
-                               s_len, *(cur_indices + 1), *(cur_values + 1),
-                               sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
-                    }
-                    // gradient of a
-                    v_p_dv[n_dim] = 0.;
-                    // gradient of b
-                    v_p_dv[n_dim + 1] = -2. * n_p1_ * (vt_dot - n_b);
-                    // gradient of alpha
-                    v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                }
-                cblas_daxpy(n_dim + 2, 1., v_p_dv, 1, block_grad_v, 1);
-                block_grad_alpha += v_p_da;
-                // update the counts
-                n_t = n_t + 1.;
-            }
-            //gradient descent step of alpha
-            cblas_dscal(n_dim + 2, -n_ga, block_grad_v, 1);
-            cblas_daxpy(n_dim + 2, 1.0, n_v0, 1, block_grad_v, 1);
-            cblas_dcopy(n_dim + 2, block_grad_v, 1, v_p_dv, 1);
-            v_p_da = n_a_p0 + n_ga * block_grad_alpha;
-            if (false) {
-                if (j % 50 == 0) {
-                    printf("lr: %.4f alpha: %.4f sr: %.4f sc:%.4f n_p1: %.4f label: %.1f, norm: %.4f\n",
-                           n_ga, v_p_da, sr, sc, n_p1_, para->y_tr[j],
-                           sqrt(cblas_ddot(n_dim + 2, v_p_dv, 1, v_p_dv, 1)));
-                }
-            }
-            // normalization -- the projection step.
-            double n_rv = sqrt(cblas_ddot(n_dim, v_p_dv, 1, v_p_dv, 1));
-            if (n_rv > sr) {
-                cblas_dscal(n_dim, 1. / n_rv * sr, v_p_dv, 1);
-            }
-            if (v_p_dv[n_dim] > sr) {
-                v_p_dv[n_dim] = sr;
-            }
-            if (v_p_dv[n_dim + 1] > sr) {
-                v_p_dv[n_dim + 1] = sr;
-            }
-
-            //----- sparse projection step
-            _hard_thresholding(v_p_dv, n_dim, para->para_s);
-            //----- sparse projection step
-
-            cblas_dcopy(n_dim + 2, v_p_dv, 1, n_v1, 1); // n_v1 = v_p_dv
-
-            double n_ra = fabs(v_p_da);
-            if (n_ra > 2. * sr) {
-                n_a_p1 = v_p_da / n_ra * (2. * sr);
-            } else {
-                n_a_p1 = v_p_da;
-            }
-
-            // update gamma_
-            double n_g_a1_ = n_g_a0_ + n_ga;
-
-            // update v_
-            cblas_dcopy(n_dim + 2, n_v0, 1, n_v1_, 1);
-            cblas_dscal(n_dim + 2, n_ga / n_g_a1_, n_v1_, 1);
-            cblas_daxpy(n_dim + 2, n_g_a0_ / n_g_a1_, n_v0_, 1, n_v1_, 1);
-
-            // update alpha_
-            n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
-
-            // update the information
-            n_p0_ = n_p1_;
-            cblas_dcopy(n_dim + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
-            n_a_p0_ = n_a_p1_;
-            n_g_a0_ = n_g_a1_;
-            cblas_dcopy(n_dim + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
-            n_a_p0 = n_a_p1;
-        }
-        n_cnt += 1;
-    }
-    cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
-    results->a = n_v1_[n_dim];
-    results->b = n_v1_[n_dim + 1];
-    free(block_grad_v);
-    free(n_v1_);
-    free(n_v1);
-    free(n_v0);
-    free(n_v0_);
-    free(v_p_dv);
-    free(v_wt);
-    free(one_v);
-    free(zero_v);
-    return true;
-}
-
-
 bool algo_da_solam_func(da_solam_para *para, da_solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
@@ -1296,5 +969,198 @@ bool algo_spam(spam_para *para, spam_results *results) {
                           para->para_num_passes, para->para_step_len, para->para_reg_opt,
                           para->verbose, results);
 
+    }
+}
+
+bool _algo_sht_am(const double *x_tr,
+                  const double *y_tr,
+                  int p,
+                  int n,
+                  double para_xi,
+                  double para_l2_reg,
+                  int para_sparsity,
+                  int para_num_passes,
+                  int para_step_len,
+                  int para_verbose,
+                  sht_am_results *results) {
+
+    // start time clock
+    double start_time = clock();
+
+    // zero vector and set it  to zero.
+    double *zero_vector = malloc(sizeof(double) * p);
+    memset(zero_vector, 0, sizeof(double) * p);
+
+    // wt --> 0.0
+    double *wt = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, wt, 1);
+    // wt_bar --> 0.0
+    double *wt_bar = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, wt_bar, 1);
+    // gradient
+    double *grad_wt = malloc(sizeof(double) * p);
+    // proxy vector
+    double *u = malloc(sizeof(double) * p);
+
+    // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=1]
+    double a_wt, *posi_x_mean = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, posi_x_mean, 1);
+    // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=-1]
+    double b_wt, *nega_x_mean = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, nega_x_mean, 1);
+    // initialize alpha_wt (initialize to zero.)
+    double alpha_wt;
+
+    // to determine a_wt, b_wt, and alpha_wt
+    double posi_t = 0.0, nega_t = 0.0;
+    for (int i = 0; i < n; i++) {
+        const double *cur_xt = x_tr + i * p;
+        double yt = y_tr[i];
+        if (yt > 0) {
+            posi_t++;
+            cblas_dscal(p, (posi_t - 1.) / posi_t, posi_x_mean, 1);
+            cblas_daxpy(p, 1. / posi_t, cur_xt, 1, posi_x_mean, 1);
+        } else {
+            nega_t++;
+            cblas_dscal(p, (nega_t - 1.) / nega_t, nega_x_mean, 1);
+            cblas_daxpy(p, 1. / nega_t, cur_xt, 1, nega_x_mean, 1);
+        }
+    }
+
+    // initialize the estimate of probability p=Pr(y=1)
+    double prob_p = posi_t / (n * 1.0);
+
+    if (para_verbose > 0) {
+        printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
+        printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",
+               sqrt(cblas_ddot(p, posi_x_mean, 1, posi_x_mean, 1)),
+               sqrt(cblas_ddot(p, nega_x_mean, 1, nega_x_mean, 1)));
+    }
+
+    // learning rate
+    double eta_t;
+
+    // initial start time is zero=1.0
+    double t = 1.0;
+
+    //intialize the results
+    results->t_index = 0;
+    results->t_eval_time = 0.0;
+
+    for (int i = 0; i < para_num_passes; i++) {
+        // for each training sample j
+        // printf("epoch: %d\n", i);
+        for (int j = 0; j < n; j++) {
+            // receive training sample zt=(xt,yt)
+            const double *cur_xt = x_tr + j * p;
+            double cur_yt = y_tr[j];
+
+            // current learning rate
+            eta_t = 2. / (para_xi * t + 1.);
+
+            // update a(wt), b(wt), and alpha(wt)
+            a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
+            b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
+            alpha_wt = b_wt - a_wt;
+
+            double weight;
+            if (cur_yt > 0) {
+                weight = 2. * (1.0 - prob_p) * (cblas_ddot(p, wt, 1, cur_xt, 1) - a_wt);
+                weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
+            } else {
+                weight = 2.0 * prob_p * (cblas_ddot(p, wt, 1, cur_xt, 1) - b_wt);
+                weight += 2.0 * (1.0 + alpha_wt) * prob_p;
+            }
+            if (para_verbose > 0) {
+                printf("cur_iter: %05d lr: %.4f a_wt: %.4f b_wt: %.4f alpha_wt: %.4f "
+                       "weight: %.4f\n", j, eta_t, a_wt, b_wt, alpha_wt, weight);
+            }
+
+            // calculate the gradient
+            cblas_dcopy(p, cur_xt, 1, grad_wt, 1);
+            cblas_dscal(p, weight, grad_wt, 1);
+
+            //gradient descent step: u= wt - eta * grad(wt)
+            cblas_dcopy(p, wt, 1, u, 1);
+            cblas_daxpy(p, -eta_t, grad_wt, 1, u, 1);
+
+            /**
+             * ell_2 regularization option proposed in the following paper:
+             *
+             * @inproceedings{singer2009efficient,
+             * title={Efficient learning using forward-backward splitting},
+             * author={Singer, Yoram and Duchi, John C},
+             * booktitle={Advances in Neural Information Processing Systems},
+             * pages={495--503},
+             * year={2009}}
+             */
+            cblas_dscal(p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
+            _hard_thresholding(u, p, para_sparsity); // k-sparse step.
+            cblas_dcopy(p, u, 1, wt, 1);
+
+            // take average of wt --> wt_bar
+            cblas_dscal(p, (t - 1.) / t, wt_bar, 1);
+            cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
+
+            // to calculate AUC score and run time
+            if (fmod(t, para_step_len) == 0.) {
+                double eval_start = clock();
+                double *y_pred = malloc(sizeof(double) * n);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                            n, p, 1., x_tr, p, wt_bar, 1, 0.0, y_pred, 1);
+                double auc = _auc_score(y_tr, y_pred, n);
+                free(y_pred);
+                double eval_time = (clock() - eval_start) / CLOCKS_PER_SEC;
+                results->t_eval_time += eval_time;
+                double run_time = (clock() - start_time) / CLOCKS_PER_SEC - results->t_eval_time;
+                results->t_run_time[results->t_index] = run_time;
+                results->t_auc[results->t_index] = auc;
+                results->t_indices[results->t_index] = i * n + j;
+                results->t_index++;
+                if (para_verbose > 0) {
+                    printf("current auc score: %.4f\n", auc);
+                }
+            }
+            // increase time
+            t++;
+        }
+    }
+    cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
+    cblas_dcopy(p, wt, 1, results->wt, 1);
+    free(nega_x_mean);
+    free(posi_x_mean);
+    free(u);
+    free(grad_wt);
+    free(wt_bar);
+    free(wt);
+    free(zero_vector);
+    return true;
+}
+
+bool _algo_sht_am_sparse(const double *x_tr_vals,
+                         const int *x_tr_indices,
+                         int x_sparse_p,
+                         const double *y_tr,
+                         int p,
+                         int n,
+                         int num_passes,
+                         double para_xi,
+                         double para_l2_reg,
+                         int sparsity,
+                         sht_am_results *results) {
+    return true;
+}
+
+bool algo_sht_am(sht_am_para *para, sht_am_results *results) {
+    if (para->is_sparse) {
+        // sparse case (for sparse data).
+        return _algo_sht_am_sparse(para->sparse_x_values, para->sparse_x_indices, para->sparse_p,
+                                   para->y_tr, para->p, para->num_tr, para->para_num_passes,
+                                   para->para_xi, para->para_l2_reg, para->para_sparsity, results);
+    } else {
+        // non-sparse case
+        return _algo_sht_am(para->x_tr, para->y_tr, para->p, para->num_tr,
+                            para->para_xi, para->para_l2_reg, para->para_sparsity,
+                            para->para_num_passes, para->para_step_len, para->verbose, results);
     }
 }
