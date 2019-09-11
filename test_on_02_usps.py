@@ -190,15 +190,16 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_passes, num_runs, k_fold = 40, 5, 5
+    num_runs, k_fold, num_tasks = 5, 5, 25
     all_para_space = []
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
-        for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
-            for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
-                para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
-                all_para_space.append(para_row)
+        for num_passes in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+            for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
+                for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
+                    para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
+                    all_para_space.append(para_row)
     # only run sub-tasks for parallel
-    num_sub_tasks = len(all_para_space) / 100
+    num_sub_tasks = len(all_para_space) / num_tasks
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
     list_tasks = all_para_space[task_start:task_end]
@@ -207,8 +208,7 @@ def run_model_selection_spam_l2():
         result = test_single_ms_spam_l2(task_para)
         list_results.append(result)
     # model selection of spam-l2
-    file_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
-    pkl.dump(list_results, open(file_name, 'wb'))
+    pkl.dump(list_results, open(data_path + 'ms_spam_l2_%02d.pkl' % task_id, 'wb'))
 
 
 def model_result_analysis():
@@ -351,10 +351,14 @@ def run_test():
         run_spam_l2_by_selected_model(id_=None, model='wt_bar', num_passes=num_passes)
 
 
-def main():
+def run_test_result():
     for i in [1, 5, 10, 20, 30, 40, 50]:
         final_result_analysis_spam_l2(i, 'wt')
         final_result_analysis_spam_l2(i, 'wt_bar')
+
+
+def main():
+    run_model_selection_spam_l2()
 
 
 if __name__ == '__main__':
