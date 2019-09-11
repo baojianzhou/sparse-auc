@@ -248,22 +248,9 @@ def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
             task_id = 1
         else:
             task_id = id_
-    num_runs, k_fold = 5, 5
-    all_para_space = []
-    for run_id, fold_id in product(range(num_runs), range(k_fold)):
-        for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
-            for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
-                para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
-                all_para_space.append(para_row)
-    # only run sub-tasks for parallel
-    num_sub_tasks = len(all_para_space) / 100
-    all_results = []
-    for i in range(100):
-        task_start, task_end = int(i) * num_sub_tasks, int(i) * num_sub_tasks + num_sub_tasks
-        f_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
-        results = pkl.load(open(f_name, 'rb'))
-        all_results.extend(results)
 
+    num_runs, k_fold = 5, 5
+    all_results = pkl.load(open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'rb'))
     # selected model
     selected_model = dict()
     for result in all_results:
@@ -319,7 +306,7 @@ def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 'result_spam_l2_%d_%d_%04d_%s.pkl' %
+    pkl.dump(re, open(data_path + 're_spam_l2_%d_%d_%04d_%s.pkl' %
                       (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
 
 
@@ -361,13 +348,13 @@ def show_graph():
 
 
 def run_test():
-    for num_passes in [1, 5, 10, 20, 30, 50]:
+    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
         run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=num_passes)
         run_spam_l2_by_selected_model(id_=None, model='wt_bar', num_passes=num_passes)
 
 
 def main():
-    run_model_selection_spam_l2()
+    run_test()
 
 
 if __name__ == '__main__':
