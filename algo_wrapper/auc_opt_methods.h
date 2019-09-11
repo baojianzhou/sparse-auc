@@ -159,8 +159,6 @@ bool algo_da_solam_func(da_solam_para *para, da_solam_results *results);
 typedef struct {
     double *x_tr;
     double *y_tr;
-    int *para_rand_ind;
-
 
     ////////////////////////////////////
     /**
@@ -196,7 +194,7 @@ typedef struct {
     double *t_run_time;
     double *t_auc;
     double t_eval_time;
-    double *t_indices;
+    int *t_indices;
     int t_index;
 } spam_results;
 

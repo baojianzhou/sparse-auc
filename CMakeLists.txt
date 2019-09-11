@@ -25,7 +25,8 @@ add_executable(test_kth_selection test_kth_selection.c
         algo_wrapper/kth_selection.c algo_wrapper/kth_selection.h)
 target_link_libraries(test_kth_selection -Wall -O3 -lm)
 
-add_executable(test_main main.c algo_wrapper/sort.h algo_wrapper/sort.c algo_wrapper/auc_opt_methods.h algo_wrapper/auc_opt_methods.c)
+add_executable(test_main main.c algo_wrapper/sort.h algo_wrapper/sort.c
+        algo_wrapper/auc_opt_methods.h algo_wrapper/auc_opt_methods.c)
 target_link_libraries(test_main python2.7 -std=c11 -Wall -Wextra -O3
         -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB}
         -lm -lpython2.7 -lopenblas -lpthread)

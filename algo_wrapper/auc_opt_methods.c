@@ -70,6 +70,57 @@ void _tpr_fpr_auc(const double *true_labels,
 }
 
 /**
+ * Calculate the AUC score.
+ * We assume true labels contain only +1,-1
+ * We also assume scores are real numbers.
+ * @param true_labels
+ * @param scores
+ * @param len
+ * @return AUC score.
+ */
+double _auc_score(const double *true_labels, const double *scores, int len) {
+    double *fpr = malloc(sizeof(double) * (len + 1));
+    double *tpr = malloc(sizeof(double) * (len + 1));
+    double num_posi = 0.0;
+    double num_nega = 0.0;
+    for (int i = 0; i < len; i++) {
+        if (true_labels[i] > 0) {
+            num_posi++;
+        } else {
+            num_nega++;
+        }
+    }
+    int *sorted_indices = malloc(sizeof(int) * len);
+    _arg_sort_descend(scores, sorted_indices, len);
+    tpr[0] = 0.0; // initial point.
+    fpr[0] = 0.0; // initial point.
+    // accumulate sum
+    for (int i = 0; i < len; i++) {
+        double cur_label = true_labels[sorted_indices[i]];
+        if (cur_label > 0) {
+            fpr[i + 1] = fpr[i];
+            tpr[i + 1] = tpr[i] + 1.0;
+        } else {
+            fpr[i + 1] = fpr[i] + 1.0;
+            tpr[i + 1] = tpr[i];
+        }
+    }
+    cblas_dscal(len, 1. / num_posi, tpr, 1);
+    cblas_dscal(len, 1. / num_nega, fpr, 1);
+    //AUC score
+    double auc = 0.0;
+    double prev = 0.0;
+    for (int i = 0; i < len; i++) {
+        auc += (tpr[i] * (fpr[i] - prev));
+        prev = fpr[i];
+    }
+    free(sorted_indices);
+    free(fpr);
+    free(tpr);
+    return auc;
+}
+
+/**
  * A full vector y dot product with a sparse vector x.
  *
  * ---
@@ -1045,23 +1096,25 @@ bool _algo_spam(const double *x_tr,
                 int para_num_passes,
                 int para_step_len,
                 int para_reg_opt,
+                int para_verbose,
                 spam_results *results) {
     // start time clock
     double start_time = clock();
 
     // zero vector and set it  to zero.
     double *zero_vector = malloc(sizeof(double) * p);
-    memset(zero_vector, 0, p * sizeof(double));
+    memset(zero_vector, 0, sizeof(double) * p);
 
-    // wt --> 0.0; wt_bar --> 0.0; gradient
+    // wt --> 0.0
     double *wt = malloc(sizeof(double) * p);
-    double *wt_bar = malloc(sizeof(double) * p);
-    double *grad_wt = malloc(sizeof(double) * p);
-    double *u = malloc(sizeof(double) * p);
-    // initialize wt
     cblas_dcopy(p, zero_vector, 1, wt, 1);
-    // initialize wt_bar
-    cblas_dcopy(p, wt, 1, wt_bar, 1);
+    // wt_bar --> 0.0
+    double *wt_bar = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, wt_bar, 1);
+    // gradient
+    double *grad_wt = malloc(sizeof(double) * p);
+    // proxy vector
+    double *u = malloc(sizeof(double) * p);
 
     // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=1]
     double a_wt, *posi_x_mean = malloc(sizeof(double) * p);
@@ -1091,12 +1144,12 @@ bool _algo_spam(const double *x_tr,
     // initialize the estimate of probability p=Pr(y=1)
     double prob_p = posi_t / (n * 1.0);
 
-    // printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
-    // printf("average norm(x0): %.4f average norm(x1): %.4f\n",           sqrt(cblas_ddot(p, x_tr, 1, x_tr, 1)),           sqrt(cblas_ddot(p, x_tr + 256, 1, x_tr + 256, 1)));
-    // printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",           sqrt(cblas_ddot(p, posi_x_mean, 1, posi_x_mean, 1)),           sqrt(cblas_ddot(p, nega_x_mean, 1, nega_x_mean, 1)));
-    // printf("");
-
-
+    if (para_verbose > 0) {
+        printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
+        printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",
+               sqrt(cblas_ddot(p, posi_x_mean, 1, posi_x_mean, 1)),
+               sqrt(cblas_ddot(p, nega_x_mean, 1, nega_x_mean, 1)));
+    }
 
     // learning rate
     double eta_t;
@@ -1124,9 +1177,6 @@ bool _algo_spam(const double *x_tr,
             b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
 
-            // printf("j: %04d eta: %.4f a: %.4f b: %.4f alpha: %.4f\n", j, eta_t, a_wt, b_wt, alpha_wt);
-
-            // calculate the weight of the gradient
             double weight;
             if (cur_yt > 0) {
                 weight = 2. * (1.0 - prob_p) * (cblas_ddot(p, wt, 1, cur_xt, 1) - a_wt);
@@ -1134,6 +1184,10 @@ bool _algo_spam(const double *x_tr,
             } else {
                 weight = 2.0 * prob_p * (cblas_ddot(p, wt, 1, cur_xt, 1) - b_wt);
                 weight += 2.0 * (1.0 + alpha_wt) * prob_p;
+            }
+            if (para_verbose > 0) {
+                printf("cur_iter: %05d lr: %.4f a_wt: %.4f b_wt: %.4f alpha_wt: %.4f "
+                       "weight: %.4f\n", j, eta_t, a_wt, b_wt, alpha_wt, weight);
             }
 
             // calculate the gradient
@@ -1183,26 +1237,21 @@ bool _algo_spam(const double *x_tr,
             // to calculate AUC score and run time
             if (fmod(t, para_step_len) == 0.) {
                 double eval_start = clock();
-                double *tpr = malloc(sizeof(double) * (n + 1));
-                double *fpr = malloc(sizeof(double) * (n + 1));
-                double *auc, auc_score = 0.0;
-                auc = &auc_score;
                 double *y_pred = malloc(sizeof(double) * n);
-                cblas_dgemv(CblasRowMajor, CblasNoTrans, n, p, 1., x_tr, p, wt_bar, 1, 0.0, y_pred, 1);
-                // printf("norm(y_pred): %.4f\n", sqrt(cblas_ddot(p, y_pred, 1, y_pred, 1)));
-
-                _tpr_fpr_auc(y_tr, y_pred, n, tpr, fpr, auc);
-                free(tpr);
-                free(fpr);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                            n, p, 1., x_tr, p, wt_bar, 1, 0.0, y_pred, 1);
+                double auc = _auc_score(y_tr, y_pred, n);
                 free(y_pred);
                 double eval_time = (clock() - eval_start) / CLOCKS_PER_SEC;
                 results->t_eval_time += eval_time;
                 double run_time = (clock() - start_time) / CLOCKS_PER_SEC - results->t_eval_time;
                 results->t_run_time[results->t_index] = run_time;
-                results->t_auc[results->t_index] = auc_score;
+                results->t_auc[results->t_index] = auc;
                 results->t_indices[results->t_index] = i * n + j;
                 results->t_index++;
-                // printf("current auc score: %.4f\n", auc_score);
+                if (para_verbose > 0) {
+                    printf("current auc score: %.4f\n", auc);
+                }
             }
             // increase time
             t++;
@@ -1244,7 +1293,8 @@ bool algo_spam(spam_para *para, spam_results *results) {
         // non-sparse case
         return _algo_spam(para->x_tr, para->y_tr, para->p, para->num_tr,
                           para->para_xi, para->para_l1_reg, para->para_l2_reg,
-                          para->para_num_passes, para->para_step_len, para->para_reg_opt, results);
+                          para->para_num_passes, para->para_step_len, para->para_reg_opt,
+                          para->verbose, results);
 
     }
 }

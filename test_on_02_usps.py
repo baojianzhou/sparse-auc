@@ -173,7 +173,7 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_sub_tasks, num_passes = 30, 50
+    num_sub_tasks, num_passes = 33, 50
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
     list_tasks = get_run_fold_index_by_task_id('spam', task_start, task_end)

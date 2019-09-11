@@ -288,28 +288,32 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
                           &para->para_step_len,
                           &para->is_sparse,
                           &para->verbose)) { return NULL; }
+
     para->num_tr = (int) x_tr_->dimensions[0];
     para->p = (int) x_tr_->dimensions[1];
     para->x_tr = (double *) PyArray_DATA(x_tr_);
     para->y_tr = (double *) PyArray_DATA(y_tr_);
     spam_results *result = malloc(sizeof(spam_results));
 
-    // printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
-
-    // printf("num_passes: %d step_len: %d\n",           para->para_num_passes, para->para_step_len);
-
-    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len
-                         + para->para_num_passes;
-    // printf("num_eval: %d\n", total_num_eval);
+    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
     result->t_eval_time = 0.0;
     result->wt = malloc(sizeof(double) * para->p);
     result->wt_bar = malloc(sizeof(double) * para->p);
-    result->t_indices = malloc(sizeof(int) * total_num_eval);
     result->t_run_time = malloc(sizeof(double) * total_num_eval);
     result->t_auc = malloc(sizeof(double) * total_num_eval);
+    result->t_indices = malloc(sizeof(int) * total_num_eval);
     result->t_index = 0;
 
     // summary of the data
+    printf("--------------------------------------------------------------\n");
+    printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
+           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
+    printf("para_xi: %04e para_l1_reg: %04e para_l2_reg: %04e\n",
+           para->para_xi, para->para_l1_reg, para->para_l2_reg);
+    printf("reg_option: %d num_passes: %d step_len: %d is_sparse: %d \n",
+           para->para_reg_opt, para->para_num_passes, para->para_step_len, para->is_sparse);
+    printf("num_eval: %d\n", total_num_eval);
+    printf("--------------------------------------------------------------\n");
 
     //call SOLAM algorithm
     algo_spam(para, result);
