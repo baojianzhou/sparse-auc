@@ -157,17 +157,6 @@ def test_single_ms_spam_l2(para):
             'run_time': run_time}
 
 
-def result_summary():
-    all_results = []
-    for task_id in range(100):
-        task_start, task_end = int(task_id) * 21, int(task_id) * 21 + 21
-        f_name = data_path + 'model_select_%04d_%04d.pkl' % (task_start, task_end)
-        results = pkl.load(open(f_name, 'rb'))
-        all_results.extend(results)
-    file_name = data_path + 'model_select_0000_2100_2.pkl'
-    pkl.dump(all_results, open(file_name, 'wb'))
-
-
 def run_model_selection_spam_l2():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -194,28 +183,30 @@ def run_model_selection_spam_l2():
     pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
 
 
-def model_result_analysis():
-    all_results = []
-    for task_id in range(100):
-        task_start, task_end = int(task_id) * 30, int(task_id) * 30 + 30
-        f_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, 50)
-        results = pkl.load(open(f_name, 'rb'))
-        all_results.extend(results)
-    results = all_results
-    max_auc_dict = dict()
-    for result in results:
-        run_id, fold_id, num_passes, para_xi, para_r = result['algo_para']
-        mean_auc = np.mean(result['list_auc'])
-        if (run_id, fold_id) not in max_auc_dict:
-            max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
-        if mean_auc > max_auc_dict[(run_id, fold_id)][0]:
-            max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
-    list_best_auc = []
-    for key in max_auc_dict:
-        print(key, max_auc_dict[key])
-        list_best_auc.append(max_auc_dict[key][0])
-    print('mean_auc: %.4f std_auc: %.4f' % (
-        float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
+def run_model_selection_sht_am():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    num_runs, k_fold, num_tasks, global_passes = 5, 5, 25, 10
+    all_para_space = []
+    for run_id, fold_id in product(range(num_runs), range(k_fold)):
+        for num_passes in [global_passes]:
+            for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
+                for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
+                    para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
+                    all_para_space.append(para_row)
+    # only run sub-tasks for parallel
+    num_sub_tasks = len(all_para_space) / num_tasks
+    task_start = int(task_id) * num_sub_tasks
+    task_end = int(task_id) * num_sub_tasks + num_sub_tasks
+    list_tasks = all_para_space[task_start:task_end]
+    list_results = []
+    for task_para in list_tasks:
+        result = test_single_ms_spam_l2(task_para)
+        list_results.append(result)
+    file_name = 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
+    pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
 
 
 def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
@@ -232,8 +223,10 @@ def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
         else:
             task_id = id_
 
-    num_runs, k_fold = 5, 5
-    all_results = pkl.load(open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'rb'))
+    all_results, num_runs, k_fold = [], 5, 5
+    for task_id in range(num_runs * k_fold):
+        f_name = root_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, num_passes)
+        all_results.extend(pkl.load(open(f_name, 'rb')))
     # selected model
     selected_model = dict()
     for result in all_results:
@@ -341,7 +334,7 @@ def run_test_result():
 
 
 def main():
-    run_model_selection_spam_l2()
+    run_model_selection_sht_am()
 
 
 if __name__ == '__main__':
