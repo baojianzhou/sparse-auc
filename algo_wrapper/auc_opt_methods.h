@@ -132,7 +132,8 @@ typedef struct {
      */
     double *sparse_x_values;
     int *sparse_x_indices;
-    int sparse_p;
+    int *sparse_x_positions;
+    int *sparse_x_len_list;
     bool is_sparse; // to check the data is sparse or not.
     ////////////////////////////////////
 

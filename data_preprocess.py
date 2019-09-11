@@ -135,4 +135,4 @@ def load_dataset(root_path, name=None):
     if name is None:
         print('Unknown dataset name')
     if name == 'realsim':
-        _load_dataset_realsim(data_path=os.path.join(root_path, '13_%s' % name))
+        return _load_dataset_realsim(data_path=os.path.join(root_path, '13_%s' % name))

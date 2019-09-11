@@ -120,6 +120,14 @@ double _auc_score(const double *true_labels, const double *scores, int len) {
     return auc;
 }
 
+void _sparse_to_full(const double *sparse_v, const int *sparse_indices,
+                     int sparse_len, double *full_v, int full_len) {
+    cblas_dscal(full_len, 0.0, full_v, 1);
+    for (int i = 0; i < sparse_len; i++) {
+        full_v[sparse_indices[i]] = sparse_v[i];
+    }
+}
+
 /**
  * A full vector y dot product with a sparse vector x.
  *
@@ -942,9 +950,10 @@ bool _algo_spam(const double *x_tr,
     return true;
 }
 
-bool _algo_spam_sparse(const double *x_tr_vals,
-                       const int *x_tr_indices,
-                       int sparse_p,
+bool _algo_spam_sparse(const double *x_values,
+                       const int *x_indices,
+                       const int *x_positions,
+                       const int *x_len_list,
                        const double *y_tr,
                        int p,
                        int n,
@@ -956,6 +965,8 @@ bool _algo_spam_sparse(const double *x_tr_vals,
                        int reg_opt,
                        int verbose,
                        spam_results *results) {
+    printf("sparse data!");
+    printf("p: %d\n", p);
     // start time clock
     double start_time = clock();
 
@@ -985,17 +996,21 @@ bool _algo_spam_sparse(const double *x_tr_vals,
 
     // to determine a_wt, b_wt, and alpha_wt
     double posi_t = 0.0, nega_t = 0.0;
+    double *full_v = malloc(sizeof(double) * p);
     for (int i = 0; i < n; i++) {
-        const double *cur_xt = x_tr + i * p;
+        // get current sample
+        const double *cur_xt = x_values + x_positions[i];
+        const int *cur_indices = x_indices + x_positions[i];
+        _sparse_to_full(cur_xt, cur_indices, x_len_list[i], full_v, p);
         double yt = y_tr[i];
         if (yt > 0) {
             posi_t++;
             cblas_dscal(p, (posi_t - 1.) / posi_t, posi_x_mean, 1);
-            cblas_daxpy(p, 1. / posi_t, cur_xt, 1, posi_x_mean, 1);
+            cblas_daxpy(p, 1. / posi_t, full_v, 1, posi_x_mean, 1);
         } else {
             nega_t++;
             cblas_dscal(p, (nega_t - 1.) / nega_t, nega_x_mean, 1);
-            cblas_daxpy(p, 1. / nega_t, cur_xt, 1, nega_x_mean, 1);
+            cblas_daxpy(p, 1. / nega_t, full_v, 1, nega_x_mean, 1);
         }
     }
 
@@ -1022,9 +1037,11 @@ bool _algo_spam_sparse(const double *x_tr_vals,
     for (int i = 0; i < num_passes; i++) {
         // for each training sample j
         // printf("epoch: %d\n", i);
+        double per_s_time = clock();
         for (int j = 0; j < n; j++) {
             // receive training sample zt=(xt,yt)
-            const double *cur_xt = x_tr + j * p;
+            const double *cur_xt = x_values + x_positions[j];
+            const int *cur_indices = x_indices + x_positions[j];
             double cur_yt = y_tr[j];
 
             // current learning rate
@@ -1036,11 +1053,12 @@ bool _algo_spam_sparse(const double *x_tr_vals,
             alpha_wt = b_wt - a_wt;
 
             double weight;
+            double dot_prod = _sparse_dot(cur_indices, cur_xt, x_len_list[j], wt);
             if (cur_yt > 0) {
-                weight = 2. * (1.0 - prob_p) * (cblas_ddot(p, wt, 1, cur_xt, 1) - a_wt);
+                weight = 2. * (1.0 - prob_p) * (dot_prod - a_wt);
                 weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
             } else {
-                weight = 2.0 * prob_p * (cblas_ddot(p, wt, 1, cur_xt, 1) - b_wt);
+                weight = 2.0 * prob_p * (dot_prod - b_wt);
                 weight += 2.0 * (1.0 + alpha_wt) * prob_p;
             }
             if (verbose > 0) {
@@ -1049,7 +1067,8 @@ bool _algo_spam_sparse(const double *x_tr_vals,
             }
 
             // calculate the gradient
-            cblas_dcopy(p, cur_xt, 1, grad_wt, 1);
+            _sparse_to_full(cur_xt, cur_indices, x_len_list[j], full_v, p);
+            cblas_dcopy(p, full_v, 1, grad_wt, 1);
             cblas_dscal(p, weight, grad_wt, 1);
 
             //gradient descent step: u= wt - eta * grad(wt)
@@ -1096,8 +1115,11 @@ bool _algo_spam_sparse(const double *x_tr_vals,
             if (fmod(t, step_len) == 0.) {
                 double eval_start = clock();
                 double *y_pred = malloc(sizeof(double) * n);
-                cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                            n, p, 1., x_tr, p, wt_bar, 1, 0.0, y_pred, 1);
+                for (int q = 0; q < n; q++) {
+                    cur_xt = x_values + x_positions[q];
+                    cur_indices = x_indices + x_positions[q];
+                    y_pred[q] = _sparse_dot(cur_indices, cur_xt, x_len_list[q], wt_bar);
+                }
                 double auc = _auc_score(y_tr, y_pred, n);
                 free(y_pred);
                 double eval_time = (clock() - eval_start) / CLOCKS_PER_SEC;
@@ -1107,16 +1129,20 @@ bool _algo_spam_sparse(const double *x_tr_vals,
                 results->t_auc[results->t_index] = auc;
                 results->t_indices[results->t_index] = i * n + j;
                 results->t_index++;
-                if (verbose > 0) {
+                if (verbose == 0) {
                     printf("current auc score: %.4f\n", auc);
                 }
             }
             // increase time
             t++;
         }
+        if (verbose > 0) {
+            printf("run time: %.4f\n", (clock() - per_s_time) / CLOCKS_PER_SEC);
+        }
     }
     cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
     cblas_dcopy(p, wt, 1, results->wt, 1);
+    free(full_v);
     free(nega_x_mean);
     free(posi_x_mean);
     free(u);
@@ -1130,7 +1156,10 @@ bool _algo_spam_sparse(const double *x_tr_vals,
 bool algo_spam(spam_para *para, spam_results *results) {
     if (para->is_sparse) {
         // sparse case (for sparse data).
-        return _algo_spam_sparse(para->sparse_x_values, para->sparse_x_indices, para->sparse_p,
+        return _algo_spam_sparse(para->sparse_x_values,
+                                 para->sparse_x_indices,
+                                 para->sparse_x_positions,
+                                 para->sparse_x_len_list,
                                  para->y_tr, para->p, para->num_tr, para->para_xi,
                                  para->para_l1_reg, para->para_l2_reg, para->para_num_passes,
                                  para->para_step_len, para->para_reg_opt, para->verbose, results);
