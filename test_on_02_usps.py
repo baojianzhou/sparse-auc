@@ -235,7 +235,7 @@ def model_result_analysis():
         float(np.mean(list_best_auc)), float(np.std(list_best_auc))))
 
 
-def run_spam_l2_by_selected_model(id_=None, model='wt'):
+def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
     """
     25 tasks to finish
     :return:
@@ -248,7 +248,7 @@ def run_spam_l2_by_selected_model(id_=None, model='wt'):
             task_id = 1
         else:
             task_id = id_
-    num_passes, num_runs, k_fold = 5, 5, 5
+    num_runs, k_fold = 5, 5
     all_para_space = []
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
         for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
@@ -267,7 +267,7 @@ def run_spam_l2_by_selected_model(id_=None, model='wt'):
     # selected model
     selected_model = dict()
     for result in all_results:
-        run_id, fold_id, num_passes, para_xi, para_beta = result['algo_para']
+        run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
         if (run_id, fold_id) not in selected_model:
             selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
@@ -365,5 +365,6 @@ def main():
 
 
 if __name__ == '__main__':
-    run_spam_l2_by_selected_model(id_=None, model='wt')
-    run_spam_l2_by_selected_model(id_=None, model='wt_bar')
+    for num_passes in [1, 5, 10, 20, 30, 50]:
+        run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=num_passes)
+        run_spam_l2_by_selected_model(id_=None, model='wt_bar', num_passes=num_passes)
