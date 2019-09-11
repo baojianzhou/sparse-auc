@@ -80,7 +80,7 @@ def get_run_fold_index_by_task_id(method, task_start, task_end):
         para_space = []
         for run_id in range(5):
             for fold_id in range(5):
-                for para_xi in np.arange(1, 101, 9, dtype=float):
+                for para_xi in np.arange(1, 61, 5, dtype=float):
                     for para_beta in 10. ** np.arange(-5, 5, 1, dtype=float):
                         para_space.append((run_id, fold_id, para_xi, para_beta))
         return para_space[task_start:task_end]
@@ -173,7 +173,7 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_sub_tasks, num_passes = 33, 50
+    num_sub_tasks, num_passes = 30, 50
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
     list_tasks = get_run_fold_index_by_task_id('spam', task_start, task_end)
@@ -188,10 +188,10 @@ def run_model_selection_spam_l2():
 
 
 def model_result_analysis():
-    results = pkl.load(open(data_path + 'model_select_0000_2100_5.pkl', 'rb'))
+    results = pkl.load(open(data_path + 'ms_spam_l2_0000_3000_50.pkl', 'rb'))
     max_auc_dict = dict()
     for result in results:
-        run_id, fold_id, para_xi, para_r = result['algo_para']
+        run_id, fold_id, num_passes, para_xi, para_r = result['algo_para']
         mean_auc = np.mean(result['list_auc'])
         if (run_id, fold_id) not in max_auc_dict:
             max_auc_dict[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_r)
@@ -342,4 +342,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    model_result_analysis()
