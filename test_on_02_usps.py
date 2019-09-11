@@ -310,18 +310,15 @@ def run_spam_l2_by_selected_model(id_=None, model='wt', num_passes=1):
                       (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
 
 
-def final_result_analysis_spam_l2():
+def final_result_analysis_spam_l2(num_passes=1, model='wt'):
     list_auc = []
     list_time = []
     for (run_id, fold_id) in product(range(5), range(5)):
-        re = pkl.load(open(data_path + 'result_spam_l2_%d_%d_passes_%02d.pkl' %
-                           (run_id, fold_id, 50), 'rb'))
-        print(re['auc'], re['run_time'])
-        list_auc.append(re['auc'])
+        re = pkl.load(open(data_path + 'result_spam_l2_%d_%d_%04d_%s.pkl' %
+                           (run_id, fold_id, num_passes, model), 'rb'))
+        list_auc.append(re['auc_%s' % model])
         list_time.append(re['run_time'])
-    print('mean: %.4f, std: %.4f' % (np.mean(list_auc), np.std(list_auc)))
-    print('total run time in aveage: %.4f run time per-iteration: %.4f' %
-          (np.mean(list_time), np.mean(list_time) / 5.))
+    print('mean: %.4f, std: %.4f' % (float(np.mean(list_auc)), float(np.std(list_auc))))
 
 
 def show_graph():
@@ -354,7 +351,9 @@ def run_test():
 
 
 def main():
-    run_test()
+    for i in [1, 5, 10, 20, 30, 40, 50]:
+        final_result_analysis_spam_l2(i, 'wt')
+        final_result_analysis_spam_l2(i, 'wt_bar')
 
 
 if __name__ == '__main__':
