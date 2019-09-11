@@ -188,12 +188,10 @@ def run_model_selection_spam_l2():
     list_tasks = get_run_fold_index_by_task_id('spam', task_start, task_end)
     list_results = []
     for task_para in list_tasks:
-        (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold) = task_para
-        result = test_single_ms_spam_l2(run_id, fold_id, para_xi, para_beta, num_passes, num_runs,
-                                        k_fold)
+        result = test_single_ms_spam_l2(task_para)
         list_results.append(result)
     # model selection of spam-l2
-    file_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
+    file_name = data_path + 'ms_spam_l2_%04d_%04d.pkl' % (task_start, task_end)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
