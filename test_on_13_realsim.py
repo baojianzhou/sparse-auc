@@ -173,10 +173,10 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, num_tasks = 5, 5, 25
+    num_runs, k_fold, num_tasks, global_passes = 5, 5, 25, 10
     all_para_space = []
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
-        for num_passes in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]:
+        for num_passes in [global_passes]:
             for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
                 for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
                     para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
@@ -190,7 +190,8 @@ def run_model_selection_spam_l2():
     for task_para in list_tasks:
         result = test_single_ms_spam_l2(task_para)
         list_results.append(result)
-    pkl.dump(list_results, open(os.path.join(root_path, 'ms_spam_l2_%02d.pkl' % task_id), 'wb'))
+    file_name = 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
+    pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
 
 
 def model_result_analysis():
