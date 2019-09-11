@@ -8,8 +8,6 @@ PYTHON_LIB=${ROOT_PATH}python-2.7.14/lib/
 FLAGS="-g -shared  -Wall -fPIC -std=c11 -O3 "
 INCLUDE="-I${PYTHON_PATH} -I${NUMPY_PATH} -I${OPENBLAS_PATH} "
 LIB="-L${OPENBLAS_LIB} -L${PYTHON_LIB} "
-SRC="algo_wrapper/main_wrapper.c algo_wrapper/algo_solam.c
-             algo_wrapper/algo_solam.h algo_wrapper/algo_sparse_solam.c
-             algo_wrapper/algo_sparse_solam.h algo_wrapper/algo_da_solam.c algo_wrapper/algo_da_solam.h
-             algo_wrapper/sort.c algo_wrapper/sort.h"
+SRC="algo_wrapper/main_wrapper.c algo_wrapper/sort.h algo_wrapper/sort.c
+             algo_wrapper/auc_opt_methods.h algo_wrapper/auc_opt_methods.c"
 gcc ${FLAGS} ${INCLUDE} ${LIB} ${SRC} -o sparse_module.so -lopenblas -lm
