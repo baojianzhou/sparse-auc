@@ -75,12 +75,12 @@ def load_dataset():
     return data
 
 
-def get_run_fold_index_by_task_id(method, task_start, task_end):
+def get_run_fold_index_by_task_id(method, task_start, task_end, num_passes, num_runs, k_fold):
     if method == 'spam':
-        num_passes, num_runs, k_fold = 1, 5, 5
+
         para_space = []
-        for run_id in range(5):
-            for fold_id in range(5):
+        for run_id in range(num_runs):
+            for fold_id in range(k_fold):
                 for para_xi in np.arange(1, 61, 5, dtype=float):
                     for para_beta in 10. ** np.arange(-5, 1, 1, dtype=float):
                         para_space.append((run_id, fold_id, para_xi, para_beta,
@@ -190,16 +190,24 @@ def run_model_selection_spam_l2():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_sub_tasks = 30
+    num_passes, num_runs, k_fold = 5, 5, 5
+    all_para_space = []
+    for run_id, fold_id in product(range(num_runs), range(k_fold)):
+        for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
+            for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
+                para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
+                all_para_space.append(para_row)
+    # only run sub-tasks for parallel
+    num_sub_tasks = len(all_para_space) / 100
     task_start = int(task_id) * num_sub_tasks
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
-    list_tasks = get_run_fold_index_by_task_id('spam', task_start, task_end)
+    list_tasks = all_para_space[task_start:task_end]
     list_results = []
     for task_para in list_tasks:
         result = test_single_ms_spam_l2(task_para)
         list_results.append(result)
     # model selection of spam-l2
-    file_name = data_path + 'ms_spam_l2_%04d_%04d.pkl' % (task_start, task_end)
+    file_name = data_path + 'ms_spam_l2_%04d_%04d_%04d.pkl' % (task_start, task_end, num_passes)
     pkl.dump(list_results, open(file_name, 'wb'))
 
 
