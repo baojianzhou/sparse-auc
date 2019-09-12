@@ -72,4 +72,29 @@ def result_summary_00_simu():
         print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
 
 
-result_summary_00_simu()
+def result_summary_13_realsim():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/13_realsim/'
+    num_runs, k_fold = 5, 5
+    auc_wt, auc_wt_bar = [], []
+    for ind in range(num_runs * k_fold):
+        for num_passes in [5]:
+            f_name = data_path + 're_spam_l2_%02d_%04d.pkl' % (ind, num_passes)
+            re = pkl.load(open(f_name, 'rb'))
+            print(re['auc_wt'])
+            auc_wt.append(re['auc_wt'])
+            auc_wt_bar.append(re['auc_wt_bar'])
+    print('%.4f %.4f %.4f %.4f ' %(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
+    global_sparsity = 2000
+    auc_wt, auc_wt_bar = [], []
+    for ind in range(num_runs * k_fold):
+        for num_passes in [5]:
+            f_name = data_path + 're_sht_am_%02d_%04d_sparsity_%04d.pkl' % \
+                     (ind, num_passes, global_sparsity)
+            re = pkl.load(open(f_name, 'rb'))
+            print(re['auc_wt'])
+            auc_wt.append(re['auc_wt'])
+            auc_wt_bar.append(re['auc_wt_bar'])
+    print('%.4f %.4f %.4f %.4f ' %(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
+
+
+result_summary_13_realsim()
