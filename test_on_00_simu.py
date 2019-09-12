@@ -368,13 +368,11 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     else:
         task_id = 1
 
-    all_results, num_runs, k_fold = [], 5, 5
-    for ind in range(num_runs * k_fold):
-        f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (ind, num_passes)
-        all_results.extend(pkl.load(open(f_name, 'rb')))
+    num_runs, k_fold = 5, 5
+    all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
     # selected model
     selected_model = dict()
-    for result in all_results:
+    for result in all_results['spam_l2'][num_passes]:
         run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
         if (run_id, fold_id) not in selected_model:
@@ -401,8 +399,8 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
                    'para_is_sparse': 0,
                    'para_step_len': 2000,
                    'para_reg_opt': 1,
-                   'data_id': 02,
-                   'data_name': '02_usps'}
+                   'data_id': 00,
+                   'data_name': '00_simu'}
     tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
     re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
@@ -428,7 +426,7 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (task_id, num_passes), 'wb'))
+    return re
 
 
 def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
@@ -477,8 +475,8 @@ def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
                    'para_is_sparse': 0,
                    'para_step_len': 2000,
                    'para_reg_opt': 1,
-                   'data_id': 02,
-                   'data_name': '02_usps'}
+                   'data_id': 00,
+                   'data_name': '00_simu'}
     tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
     re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
@@ -503,14 +501,7 @@ def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 're_sht_am_%02d_passes_%03d_sparsity_%04d.pkl' %
-                      (task_id, num_passes, global_sparsity), 'wb'))
-
-
-def run_test_result():
-    for num_passes in [1, 5]:
-        run_sht_am_by_sm(num_passes=num_passes, global_sparsity=100)
-        run_spam_l2_by_sm(num_passes=num_passes)
+    return re
 
 
 def run_model_selection():
@@ -533,8 +524,26 @@ def run_model_selection():
               'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
 
 
+def run_testing():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    results_spam_l2 = dict()
+    results_sht_am = dict()
+    for num_passes in [1, 5, 10, 15, 20, 25, 30]:
+        results_spam_l2[num_passes] = run_spam_l2_by_sm(num_passes=num_passes)
+        results_sht_am[num_passes] = dict()
+        for sparsity in [50, 100, 150, 200, 250, 300]:
+            re = run_sht_am_by_sm(num_passes=num_passes, global_sparsity=100)
+            results_sht_am[num_passes][sparsity] = re
+    file_name = 're_task_%02d.pkl' % task_id
+    pkl.dump({'spam_l2': results_spam_l2,
+              'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
+
+
 def main():
-    run_model_selection()
+    run_testing()
 
 
 if __name__ == '__main__':

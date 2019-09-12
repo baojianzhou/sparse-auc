@@ -268,16 +268,10 @@ def run_ms_sht_am():
         task_id = 0
     num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 4000
     all_para_space = []
-<<<<<<< HEAD
-    list_sparsity = [2000, 4000, 6000, 8000, 10000]
     list_xi = 10. ** np.arange(-7, -2., 1, dtype=float)
     list_beta = 10. ** np.arange(-5, 1, 1, dtype=float)
-=======
     list_passes = [global_passes]
     list_sparsity = [global_sparsity]
-    list_xi = 10. ** np.arange(-7, -2., 1, dtype=float)
-    list_beta = 10. ** np.arange(-6, 1, 1, dtype=float)
->>>>>>> 5001be8b478949724ff4b2e2b148317995f8d05d
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
         for num_passes in list_passes:
             for para_sparsity, para_xi, para_beta in product(list_sparsity, list_xi, list_beta):
