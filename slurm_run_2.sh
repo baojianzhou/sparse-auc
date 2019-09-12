@@ -7,9 +7,9 @@
 #SBATCH --job-name=sparse-run
 #SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%a.out
 #SBATCH --array=00-24
-#SBATCH --nodelist=ceashpc-03
+#SBATCH --nodelist=rhea-08
 #SBATCH --time=12:00:00
-#SBATCH --partition=ceashpc
+#SBATCH --partition=batch
 #SBATCH --mem=2G
 #SBATCH --ntasks=1
 # %A_%a notation is filled in with the master job id (%A) and the array task id (%a)

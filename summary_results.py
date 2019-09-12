@@ -3,10 +3,9 @@ import numpy as np
 import pickle as pkl
 from itertools import product
 
-data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/'
-
 
 def result_summary(num_passes):
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/'
     num_runs, k_fold = 5, 5
     all_para_space = []
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
@@ -25,5 +24,52 @@ def result_summary(num_passes):
     pkl.dump(all_results, open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'wb'))
 
 
-for i in [1, 5, 10, 20, 30, 40, 50]:
-    result_summary(i)
+def show_graph():
+    auc_matrix = np.zeros(shape=(25, 20))
+    for _ in range(100):
+        re = pkl.load(open(data_path + 'result_sht_am_%3d_passes_5.pkl' % _, 'rb'))
+        for key in re:
+            run_id, fold_id, s = key
+            auc_matrix[run_id * 5 + fold_id][s / 2000 - 1] = re[key]['auc']
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({'font.size': 14})
+    xx = ["{0:.0%}".format(_ / 55197.) for _ in np.asarray(range(2000, 40001, 2000))]
+    print(xx)
+    plt.figure(figsize=(5, 10))
+    plt.plot(range(20), np.mean(auc_matrix, axis=0), color='r', marker='D',
+             label='StoIHT+AUC')
+    plt.plot(range(20), [0.9601] * 20, color='b', marker='*', label='SOLAM')
+    plt.xticks(range(20), xx)
+    plt.ylim([0.95, 0.97])
+    plt.title('Sector Dataset')
+    plt.xlabel('Sparsity Level=k/d')
+    plt.legend()
+    plt.show()
+
+
+def result_summary_00_simu():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    num_runs, k_fold = 5, 5
+    global_sparsity = 100
+
+    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
+        auc_wt, auc_wt_bar = [], []
+        for ind in range(num_runs * k_fold):
+            f_name = data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (ind, num_passes)
+            auc_wt.append(pkl.load(open(f_name, 'rb'))['auc_wt'])
+            auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['auc_wt_bar'])
+        print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
+    print('test')
+
+    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
+
+        auc_wt, auc_wt_bar = [], []
+        for ind in range(num_runs * k_fold):
+            f_name = data_path + 're_sht_am_%02d_passes_%03d_sparsity_%04d.pkl' % \
+                     (ind, num_passes, 100)
+            auc_wt.append(pkl.load(open(f_name, 'rb'))['auc_wt'])
+            auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['auc_wt_bar'])
+        print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
+
+
+result_summary_00_simu()
