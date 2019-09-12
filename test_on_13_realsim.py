@@ -307,9 +307,8 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
             task_id = id_
 
     all_results, num_runs, k_fold = [], 5, 5
-    for task_id in range(num_runs * k_fold):
-        f_name = root_path + '13_realsim/ms_spam_l2_task_%02d_passes_%03d.pkl' % \
-                 (task_id, num_passes)
+    for ind in range(num_runs * k_fold):
+        f_name = root_path + '13_realsim/ms_spam_l2_task_%02d_passes_%03d.pkl' % (ind, num_passes)
         all_results.extend(pkl.load(open(f_name, 'rb')))
     # selected model
     selected_model = dict()
