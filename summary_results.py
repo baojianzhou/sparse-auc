@@ -29,7 +29,7 @@ def result_summary_00_simu():
     num_runs, k_fold = 5, 5
     global_sparsity = 100
 
-    for num_passes in [10, 20, 30, 40, 50]:
+    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
         auc_wt, auc_wt_bar = [], []
         for ind in range(num_runs * k_fold):
             f_name = data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (ind, num_passes)
@@ -37,7 +37,7 @@ def result_summary_00_simu():
             auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['auc_wt_bar'])
         print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
 
-    for num_passes in [10, 20, 30, 40, 50]:
+    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
         # model selection
         all_results, num_runs, k_fold = [], 5, 5
         for ind in range(num_runs * k_fold):
