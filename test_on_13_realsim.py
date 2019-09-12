@@ -441,20 +441,20 @@ def run_sht_am_by_sm(id_=None, model='wt', num_passes=1, global_sparsity=2000):
     re = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
     x_tr_values, x_tr_indices, x_tr_positions, x_tr_len_list = re
     y_tr = data['y_tr'][tr_index]
-    re = c_algo_spam_sparse(np.asarray(x_tr_values, dtype=float),
-                            np.asarray(x_tr_indices, dtype=np.int32),
-                            np.asarray(x_tr_positions, dtype=np.int32),
-                            np.asarray(x_tr_len_list, dtype=np.int32),
-                            np.asarray(y_tr, dtype=float),
-                            len(y_tr),
-                            data['p'],
-                            para_spaces['para_sparsity'],
-                            para_spaces['para_xi'],
-                            para_spaces['para_beta'],
-                            para_spaces['para_num_passes'],
-                            para_spaces['para_step_len'],
-                            para_spaces['para_is_sparse'],
-                            para_spaces['para_verbose'])
+    re = c_algo_sht_am_sparse(np.asarray(x_tr_values, dtype=float),
+                              np.asarray(x_tr_indices, dtype=np.int32),
+                              np.asarray(x_tr_positions, dtype=np.int32),
+                              np.asarray(x_tr_len_list, dtype=np.int32),
+                              np.asarray(y_tr, dtype=float),
+                              len(y_tr),
+                              data['p'],
+                              para_spaces['para_sparsity'],
+                              para_spaces['para_xi'],
+                              para_spaces['para_beta'],
+                              para_spaces['para_num_passes'],
+                              para_spaces['para_step_len'],
+                              para_spaces['para_is_sparse'],
+                              para_spaces['para_verbose'])
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     re = get_sub_data_by_indices(data, te_index, range(len(te_index)))
