@@ -553,13 +553,11 @@ def run_test_result():
 
 
 def main():
-    for num_passes in [10, 20, 30, 40, 50]:
+    for num_passes in [1, 5]:
         for model in ['wt', 'wt_bar']:
             run_ms_spam_l2(model=model, num_passes=num_passes)
             run_sht_am_by_sm(model=model, num_passes=num_passes)
 
 
 if __name__ == '__main__':
-    for num_passes in [1, 5]:
-        run_ms_spam_l2(num_passes)
-        run_ms_sht_am(num_passes)
+    main()
