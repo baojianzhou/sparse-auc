@@ -341,7 +341,7 @@ def run_ms_sht_am():
     num_runs, k_fold, num_tasks, global_passes = 5, 5, 25, 5
     all_para_space = []
     list_sparsity = [2000, 4000, 6000, 8000, 10000]
-    list_xi = 10. ** np.arange(-7, -2., 0.5, dtype=float)
+    list_xi = 10. ** np.arange(-7, -2., 1, dtype=float)
     list_beta = 10. ** np.arange(-5, 1, 1, dtype=float)
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
         for num_passes in [global_passes]:
@@ -355,8 +355,11 @@ def run_ms_sht_am():
     task_end = int(task_id) * num_sub_tasks + num_sub_tasks
     list_tasks = all_para_space[task_start:task_end]
     list_results = []
+    print(len(all_para_space))
     for task_para in list_tasks:
+        s_time = time.time()
         result = run_single_ms_sht_am(task_para)
+        print(time.time() - s_time)
         list_results.append(result)
     file_name = 'ms_sht_am_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
     pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
