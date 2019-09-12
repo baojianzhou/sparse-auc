@@ -453,7 +453,8 @@ def run_sht_am_by_sm(model='wt', num_passes=1):
     # selected model
     selected_model = dict()
     for result in all_results:
-        run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
+        run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = result[
+            'algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
         if (run_id, fold_id) not in selected_model:
             selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
@@ -470,6 +471,7 @@ def run_sht_am_by_sm(model='wt', num_passes=1):
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
+                   'para_sparsity': global_sparsity,
                    'para_beta': selected_para_beta,
                    'para_l1_reg': 0.0,  # no l1 regularization needed.
                    'para_xi': selected_para_xi,
