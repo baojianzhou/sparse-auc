@@ -276,7 +276,8 @@ def run_single_ms_sht_am(para):
     run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
     data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], fig_id='fig_1')
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
+                     task_id=(run_id * 5 + fold_id))
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -329,12 +330,12 @@ def run_single_ms_sht_am(para):
             'run_time': run_time}
 
 
-def run_ms_sht_am():
+def run_ms_sht_am(global_passes):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 500
+    num_runs, k_fold, global_sparsity = 5, 5, 100
     all_para_space = []
     list_sparsity = [global_sparsity]
     list_xi = 10. ** np.arange(-7, -2., .5, dtype=float)
@@ -485,7 +486,7 @@ def run_test_result():
 
 def main():
     for global_passes in [10, 20, 30, 40, 50]:
-        run_ms_spam_l2(global_passes)
+        run_ms_sht_am(global_passes)
 
 
 if __name__ == '__main__':
