@@ -513,6 +513,7 @@ def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
 def run_test_result():
     for num_passes in [1, 5]:
         run_sht_am_by_sm(num_passes=num_passes, global_sparsity=100)
+        run_spam_l2_by_sm(num_passes=num_passes)
 
 
 def run_model_selection():
