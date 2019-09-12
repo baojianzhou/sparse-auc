@@ -266,7 +266,7 @@ def run_ms_sht_am():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 2000
+    num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 4000
     all_para_space = []
     list_passes = [global_passes]
     list_sparsity = [global_sparsity]
@@ -417,7 +417,7 @@ def run_test_result():
 
 
 def main():
-    run_ms_spam_l2()
+    run_ms_sht_am()
 
 
 if __name__ == '__main__':
