@@ -18,6 +18,7 @@ try:
     try:
         from sparse_module import c_algo_spam
         from sparse_module import c_algo_spam_sparse
+        from sparse_module import c_algo_sht_am_sparse
     except ImportError:
         print('cannot find some function(s) in sparse_module')
         exit(0)
@@ -263,7 +264,7 @@ def run_single_ms_sht_am(para):
     Model selection of SPAM-l2
     :return:
     """
-    run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
+    run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
     data = load_dataset(root_path=root_path, name='realsim')
     para_spaces = {'conf_num_runs': num_runs,
@@ -271,13 +272,13 @@ def run_single_ms_sht_am(para):
                    'para_num_passes': num_passes,
                    'para_beta': para_beta,
                    'para_l1_reg': 0.0,  # no l1 regularization needed.
+                   'para_sparsity': para_sparsity,
                    'para_xi': para_xi,
                    'para_fold_id': fold_id,
                    'para_run_id': run_id,
                    'para_verbose': 0,
                    'para_is_sparse': 1,
                    'para_step_len': 400000000,
-                   'para_reg_opt': 1,
                    'data_id': 13,
                    'data_name': '13_realsim'}
     tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
@@ -291,21 +292,20 @@ def run_single_ms_sht_am(para):
         re = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
         sub_x_tr_values, sub_x_tr_indices, sub_x_tr_positions, sub_x_tr_len_list = re
         sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
-        re = c_algo_spam_sparse(np.asarray(sub_x_tr_values, dtype=float),
-                                np.asarray(sub_x_tr_indices, dtype=np.int32),
-                                np.asarray(sub_x_tr_positions, dtype=np.int32),
-                                np.asarray(sub_x_tr_len_list, dtype=np.int32),
-                                np.asarray(sub_y_tr, dtype=float),
-                                len(sub_y_tr),
-                                data['p'],
-                                para_spaces['para_xi'],
-                                para_spaces['para_l1_reg'],
-                                para_spaces['para_beta'],
-                                para_spaces['para_reg_opt'],
-                                para_spaces['para_num_passes'],
-                                para_spaces['para_step_len'],
-                                para_spaces['para_is_sparse'],
-                                para_spaces['para_verbose'])
+        re = c_algo_sht_am_sparse(np.asarray(sub_x_tr_values, dtype=float),
+                                  np.asarray(sub_x_tr_indices, dtype=np.int32),
+                                  np.asarray(sub_x_tr_positions, dtype=np.int32),
+                                  np.asarray(sub_x_tr_len_list, dtype=np.int32),
+                                  np.asarray(sub_y_tr, dtype=float),
+                                  len(sub_y_tr),
+                                  data['p'],
+                                  para_spaces['para_sparsity'],
+                                  para_spaces['para_xi'],
+                                  para_spaces['para_beta'],
+                                  para_spaces['para_num_passes'],
+                                  para_spaces['para_step_len'],
+                                  para_spaces['para_is_sparse'],
+                                  para_spaces['para_verbose'])
         wt = np.asarray(re[0])
         wt_bar = np.asarray(re[1])
         re = get_sub_data_by_indices(data, tr_index, sub_te_ind)
@@ -338,14 +338,17 @@ def run_ms_sht_am():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, num_tasks, global_passes = 5, 5, 25, 10
+    num_runs, k_fold, num_tasks, global_passes = 5, 5, 25, 5
     all_para_space = []
+    list_sparsity = [2000, 4000, 6000, 8000, 10000]
+    list_xi = 10. ** np.arange(-7, -2., 0.5, dtype=float)
+    list_beta = 10. ** np.arange(-5, 1, 1, dtype=float)
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
         for num_passes in [global_passes]:
-            for para_xi in 10. ** np.arange(-7, -2., 0.5, dtype=float):
-                for para_beta in 10. ** np.arange(-5, 1, 1, dtype=float):
-                    para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
-                    all_para_space.append(para_row)
+            for para_sparsity, para_xi, para_beta in product(list_sparsity, list_xi, list_beta):
+                para_row = (run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes,
+                            num_runs, k_fold)
+                all_para_space.append(para_row)
     # only run sub-tasks for parallel
     num_sub_tasks = len(all_para_space) / num_tasks
     task_start = int(task_id) * num_sub_tasks
@@ -355,7 +358,7 @@ def run_ms_sht_am():
     for task_para in list_tasks:
         result = run_single_ms_sht_am(task_para)
         list_results.append(result)
-    file_name = 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
+    file_name = 'ms_sht_am_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
     pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
 
 

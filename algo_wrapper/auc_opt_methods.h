@@ -201,7 +201,8 @@ typedef struct {
      */
     double *sparse_x_values;
     int *sparse_x_indices;
-    int sparse_p;
+    int *sparse_x_positions;
+    int *sparse_x_len_list;
     bool is_sparse; // to check the data is sparse or not.
     ////////////////////////////////////
 
@@ -213,7 +214,6 @@ typedef struct {
     int para_sparsity; // the para_sparsity parameter
     int para_num_passes; // number of epochs of the processing. default is one.
     int para_step_len;
-    int para_reg_opt; // option of regularization: 0: l2^2 1: l1/l2 mixed norm.
     int verbose;
 } sht_am_para;
 

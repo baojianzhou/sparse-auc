@@ -965,8 +965,6 @@ bool _algo_spam_sparse(const double *x_values,
                        int reg_opt,
                        int verbose,
                        spam_results *results) {
-    printf("sparse data!");
-    printf("p: %d\n", p);
     // start time clock
     double start_time = clock();
 
@@ -1337,26 +1335,212 @@ bool _algo_sht_am(const double *x_tr,
     return true;
 }
 
-bool _algo_sht_am_sparse(const double *x_tr_vals,
-                         const int *x_tr_indices,
-                         int x_sparse_p,
+
+bool _algo_sht_am_sparse(const double *x_values,
+                         const int *x_indices,
+                         const int *x_positions,
+                         const int *x_len_list,
                          const double *y_tr,
                          int p,
                          int n,
-                         int num_passes,
+                         int para_sparsity,
                          double para_xi,
                          double para_l2_reg,
-                         int sparsity,
+                         int num_passes,
+                         int step_len,
+                         int verbose,
                          sht_am_results *results) {
+    // start time clock
+    double start_time = clock();
+
+    // zero vector and set it  to zero.
+    double *zero_vector = malloc(sizeof(double) * p);
+    memset(zero_vector, 0, sizeof(double) * p);
+
+    // wt --> 0.0
+    double *wt = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, wt, 1);
+    // wt_bar --> 0.0
+    double *wt_bar = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, wt_bar, 1);
+    // gradient
+    double *grad_wt = malloc(sizeof(double) * p);
+    // proxy vector
+    double *u = malloc(sizeof(double) * p);
+
+    // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=1]
+    double a_wt, *posi_x_mean = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, posi_x_mean, 1);
+    // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=-1]
+    double b_wt, *nega_x_mean = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, nega_x_mean, 1);
+    // initialize alpha_wt (initialize to zero.)
+    double alpha_wt;
+
+    // to determine a_wt, b_wt, and alpha_wt
+    double posi_t = 0.0, nega_t = 0.0;
+    double *full_v = malloc(sizeof(double) * p);
+    for (int i = 0; i < n; i++) {
+        // get current sample
+        const double *cur_xt = x_values + x_positions[i];
+        const int *cur_indices = x_indices + x_positions[i];
+        _sparse_to_full(cur_xt, cur_indices, x_len_list[i], full_v, p);
+        double yt = y_tr[i];
+        if (yt > 0) {
+            posi_t++;
+            cblas_dscal(p, (posi_t - 1.) / posi_t, posi_x_mean, 1);
+            cblas_daxpy(p, 1. / posi_t, full_v, 1, posi_x_mean, 1);
+        } else {
+            nega_t++;
+            cblas_dscal(p, (nega_t - 1.) / nega_t, nega_x_mean, 1);
+            cblas_daxpy(p, 1. / nega_t, full_v, 1, nega_x_mean, 1);
+        }
+    }
+
+    // initialize the estimate of probability p=Pr(y=1)
+    double prob_p = posi_t / (n * 1.0);
+
+    if (verbose > 0) {
+        printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
+        printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",
+               sqrt(cblas_ddot(p, posi_x_mean, 1, posi_x_mean, 1)),
+               sqrt(cblas_ddot(p, nega_x_mean, 1, nega_x_mean, 1)));
+    }
+
+    // learning rate
+    double eta_t;
+
+    // initial start time is zero=1.0
+    double t = 1.0;
+
+    //intialize the results
+    results->t_index = 0;
+    results->t_eval_time = 0.0;
+
+    for (int i = 0; i < num_passes; i++) {
+        // for each training sample j
+        // printf("epoch: %d\n", i);
+        double per_s_time = clock();
+        for (int j = 0; j < n; j++) {
+            // receive training sample zt=(xt,yt)
+            const double *cur_xt = x_values + x_positions[j];
+            const int *cur_indices = x_indices + x_positions[j];
+            double cur_yt = y_tr[j];
+
+            // current learning rate
+            eta_t = 2. / (para_xi * t + 1.);
+
+            // update a(wt), b(wt), and alpha(wt)
+            a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
+            b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
+            alpha_wt = b_wt - a_wt;
+
+            double weight;
+            double dot_prod = _sparse_dot(cur_indices, cur_xt, x_len_list[j], wt);
+            if (cur_yt > 0) {
+                weight = 2. * (1.0 - prob_p) * (dot_prod - a_wt);
+                weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
+            } else {
+                weight = 2.0 * prob_p * (dot_prod - b_wt);
+                weight += 2.0 * (1.0 + alpha_wt) * prob_p;
+            }
+            if (verbose > 0) {
+                printf("cur_iter: %05d lr: %.4f a_wt: %.4f b_wt: %.4f alpha_wt: %.4f "
+                       "weight: %.4f\n", j, eta_t, a_wt, b_wt, alpha_wt, weight);
+            }
+
+            memset(grad_wt, 0, sizeof(double) * p);
+            for (int kk = 0; kk < x_len_list[j]; kk++) {
+                grad_wt[cur_indices[kk]] = weight * cur_xt[kk];
+            }
+            if (false) {
+                // calculate the gradient
+                _sparse_to_full(cur_xt, cur_indices, x_len_list[j], full_v, p);
+                cblas_dcopy(p, full_v, 1, grad_wt, 1);
+                cblas_dscal(p, weight, grad_wt, 1);
+            }
+
+            //gradient descent step: u= wt - eta * grad(wt)
+            cblas_dcopy(p, wt, 1, u, 1);
+            cblas_daxpy(p, -eta_t, grad_wt, 1, u, 1);
+
+            /**
+             * ell_2 regularization option proposed in the following paper:
+             *
+             * @inproceedings{singer2009efficient,
+             * title={Efficient learning using forward-backward splitting},
+             * author={Singer, Yoram and Duchi, John C},
+             * booktitle={Advances in Neural Information Processing Systems},
+             * pages={495--503},
+             * year={2009}}
+             */
+            cblas_dscal(p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
+            _hard_thresholding(u, p, para_sparsity); // k-sparse step.
+            cblas_dcopy(p, u, 1, wt, 1);
+
+            // take average of wt --> wt_bar
+            cblas_dscal(p, (t - 1.) / t, wt_bar, 1);
+            cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
+
+            // to calculate AUC score and run time
+            if (fmod(t, step_len) == 0.) {
+                double eval_start = clock();
+                double *y_pred = malloc(sizeof(double) * n);
+                for (int q = 0; q < n; q++) {
+                    cur_xt = x_values + x_positions[q];
+                    cur_indices = x_indices + x_positions[q];
+                    y_pred[q] = _sparse_dot(cur_indices, cur_xt, x_len_list[q], wt_bar);
+                }
+                double auc = _auc_score(y_tr, y_pred, n);
+                free(y_pred);
+                double eval_time = (clock() - eval_start) / CLOCKS_PER_SEC;
+                results->t_eval_time += eval_time;
+                double run_time = (clock() - start_time) / CLOCKS_PER_SEC - results->t_eval_time;
+                results->t_run_time[results->t_index] = run_time;
+                results->t_auc[results->t_index] = auc;
+                results->t_indices[results->t_index] = i * n + j;
+                results->t_index++;
+                if (verbose == 0) {
+                    printf("current auc score: %.4f\n", auc);
+                }
+            }
+            // increase time
+            t++;
+        }
+        if (verbose == 0) {
+            printf("run time: %.4f\n", (clock() - per_s_time) / CLOCKS_PER_SEC);
+        }
+    }
+    cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
+    cblas_dcopy(p, wt, 1, results->wt, 1);
+    free(full_v);
+    free(nega_x_mean);
+    free(posi_x_mean);
+    free(u);
+    free(grad_wt);
+    free(wt_bar);
+    free(wt);
+    free(zero_vector);
     return true;
 }
 
 bool algo_sht_am(sht_am_para *para, sht_am_results *results) {
     if (para->is_sparse) {
         // sparse case (for sparse data).
-        return _algo_sht_am_sparse(para->sparse_x_values, para->sparse_x_indices, para->sparse_p,
-                                   para->y_tr, para->p, para->num_tr, para->para_num_passes,
-                                   para->para_xi, para->para_l2_reg, para->para_sparsity, results);
+        return _algo_sht_am_sparse(para->sparse_x_values,
+                                   para->sparse_x_indices,
+                                   para->sparse_x_positions,
+                                   para->sparse_x_len_list,
+                                   para->y_tr,
+                                   para->p,
+                                   para->num_tr,
+                                   para->para_sparsity,
+                                   para->para_xi,
+                                   para->para_l2_reg,
+                                   para->para_num_passes,
+                                   para->para_step_len,
+                                   para->verbose,
+                                   results);
     } else {
         // non-sparse case
         return _algo_sht_am(para->x_tr, para->y_tr, para->p, para->num_tr,
