@@ -363,10 +363,19 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
                             para_spaces['para_verbose'])
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
-    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
-                           y_score=np.dot(data['x_tr'][te_index], wt))
-    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
-                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
+    re = get_sub_data_by_indices(data, te_index, range(len(te_index)))
+    x_te_values, x_te_indices, x_te_positions, x_te_len_list = re
+    y_te = data['y_tr'][te_index]
+    y_pred_wt, y_pred_wt_bar = np.zeros_like(y_te), np.zeros_like(y_te)
+    for i in range(len(te_index)):
+        cur_posi = x_te_positions[i]
+        cur_len = x_te_len_list[i]
+        cur_x = x_te_values[cur_posi:cur_posi + cur_len]
+        cur_ind = x_te_indices[cur_posi:cur_posi + cur_len]
+        y_pred_wt[i] = np.sum([cur_x[_] * wt[cur_ind[_]] for _ in range(cur_len)])
+        y_pred_wt_bar[i] = np.sum([cur_x[_] * wt_bar[cur_ind[_]] for _ in range(cur_len)])
+    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt)
+    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar)
     print('run_id, fold_id, para_xi, para_r: ',
           selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     run_time = time.time() - s_time
@@ -374,8 +383,8 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(root_path + '13_realsim/re_spam_l2_%d_%d_%04d.pkl' %
-                      (selected_run_id, selected_fold_id, num_passes), 'wb'))
+    pkl.dump(re, open(root_path + '13_realsim/re_spam_l2_%02d_%04d.pkl' %
+                      (task_id, num_passes), 'wb'))
 
 
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
