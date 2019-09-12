@@ -372,8 +372,8 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
         task_id = 1
 
     all_results, num_runs, k_fold = [], 5, 5
-    for task_id in range(num_runs * k_fold):
-        f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, num_passes)
+    for ind in range(num_runs * k_fold):
+        f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (ind, num_passes)
         all_results.extend(pkl.load(open(f_name, 'rb')))
     # selected model
     selected_model = dict()
@@ -431,8 +431,7 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 're_spam_l2_%02d_passes_%03d.pkl' %
-                      (task_id, num_passes), 'wb'))
+    pkl.dump(re, open(data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (task_id, num_passes), 'wb'))
 
 
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
