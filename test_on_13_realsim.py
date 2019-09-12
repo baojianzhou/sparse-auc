@@ -325,7 +325,7 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
-    data = load_dataset()
+    data = load_dataset(root_path=root_path, name='realsim')
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -335,23 +335,31 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
                    'para_fold_id': selected_fold_id,
                    'para_run_id': selected_run_id,
                    'para_verbose': 0,
-                   'para_is_sparse': 0,
-                   'para_step_len': 2000,
+                   'para_is_sparse': 1,
+                   'para_step_len': 400000000,
                    'para_reg_opt': 1,
-                   'data_id': 02,
-                   'data_name': '02_usps'}
+                   'data_id': 13,
+                   'data_name': '13_realsim'}
     tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
-    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                     np.asarray(data['y_tr'][tr_index], dtype=float),
-                     para_spaces['para_xi'],
-                     para_spaces['para_l1_reg'],
-                     para_spaces['para_beta'],
-                     para_spaces['para_reg_opt'],
-                     para_spaces['para_num_passes'],
-                     para_spaces['para_step_len'],
-                     para_spaces['para_is_sparse'],
-                     para_spaces['para_verbose'])
+    re = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    x_tr_values, x_tr_indices, x_tr_positions, x_tr_len_list = re
+    y_tr = data['y_tr'][tr_index]
+    re = c_algo_spam_sparse(np.asarray(x_tr_values, dtype=float),
+                            np.asarray(x_tr_indices, dtype=np.int32),
+                            np.asarray(x_tr_positions, dtype=np.int32),
+                            np.asarray(x_tr_len_list, dtype=np.int32),
+                            np.asarray(y_tr, dtype=float),
+                            len(y_tr),
+                            data['p'],
+                            para_spaces['para_xi'],
+                            para_spaces['para_l1_reg'],
+                            para_spaces['para_beta'],
+                            para_spaces['para_reg_opt'],
+                            para_spaces['para_num_passes'],
+                            para_spaces['para_step_len'],
+                            para_spaces['para_is_sparse'],
+                            para_spaces['para_verbose'])
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
@@ -365,8 +373,8 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 're_spam_l2_%d_%d_%04d_%s.pkl' %
-                      (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
+    pkl.dump(re, open(root_path + '13_realsim/re_spam_l2_%d_%d_%04d.pkl' %
+                      (selected_run_id, selected_fold_id, num_passes), 'wb'))
 
 
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
@@ -404,20 +412,12 @@ def show_graph():
     plt.show()
 
 
-def run_test():
-    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
-        run_spam_l2_by_sm(id_=None, model='wt', num_passes=num_passes)
-        run_spam_l2_by_sm(id_=None, model='wt_bar', num_passes=num_passes)
-
-
 def run_test_result():
-    for i in [1, 5, 10, 20, 30, 40, 50]:
-        final_result_analysis_spam_l2(i, 'wt')
-        final_result_analysis_spam_l2(i, 'wt_bar')
+    run_spam_l2_by_sm(None, 'wt', 5)
 
 
 def main():
-    run_ms_sht_am()
+    run_test_result()
 
 
 if __name__ == '__main__':
