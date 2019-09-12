@@ -1543,8 +1543,16 @@ bool algo_sht_am(sht_am_para *para, sht_am_results *results) {
                                    results);
     } else {
         // non-sparse case
-        return _algo_sht_am(para->x_tr, para->y_tr, para->p, para->num_tr,
-                            para->para_xi, para->para_l2_reg, para->para_sparsity,
-                            para->para_num_passes, para->para_step_len, para->verbose, results);
+        return _algo_sht_am(para->x_tr,
+                            para->y_tr,
+                            para->p,
+                            para->num_tr,
+                            para->para_xi,
+                            para->para_l2_reg,
+                            para->para_sparsity,
+                            para->para_num_passes,
+                            para->para_step_len,
+                            para->verbose,
+                            results);
     }
 }
