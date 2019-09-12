@@ -360,7 +360,7 @@ def run_ms_sht_am(global_passes):
     pkl.dump(list_results, open(os.path.join(data_path, file_name), 'wb'))
 
 
-def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
+def run_spam_l2_by_sm(model='wt', num_passes=1):
     """
     25 tasks to finish
     :return:
@@ -369,10 +369,7 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
-        if id_ is None:
-            task_id = 1
-        else:
-            task_id = id_
+        task_id = 1
 
     all_results, num_runs, k_fold = [], 5, 5
     for task_id in range(num_runs * k_fold):
@@ -393,7 +390,9 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
-    data = load_dataset()
+    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
+                     task_id=(selected_run_id * 5 + selected_fold_id))
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -433,8 +432,8 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 're_spam_l2_%d_%d_%04d_%s.pkl' %
-                      (selected_run_id, selected_fold_id, num_passes, model), 'wb'))
+    pkl.dump(re, open(data_path + 're_spam_l2_%02d_passes_%03d.pkl' %
+                      (task_id, num_passes), 'wb'))
 
 
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
@@ -472,12 +471,6 @@ def show_graph():
     plt.show()
 
 
-def run_test():
-    for num_passes in [10]:
-        run_spam_l2_by_sm(id_=None, model='wt', num_passes=num_passes)
-        run_spam_l2_by_sm(id_=None, model='wt_bar', num_passes=num_passes)
-
-
 def run_test_result():
     for i in [1, 5, 10, 20, 30, 40, 50]:
         final_result_analysis_spam_l2(i, 'wt')
@@ -485,8 +478,9 @@ def run_test_result():
 
 
 def main():
-    for global_passes in [10, 20, 30, 40, 50]:
-        run_ms_sht_am(global_passes)
+    for num_passes in [10, 20, 30, 40, 50]:
+        for model in ['wt', 'wt_bar']:
+            run_spam_l2_by_sm(model=model, num_passes=num_passes)
 
 
 if __name__ == '__main__':

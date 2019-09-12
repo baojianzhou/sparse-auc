@@ -24,16 +24,16 @@ def result_summary(num_passes):
     pkl.dump(all_results, open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'wb'))
 
 
-def result_summary_00_simu(num_passes):
+def result_summary_00_simu():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/'
     num_runs, k_fold = 5, 5
     all_results = []
-    for ind in range(num_runs * k_fold):
-        f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (ind, num_passes)
-        results = pkl.load(open(f_name, 'rb'))
-        all_results.extend(results)
-    pkl.dump(all_results, open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'wb'))
+    for num_passes in [10, 20, 30, 40, 50]:
+        for ind in range(num_runs * k_fold):
+            f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (ind, num_passes)
+            results = pkl.load(open(f_name, 'rb'))
+            all_results.extend(results)
+        pkl.dump(all_results, open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'wb'))
 
 
-for i in [10]:
-    result_summary_00_simu(i)
+result_summary_00_simu()
