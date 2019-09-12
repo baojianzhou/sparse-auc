@@ -391,8 +391,7 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
     data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
-                     task_id=(selected_run_id * 5 + selected_fold_id))
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], task_id=task_id)
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
