@@ -505,7 +505,8 @@ def run_sht_am_by_sm(model='wt', num_passes=1):
     re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
           'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
           'run_time': run_time}
-    pkl.dump(re, open(data_path + 're_sht_am_%02d_passes_%03d.pkl' % (task_id, num_passes), 'wb'))
+    pkl.dump(re, open(data_path + 're_sht_am_%02d_passes_%03d_sparsity_%04d.pkl' %
+                      (task_id, num_passes, global_sparsity), 'wb'))
 
 
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
