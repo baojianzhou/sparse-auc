@@ -186,7 +186,7 @@ def run_single_ms_spam_l2(para):
     """
     run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
-    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
+    data = load_data(width=33, height=33, num_tr=1200, noise_mu=0.0,
                      noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
                      task_id=(run_id * 5 + fold_id))
     para_spaces = {'conf_num_runs': num_runs,
@@ -264,8 +264,7 @@ def run_ms_spam_l2(global_passes):
     for task_para in list_tasks:
         result = run_single_ms_spam_l2(task_para)
         list_results.append(result)
-    file_name = 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
-    pkl.dump(list_results, open(os.path.join(data_path, file_name), 'wb'))
+    return list_results
 
 
 def run_single_ms_sht_am(para):
@@ -330,12 +329,12 @@ def run_single_ms_sht_am(para):
             'run_time': run_time}
 
 
-def run_ms_sht_am(global_passes):
+def run_ms_sht_am(global_passes, global_sparsity):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, global_sparsity = 5, 5, 100
+    num_runs, k_fold = 5, 5
     all_para_space = []
     list_sparsity = [global_sparsity]
     list_xi = 10. ** np.arange(-7, -2., .5, dtype=float)
@@ -355,9 +354,7 @@ def run_ms_sht_am(global_passes):
     for task_para in list_tasks:
         result = run_single_ms_sht_am(task_para)
         list_results.append(result)
-    file_name = 'ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
-                (task_id, global_passes, global_sparsity)
-    pkl.dump(list_results, open(os.path.join(data_path, file_name), 'wb'))
+    return list_results
 
 
 def run_spam_l2_by_sm(model='wt', num_passes=1):
@@ -517,13 +514,28 @@ def run_test_result():
 
 
 def run_model_selection():
-    for num_passes in [1, 5]:
-        for model in ['wt', 'wt_bar']:
-            run_ms_spam_l2(model=model, num_passes=num_passes)
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    results_spam_l2 = dict()
+    results_sht_am = dict()
+    for num_passes in [1, 5, 10, 15, 20, 25, 30]:
+        s_time = time.time()
+        results_spam_l2[num_passes] = run_ms_spam_l2(num_passes)
+        results_sht_am[num_passes] = dict()
+        for sparsity in [50, 100, 150, 200, 250, 300]:
+            re = run_ms_sht_am(num_passes, global_sparsity=sparsity)
+            results_sht_am[num_passes][sparsity] = re
+        print(time.time() - s_time)
+    file_name = 'ms_task_%02d.pkl' % task_id
+    pkl.dump({'spam_l2': results_spam_l2,
+              'sht_am': results_sht_am},
+             open(os.path.join(data_path, file_name), 'wb'))
 
 
 def main():
-    run_test_result()
+    run_model_selection()
 
 
 if __name__ == '__main__':

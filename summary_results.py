@@ -59,28 +59,9 @@ def result_summary_00_simu():
             auc_wt.append(pkl.load(open(f_name, 'rb'))['auc_wt'])
             auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['auc_wt_bar'])
         print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
+    print('test')
 
     for num_passes in [1, 5, 10, 20, 30, 40, 50]:
-        # model selection
-        all_results, num_runs, k_fold = [], 5, 5
-        for ind in range(num_runs * k_fold):
-            f_name = data_path + 'ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
-                     (ind, num_passes, global_sparsity)
-            all_results.extend(pkl.load(open(f_name, 'rb')))
-        for model in ['wt', 'wt_bar']:
-            selected_model = dict()
-            for result in all_results:
-                run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = \
-                    result['algo_para']
-                mean_auc = np.mean(result['list_auc_%s' % model])
-                if (run_id, fold_id) not in selected_model:
-                    selected_model[(run_id, fold_id)] = (
-                        mean_auc, run_id, fold_id, para_xi, para_beta)
-                if mean_auc > selected_model[(run_id, fold_id)][0]:
-                    selected_model[(run_id, fold_id)] = (
-                        mean_auc, run_id, fold_id, para_xi, para_beta)
-            for item in selected_model:
-                print(item, selected_model[item])
 
         auc_wt, auc_wt_bar = [], []
         for ind in range(num_runs * k_fold):
