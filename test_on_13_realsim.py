@@ -386,6 +386,101 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
                       (task_id, num_passes), 'wb'))
 
 
+def run_sht_am_by_sm(id_=None, model='wt', num_passes=1, global_sparsity=2000):
+    """
+    25 tasks to finish
+    :return:
+    """
+    s_time = time.time()
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        if id_ is None:
+            task_id = 1
+        else:
+            task_id = id_
+
+    all_results, num_runs, k_fold = [], 5, 5
+    for ind in range(num_runs * k_fold):
+        f_name = root_path + '13_realsim/ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' \
+                 % (ind, num_passes, global_sparsity)
+        all_results.extend(pkl.load(open(f_name, 'rb')))
+    # selected model
+    selected_model = dict()
+    for result in all_results:
+        run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = result[
+            'algo_para']
+        mean_auc = np.mean(result['list_auc_%s' % model])
+        if (run_id, fold_id) not in selected_model:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
+        if mean_auc > selected_model[(run_id, fold_id)][0]:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
+
+    # select run_id and fold_id by task_id
+    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
+    selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    # to test it
+    data = load_dataset(root_path=root_path, name='realsim')
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': selected_para_beta,
+                   'para_l1_reg': 0.0,  # no l1 regularization needed.
+                   'para_sparsity': global_sparsity,
+                   'para_xi': selected_para_xi,
+                   'para_fold_id': selected_fold_id,
+                   'para_run_id': selected_run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 1,
+                   'para_step_len': 400000000,
+                   'data_id': 13,
+                   'data_name': '13_realsim'}
+    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
+    re = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    x_tr_values, x_tr_indices, x_tr_positions, x_tr_len_list = re
+    y_tr = data['y_tr'][tr_index]
+    re = c_algo_spam_sparse(np.asarray(x_tr_values, dtype=float),
+                            np.asarray(x_tr_indices, dtype=np.int32),
+                            np.asarray(x_tr_positions, dtype=np.int32),
+                            np.asarray(x_tr_len_list, dtype=np.int32),
+                            np.asarray(y_tr, dtype=float),
+                            len(y_tr),
+                            data['p'],
+                            para_spaces['para_sparsity'],
+                            para_spaces['para_xi'],
+                            para_spaces['para_beta'],
+                            para_spaces['para_num_passes'],
+                            para_spaces['para_step_len'],
+                            para_spaces['para_is_sparse'],
+                            para_spaces['para_verbose'])
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    re = get_sub_data_by_indices(data, te_index, range(len(te_index)))
+    x_te_values, x_te_indices, x_te_positions, x_te_len_list = re
+    y_te = data['y_tr'][te_index]
+    y_pred_wt, y_pred_wt_bar = np.zeros_like(y_te), np.zeros_like(y_te)
+    for i in range(len(te_index)):
+        cur_posi = x_te_positions[i]
+        cur_len = x_te_len_list[i]
+        cur_x = x_te_values[cur_posi:cur_posi + cur_len]
+        cur_ind = x_te_indices[cur_posi:cur_posi + cur_len]
+        y_pred_wt[i] = np.sum([cur_x[_] * wt[cur_ind[_]] for _ in range(cur_len)])
+        y_pred_wt_bar[i] = np.sum([cur_x[_] * wt_bar[cur_ind[_]] for _ in range(cur_len)])
+    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt)
+    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar)
+    print('run_id, fold_id, para_xi, para_r: ',
+          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    run_time = time.time() - s_time
+    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
+          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+          'run_time': run_time}
+    pkl.dump(re, open(root_path + '13_realsim/re_sht_am_%02d_%04d_sparsity_%04d.pkl' %
+                      (task_id, num_passes, global_sparsity), 'wb'))
+
+
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
     list_auc = []
     list_time = []
@@ -422,7 +517,7 @@ def show_graph():
 
 
 def run_test_result():
-    run_spam_l2_by_sm(None, 'wt', 5)
+    run_sht_am_by_sm(None, 'wt', 5, 2000)
 
 
 def main():
