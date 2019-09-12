@@ -444,10 +444,11 @@ def run_sht_am_by_sm(model='wt', num_passes=1):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 1
-
+    global_sparsity = 100
     all_results, num_runs, k_fold = [], 5, 5
     for ind in range(num_runs * k_fold):
-        f_name = data_path + 'ms_sht_am_task_%02d_passes_%03d.pkl' % (ind, num_passes)
+        f_name = data_path + 'ms_sht_am_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
+                 (ind, num_passes, global_sparsity)
         all_results.extend(pkl.load(open(f_name, 'rb')))
     # selected model
     selected_model = dict()
