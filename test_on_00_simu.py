@@ -434,6 +434,79 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     pkl.dump(re, open(data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (task_id, num_passes), 'wb'))
 
 
+def run_sht_am_by_sm(model='wt', num_passes=1):
+    """
+    25 tasks to finish
+    :return:
+    """
+    s_time = time.time()
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 1
+
+    all_results, num_runs, k_fold = [], 5, 5
+    for ind in range(num_runs * k_fold):
+        f_name = data_path + 'ms_sht_am_task_%02d_passes_%03d.pkl' % (ind, num_passes)
+        all_results.extend(pkl.load(open(f_name, 'rb')))
+    # selected model
+    selected_model = dict()
+    for result in all_results:
+        run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
+        mean_auc = np.mean(result['list_auc_%s' % model])
+        if (run_id, fold_id) not in selected_model:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
+        if mean_auc > selected_model[(run_id, fold_id)][0]:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
+
+    # select run_id and fold_id by task_id
+    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
+    selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    # to test it
+    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], task_id=task_id)
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': selected_para_beta,
+                   'para_l1_reg': 0.0,  # no l1 regularization needed.
+                   'para_xi': selected_para_xi,
+                   'para_fold_id': selected_fold_id,
+                   'para_run_id': selected_run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 0,
+                   'para_step_len': 2000,
+                   'para_reg_opt': 1,
+                   'data_id': 02,
+                   'data_name': '02_usps'}
+    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
+    re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
+                       np.asarray(data['y_tr'][tr_index], dtype=float),
+                       para_spaces['para_sparsity'],
+                       para_spaces['para_xi'],
+                       para_spaces['para_beta'],
+                       para_spaces['para_num_passes'],
+                       para_spaces['para_step_len'],
+                       para_spaces['para_is_sparse'],
+                       para_spaces['para_verbose'])
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
+                           y_score=np.dot(data['x_tr'][te_index], wt))
+    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
+                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
+    print('run_id, fold_id, para_xi, para_r: ',
+          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    run_time = time.time() - s_time
+    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
+          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+          'run_time': run_time}
+    pkl.dump(re, open(data_path + 're_sht_am_%02d_passes_%03d.pkl' % (task_id, num_passes), 'wb'))
+
+
 def final_result_analysis_spam_l2(num_passes=1, model='wt'):
     list_auc = []
     list_time = []
@@ -478,7 +551,7 @@ def run_test_result():
 def main():
     for num_passes in [10, 20, 30, 40, 50]:
         for model in ['wt', 'wt_bar']:
-            run_spam_l2_by_sm(model=model, num_passes=num_passes)
+            run_sht_am_by_sm(model=model, num_passes=num_passes)
 
 
 if __name__ == '__main__':
