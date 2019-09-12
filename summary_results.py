@@ -25,15 +25,24 @@ def result_summary(num_passes):
 
 
 def result_summary_00_simu():
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/02_usps/'
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     num_runs, k_fold = 5, 5
-    all_results = []
     for num_passes in [10, 20, 30, 40, 50]:
+        auc_wt, auc_wt_bar = [], []
         for ind in range(num_runs * k_fold):
-            f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (ind, num_passes)
-            results = pkl.load(open(f_name, 'rb'))
-            all_results.extend(results)
-        pkl.dump(all_results, open(data_path + 'ms_spam_l2_passes_%04d.pkl' % num_passes, 'wb'))
+            f_name = data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (ind, num_passes)
+            auc_wt.append(pkl.load(open(f_name, 'rb'))['auc_wt'])
+            auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['auc_wt_bar'])
+        print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
+
+    for num_passes in [10, 20, 30, 40, 50]:
+        auc_wt, auc_wt_bar = [], []
+        for ind in range(num_runs * k_fold):
+            f_name = data_path + 're_sht_am_%02d_passes_%03d_sparsity_%04d.pkl' % \
+                     (ind, num_passes, 100)
+            auc_wt.append(pkl.load(open(f_name, 'rb'))['auc_wt'])
+            auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['auc_wt_bar'])
+        print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
 
 
 result_summary_00_simu()
