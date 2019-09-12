@@ -182,7 +182,7 @@ def run_ms_spam_l2():
     for task_para in list_tasks:
         result = run_single_ms_spam_l2(task_para)
         list_results.append(result)
-    file_name = '13_realsim/ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
+    file_name = 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, global_passes)
     pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
 
 
@@ -268,12 +268,11 @@ def run_ms_sht_am():
         task_id = 0
     num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 2000
     all_para_space = []
-    list_passes = [global_passes]
-    list_sparsity = [global_sparsity]
+    list_sparsity = [2000]
     list_xi = 10. ** np.arange(-7, -2., 1, dtype=float)
     list_beta = 10. ** np.arange(-6, 1, 1, dtype=float)
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
-        for num_passes in list_passes:
+        for num_passes in [global_passes]:
             for para_sparsity, para_xi, para_beta in product(list_sparsity, list_xi, list_beta):
                 para_row = (run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes,
                             num_runs, k_fold)
@@ -287,7 +286,7 @@ def run_ms_sht_am():
     for task_para in list_tasks:
         result = run_single_ms_sht_am(task_para)
         list_results.append(result)
-    file_name = '13_realsim/ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
+    file_name = 'ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
                 (task_id, global_passes, global_sparsity)
     pkl.dump(list_results, open(os.path.join(root_path, file_name), 'wb'))
 
@@ -417,7 +416,7 @@ def run_test_result():
 
 
 def main():
-    run_ms_spam_l2()
+    run_ms_sht_am()
 
 
 if __name__ == '__main__':
