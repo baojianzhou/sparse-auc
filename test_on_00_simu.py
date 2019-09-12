@@ -530,8 +530,7 @@ def run_model_selection():
         print(time.time() - s_time)
     file_name = 'ms_task_%02d.pkl' % task_id
     pkl.dump({'spam_l2': results_spam_l2,
-              'sht_am': results_sht_am},
-             open(os.path.join(data_path, file_name), 'wb'))
+              'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
 
 
 def main():
