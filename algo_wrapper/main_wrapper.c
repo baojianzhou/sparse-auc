@@ -454,13 +454,14 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
     sht_am_results *result = malloc(sizeof(sht_am_results));
 
     int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
+    result->t_index = 0;
     result->t_eval_time = 0.0;
     result->wt = malloc(sizeof(double) * para->p);
     result->wt_bar = malloc(sizeof(double) * para->p);
     result->t_run_time = malloc(sizeof(double) * total_num_eval);
     result->t_auc = malloc(sizeof(double) * total_num_eval);
     result->t_indices = malloc(sizeof(int) * total_num_eval);
-    result->t_index = 0;
+
 
     // summary of the data
     printf("--------------------------------------------------------------\n");

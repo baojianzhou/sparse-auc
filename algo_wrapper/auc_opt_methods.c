@@ -1460,7 +1460,7 @@ bool _algo_sht_am_sparse(const double *x_values,
                 cblas_dscal(p, weight, grad_wt, 1);
             }
 
-            //gradient descent step: u= wt - eta * grad(wt)
+            // gradient descent step: u= wt - eta * grad(wt)
             cblas_dcopy(p, wt, 1, u, 1);
             cblas_daxpy(p, -eta_t, grad_wt, 1, u, 1);
 
@@ -1484,6 +1484,7 @@ bool _algo_sht_am_sparse(const double *x_values,
 
             // to calculate AUC score and run time
             if (fmod(t, step_len) == 0.) {
+                printf("test!\n");
                 double eval_start = clock();
                 double *y_pred = malloc(sizeof(double) * n);
                 for (int q = 0; q < n; q++) {
