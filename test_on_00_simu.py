@@ -110,7 +110,9 @@ bench_data = {
 }
 
 
-def load_data(width, height, num_tr, noise_mu, noise_std, mu, sub_graph, fig_id):
+def load_data(width, height, num_tr, noise_mu, noise_std, mu, sub_graph, task_id):
+    if os.path.exists(data_path + 'processed_%02d.pkl' % task_id):
+        return pkl.load(open(data_path + 'processed_%02d.pkl' % task_id, 'rb'))
     p = int(width * height)
     posi_label = +1
     nega_label = -1
@@ -134,7 +136,7 @@ def load_data(width, height, num_tr, noise_mu, noise_std, mu, sub_graph, fig_id)
         x_tr[i] = x_tr[i] / np.linalg.norm(x_tr[i])
     data = {'x_tr': x_tr[:num_tr], 'y_tr': y_tr[:num_tr], 'subgraph': sub_graph, 'edges': edges,
             'weights': weis, 'mu': mu, 'noise_mu': noise_mu, 'noise_std': noise_std,
-            'fig_id': fig_id, 'p': p, 'num_runs': 5, 'num_k_fold': 5, 'n': num_tr}
+            'task_id': task_id, 'p': p, 'num_runs': 5, 'num_k_fold': 5, 'n': num_tr}
     # randomly permute the datasets 25 times for future use.
     for run_index in range(data['num_runs']):
         kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
@@ -144,6 +146,7 @@ def load_data(width, height, num_tr, noise_mu, noise_std, mu, sub_graph, fig_id)
             rand_perm = np.random.permutation(data['n'])
             data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
                                                                 'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(data_path + 'processed_%02d.pkl' % task_id, 'wb'))
     return data
 
 
@@ -184,7 +187,8 @@ def run_single_ms_spam_l2(para):
     run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
     data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], fig_id='fig_1')
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
+                     task_id=(run_id * 5 + fold_id))
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -238,12 +242,12 @@ def run_single_ms_spam_l2(para):
             'run_time': run_time}
 
 
-def run_ms_spam_l2():
+def run_ms_spam_l2(global_passes):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, global_passes = 5, 5, 10
+    num_runs, k_fold = 5, 5
     all_para_space = []
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
         for num_passes in [global_passes]:
@@ -371,7 +375,7 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
 
     all_results, num_runs, k_fold = [], 5, 5
     for task_id in range(num_runs * k_fold):
-        f_name = root_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, num_passes)
+        f_name = data_path + 'ms_spam_l2_task_%02d_passes_%03d.pkl' % (task_id, num_passes)
         all_results.extend(pkl.load(open(f_name, 'rb')))
     # selected model
     selected_model = dict()
@@ -468,7 +472,7 @@ def show_graph():
 
 
 def run_test():
-    for num_passes in [1, 5, 10, 20, 30, 40, 50]:
+    for num_passes in [10]:
         run_spam_l2_by_sm(id_=None, model='wt', num_passes=num_passes)
         run_spam_l2_by_sm(id_=None, model='wt_bar', num_passes=num_passes)
 
@@ -480,7 +484,8 @@ def run_test_result():
 
 
 def main():
-    run_ms_spam_l2()
+    for global_passes in [10, 20, 30, 40, 50]:
+        run_ms_spam_l2(global_passes)
 
 
 if __name__ == '__main__':
