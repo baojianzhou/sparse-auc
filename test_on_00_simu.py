@@ -434,7 +434,7 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     pkl.dump(re, open(data_path + 're_spam_l2_%02d_passes_%03d.pkl' % (task_id, num_passes), 'wb'))
 
 
-def run_sht_am_by_sm(model='wt', num_passes=1):
+def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
     """
     25 tasks to finish
     :return:
@@ -444,7 +444,6 @@ def run_sht_am_by_sm(model='wt', num_passes=1):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 1
-    global_sparsity = 100
     all_results, num_runs, k_fold = [], 5, 5
     for ind in range(num_runs * k_fold):
         f_name = data_path + 'ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
@@ -511,52 +510,19 @@ def run_sht_am_by_sm(model='wt', num_passes=1):
                       (task_id, num_passes, global_sparsity), 'wb'))
 
 
-def final_result_analysis_spam_l2(num_passes=1, model='wt'):
-    list_auc = []
-    list_time = []
-    for (run_id, fold_id) in product(range(5), range(5)):
-        re = pkl.load(open(data_path + 're_spam_l2_%d_%d_%04d_%s.pkl' %
-                           (run_id, fold_id, num_passes, model), 'rb'))
-        list_auc.append(re['auc_%s' % model])
-        list_time.append(re['run_time'])
-    print('num_passes: %d %s mean: %.4f, std: %.4f' %
-          (num_passes, model, float(np.mean(list_auc)), float(np.std(list_auc))))
-
-
-def show_graph():
-    auc_matrix = np.zeros(shape=(25, 20))
-    for _ in range(100):
-        re = pkl.load(open(data_path + 'result_sht_am_%3d_passes_5.pkl' % _, 'rb'))
-        for key in re:
-            run_id, fold_id, s = key
-            auc_matrix[run_id * 5 + fold_id][s / 2000 - 1] = re[key]['auc']
-    import matplotlib.pyplot as plt
-    plt.rcParams.update({'font.size': 14})
-    xx = ["{0:.0%}".format(_ / 55197.) for _ in np.asarray(range(2000, 40001, 2000))]
-    print(xx)
-    plt.figure(figsize=(5, 10))
-    plt.plot(range(20), np.mean(auc_matrix, axis=0), color='r', marker='D',
-             label='StoIHT+AUC')
-    plt.plot(range(20), [0.9601] * 20, color='b', marker='*', label='SOLAM')
-    plt.xticks(range(20), xx)
-    plt.ylim([0.95, 0.97])
-    plt.title('Sector Dataset')
-    plt.xlabel('Sparsity Level=k/d')
-    plt.legend()
-    plt.show()
-
-
 def run_test_result():
-    for i in [1, 5, 10, 20, 30, 40, 50]:
-        final_result_analysis_spam_l2(i, 'wt')
-        final_result_analysis_spam_l2(i, 'wt_bar')
+    for num_passes in [1, 5]:
+        run_sht_am_by_sm(num_passes=num_passes, global_sparsity=100)
 
 
-def main():
+def run_model_selection():
     for num_passes in [1, 5]:
         for model in ['wt', 'wt_bar']:
             run_ms_spam_l2(model=model, num_passes=num_passes)
-            run_sht_am_by_sm(model=model, num_passes=num_passes)
+
+
+def main():
+    run_test_result()
 
 
 if __name__ == '__main__':
