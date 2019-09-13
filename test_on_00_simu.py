@@ -463,7 +463,7 @@ def run_spam_elastic_net_by_sm(model, num_passes):
     all_results = pkl.load(open(data_path + 'ms_task_%02d_elastic_net.pkl' % task_id, 'rb'))
     # selected model
     selected_model = dict()
-    for result in all_results['elastic_net'][num_passes]:
+    for result in all_results['spam_elastic_net'][num_passes]:
         run_id, fold_id, para_xi, para_beta, para_l1, num_passes, num_runs, k_fold = result[
             'algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
