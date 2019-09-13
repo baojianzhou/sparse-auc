@@ -448,6 +448,79 @@ def run_ms_sht_am(global_passes, global_sparsity):
     return list_results
 
 
+def run_spam_elastic_net_by_sm(model, num_passes):
+    """
+    25 tasks to finish
+    :return:
+    """
+    s_time = time.time()
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 1
+
+    num_runs, k_fold = 5, 5
+    all_results = pkl.load(open(data_path + 'ms_task_%02d_elastic_net.pkl' % task_id, 'rb'))
+    # selected model
+    selected_model = dict()
+    for result in all_results['elastic_net'][num_passes]:
+        run_id, fold_id, para_xi, para_beta, para_l1, num_passes, num_runs, k_fold = result[
+            'algo_para']
+        mean_auc = np.mean(result['list_auc_%s' % model])
+        if (run_id, fold_id) not in selected_model:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta,para_l1)
+        if mean_auc > selected_model[(run_id, fold_id)][0]:
+            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta,para_l1)
+
+    # select run_id and fold_id by task_id
+    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
+    selected_para_xi, selected_para_beta,selected_para_l1 = selected_model[(task_id / 5, task_id % 5)][3:6]
+    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    # to test it
+    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], task_id=task_id)
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': selected_para_beta,
+                   'para_l1_reg': selected_para_l1,  # no l1 regularization needed.
+                   'para_xi': selected_para_xi,
+                   'para_fold_id': selected_fold_id,
+                   'para_run_id': selected_run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 0,
+                   'para_step_len': 2000,
+                   'para_reg_opt': 1,
+                   'data_id': 00,
+                   'data_name': '00_simu'}
+    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
+    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                     np.asarray(data['y_tr'][tr_index], dtype=float),
+                     para_spaces['para_xi'],
+                     para_spaces['para_l1_reg'],
+                     para_spaces['para_beta'],
+                     para_spaces['para_reg_opt'],
+                     para_spaces['para_num_passes'],
+                     para_spaces['para_step_len'],
+                     para_spaces['para_is_sparse'],
+                     para_spaces['para_verbose'])
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
+                           y_score=np.dot(data['x_tr'][te_index], wt))
+    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
+                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
+    print('run_id, fold_id, para_xi, para_r: ',
+          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
+    run_time = time.time() - s_time
+    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
+    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
+          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+          'run_time': run_time}
+    return re
+
+
 def run_spam_l2_by_sm(model, num_passes):
     """
     25 tasks to finish
@@ -644,8 +717,20 @@ def run_testing():
               'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
 
 
+def run_testing_elastic_net():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    results_spam_l2 = dict()
+    for num_passes in [1, 5, 10, 15, 20, 25, 30]:
+        results_spam_l2[num_passes] = run_spam_elastic_net_by_sm(model='wt', num_passes=num_passes)
+    file_name = 're_task_%02d_elastic_net.pkl' % task_id
+    pkl.dump({'spam_elastic_net': results_spam_l2}, open(os.path.join(data_path, file_name), 'wb'))
+
+
 def main():
-    run_model_selection_elastic_net()
+    run_testing_elastic_net()
 
 
 if __name__ == '__main__':
