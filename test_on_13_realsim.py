@@ -266,7 +266,7 @@ def run_ms_sht_am():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 4000
+    num_runs, k_fold, global_passes, global_sparsity = 5, 5, 5, 6000
     all_para_space = []
     list_xi = 10. ** np.arange(-7, -2., 1, dtype=float)
     list_beta = 10. ** np.arange(-5, 1, 1, dtype=float)
@@ -489,7 +489,7 @@ def run_test_result():
 
 
 def main():
-    run_test_result()
+    run_ms_sht_am()
 
 
 if __name__ == '__main__':
