@@ -51,7 +51,7 @@ def result_summary_00_simu():
     import matplotlib.pyplot as plt
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     num_runs, k_fold = 5, 5
-    passes_list = [1, 5, 10, 15, 20, 25, 30]
+    passes_list = [1, 5, 10, 15, 20]
     y, yerr = [], []
     for num_passes in passes_list:
         auc_wt, auc_wt_bar = [], []
@@ -82,9 +82,9 @@ def result_summary_00_simu():
     plt.errorbar(x=passes_list, y=y, yerr=yerr,linestyle='--', c='green', label='SPAM-L1/L2')
     plt.ylim([0.5, 1.])
 
-    for sparsity in [50, 100, 150, 200, 250, 300]:
+    for sparsity in [100, 200, 400, 800]:
         y, yerr = [], []
-        for num_passes in [1, 5, 10, 15, 20, 25, 30]:
+        for num_passes in [1, 5, 10, 15, 20]:
             auc_wt, auc_wt_bar = [], []
             for ind in range(num_runs * k_fold):
                 f_name = data_path + 're_task_%02d.pkl' % ind

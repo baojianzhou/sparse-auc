@@ -485,11 +485,11 @@ def run_sht_am_by_sm(id_=None, model='wt', num_passes=1, global_sparsity=2000):
 
 
 def run_test_result():
-    run_sht_am_by_sm(None, 'wt', 5, 4000)
+    run_sht_am_by_sm(None, 'wt', 5, 6000)
 
 
 def main():
-    run_ms_sht_am()
+    run_test_result()
 
 
 if __name__ == '__main__':
