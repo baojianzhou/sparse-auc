@@ -439,14 +439,11 @@ def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 1
-    all_results, num_runs, k_fold = [], 5, 5
-    for ind in range(num_runs * k_fold):
-        f_name = data_path + 'ms_sht_am_l2_task_%02d_passes_%03d_sparsity_%04d.pkl' % \
-                 (ind, num_passes, global_sparsity)
-        all_results.extend(pkl.load(open(f_name, 'rb')))
+    num_runs, k_fold = 5, 5
+    all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
     # selected model
     selected_model = dict()
-    for result in all_results:
+    for result in all_results['sht_am'][num_passes]:
         run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = result[
             'algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
