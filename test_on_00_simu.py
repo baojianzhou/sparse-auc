@@ -267,6 +267,97 @@ def run_ms_spam_l2(global_passes):
     return list_results
 
 
+def run_single_ms_elastic_net(para):
+    """
+    Model selection of SPAM-l2
+    :return:
+    """
+    run_id, fold_id, para_xi, para_beta, para_l1, num_passes, num_runs, k_fold = para
+    s_time = time.time()
+    data = load_data(width=33, height=33, num_tr=1200, noise_mu=0.0,
+                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
+                     task_id=(run_id * 5 + fold_id))
+    para_spaces = {'conf_num_runs': num_runs,
+                   'conf_k_fold': k_fold,
+                   'para_num_passes': num_passes,
+                   'para_beta': para_beta,
+                   'para_l1_reg': para_l1,
+                   'para_xi': para_xi,
+                   'para_fold_id': fold_id,
+                   'para_run_id': run_id,
+                   'para_verbose': 0,
+                   'para_is_sparse': 0,  # not sparse data
+                   'para_step_len': 400000,
+                   'para_reg_opt': 0,  # for elastic net
+                   'data_id': 00,
+                   'data_name': '00_simu'}
+    tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+    print('number of tr: %d number of te: %d' % (len(tr_index), len(te_index)))
+    # cross validate based on tr_index
+    list_auc_wt = np.zeros(para_spaces['conf_k_fold'])
+    list_auc_wt_bar = np.zeros(para_spaces['conf_k_fold'])
+    kf = KFold(n_splits=para_spaces['conf_k_fold'], shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+        sub_x_tr = data['x_tr'][tr_index[sub_tr_ind]]
+        sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
+        re = c_algo_spam(np.asarray(sub_x_tr, dtype=float),
+                         np.asarray(sub_y_tr, dtype=float),
+                         para_spaces['para_xi'],
+                         para_spaces['para_l1_reg'],
+                         para_spaces['para_beta'],
+                         para_spaces['para_reg_opt'],
+                         para_spaces['para_num_passes'],
+                         para_spaces['para_step_len'],
+                         para_spaces['para_is_sparse'],
+                         para_spaces['para_verbose'])
+        wt = np.asarray(re[0])
+        wt_bar = np.asarray(re[1])
+        sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+        sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+        list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+        list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+    run_time = time.time() - s_time
+    print('run_id, fold_id, para_xi, para_beta: ', run_id, fold_id, para_xi, para_beta)
+    print('list_auc_wt:', list_auc_wt)
+    print('list_auc_wt_bar:', list_auc_wt_bar)
+    print('run_time: %.4f' % run_time)
+    return {'algo_para_name_list': ['run_id', 'fold_id', 'para_xi', 'para_beta',
+                                    'num_passes', 'num_runs', 'k_fold'],
+            'algo_para': para, 'para_spaces': para_spaces,
+            'list_auc_wt': list_auc_wt,
+            'list_auc_wt_bar': list_auc_wt_bar,
+            'run_time': run_time}
+
+
+def run_ms_spam_elastic_net(global_passes):
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    num_runs, k_fold = 5, 5
+    all_para_space = []
+    for run_id, fold_id in product(range(num_runs), range(k_fold)):
+        for num_passes in [global_passes]:
+            for para_xi in 10. ** np.arange(-7, -2., .5, dtype=float):
+                for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
+                    for para_l1 in 10. ** np.arange(-6, 1, 1, dtype=float):
+                        para_row = (
+                            run_id, fold_id, para_xi, para_beta, para_l1, num_passes, num_runs,
+                            k_fold)
+                        all_para_space.append(para_row)
+    # only run sub-tasks for parallel
+    num_sub_tasks = len(all_para_space) / (num_runs * k_fold)
+    task_start = int(task_id) * num_sub_tasks
+    task_end = int(task_id) * num_sub_tasks + num_sub_tasks
+    list_tasks = all_para_space[task_start:task_end]
+    list_results = []
+    for task_para in list_tasks:
+        result = run_single_ms_elastic_net(task_para)
+        list_results.append(result)
+    return list_results
+
+
 def run_single_ms_sht_am(para):
     """
     Model selection of SPAM-l2
@@ -521,6 +612,20 @@ def run_model_selection():
               'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
 
 
+def run_model_selection_elastic_net():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    results_spam_l1 = dict()
+    for num_passes in [1, 5, 10, 15, 20, 25, 30]:
+        s_time = time.time()
+        results_spam_l1[num_passes] = run_ms_spam_elastic_net(num_passes)
+        print(time.time() - s_time)
+    file_name = 'ms_task_%02d_elastic_net.pkl' % task_id
+    pkl.dump({'spam_elastic_net': results_spam_l1}, open(os.path.join(data_path, file_name), 'wb'))
+
+
 def run_testing():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -540,7 +645,7 @@ def run_testing():
 
 
 def main():
-    run_testing()
+    run_model_selection_elastic_net()
 
 
 if __name__ == '__main__':
