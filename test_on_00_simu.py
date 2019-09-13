@@ -357,7 +357,7 @@ def run_ms_sht_am(global_passes, global_sparsity):
     return list_results
 
 
-def run_spam_l2_by_sm(model='wt', num_passes=1):
+def run_spam_l2_by_sm(model, num_passes):
     """
     25 tasks to finish
     :return:
@@ -429,7 +429,7 @@ def run_spam_l2_by_sm(model='wt', num_passes=1):
     return re
 
 
-def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
+def run_sht_am_by_sm(model, num_passes, global_sparsity):
     """
     25 tasks to finish
     :return:
@@ -529,10 +529,10 @@ def run_testing():
     results_spam_l2 = dict()
     results_sht_am = dict()
     for num_passes in [1, 5, 10, 15, 20, 25, 30]:
-        results_spam_l2[num_passes] = run_spam_l2_by_sm(num_passes=num_passes)
+        results_spam_l2[num_passes] = run_spam_l2_by_sm(model='wt', num_passes=num_passes)
         results_sht_am[num_passes] = dict()
         for sparsity in [50, 100, 150, 200, 250, 300]:
-            re = run_sht_am_by_sm(num_passes=num_passes, global_sparsity=100)
+            re = run_sht_am_by_sm(model='wt', num_passes=num_passes, global_sparsity=sparsity)
             results_sht_am[num_passes][sparsity] = re
     file_name = 're_task_%02d.pkl' % task_id
     pkl.dump({'spam_l2': results_spam_l2,
