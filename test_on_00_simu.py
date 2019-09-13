@@ -460,7 +460,7 @@ def run_spam_elastic_net_by_sm(model, num_passes):
         task_id = 1
 
     num_runs, k_fold = 5, 5
-    all_results = pkl.load(open(data_path + 'ms_task_%02d_elastic_net.pkl' % task_id, 'rb'))
+    all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
     # selected model
     selected_model = dict()
     for result in all_results['spam_elastic_net'][num_passes]:
