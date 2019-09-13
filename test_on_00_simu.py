@@ -468,13 +468,16 @@ def run_spam_elastic_net_by_sm(model, num_passes):
             'algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
         if (run_id, fold_id) not in selected_model:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta,para_l1)
+            selected_model[(run_id, fold_id)] = (
+                mean_auc, run_id, fold_id, para_xi, para_beta, para_l1)
         if mean_auc > selected_model[(run_id, fold_id)][0]:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta,para_l1)
+            selected_model[(run_id, fold_id)] = (
+                mean_auc, run_id, fold_id, para_xi, para_beta, para_l1)
 
     # select run_id and fold_id by task_id
     selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
-    selected_para_xi, selected_para_beta,selected_para_l1 = selected_model[(task_id / 5, task_id % 5)][3:6]
+    selected_para_xi, selected_para_beta, selected_para_l1 = selected_model[
+                                                                 (task_id / 5, task_id % 5)][3:6]
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
     data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
@@ -684,21 +687,9 @@ def run_model_selection():
         print(time.time() - s_time)
     file_name = 'ms_task_%02d.pkl' % task_id
     pkl.dump({'spam_l2': results_spam_l2,
-              'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
-
-
-def run_model_selection_elastic_net():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 0
-    results_spam_elastic_net = dict()
-    for num_passes in [1, 5, 10, 15, 20, 25, 30]:
-        s_time = time.time()
-        results_spam_elastic_net[num_passes] = run_ms_spam_elastic_net(num_passes)
-        print(time.time() - s_time)
-    file_name = 'ms_task_%02d_elastic_net.pkl' % task_id
-    pkl.dump({'spam_elastic_net': results_spam_elastic_net}, open(os.path.join(data_path, file_name), 'wb'))
+              'sht_am': results_sht_am,
+              'spam_elastic_net': results_elastic_net},
+             open(os.path.join(data_path, file_name), 'wb'))
 
 
 def run_testing():
