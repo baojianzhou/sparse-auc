@@ -83,6 +83,8 @@ def result_summary_00_simu():
         plt.errorbar(x=passes_list, y=y, yerr=yerr, label='HT(k=%03d)' % sparsity)
         print('\n')
     plt.legend()
+    plt.ylabel('AUC')
+    plt.xlabel('num_passes')
     plt.show()
 
 
@@ -113,4 +115,4 @@ def result_summary_13_realsim():
         np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
 
 
-result_summary_13_realsim()
+result_summary_00_simu()
