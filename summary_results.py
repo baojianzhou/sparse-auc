@@ -99,7 +99,7 @@ def result_summary_13_realsim():
             auc_wt_bar.append(re['auc_wt_bar'])
     print('%.4f %.4f %.4f %.4f ' % (
         np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
-    global_sparsity = 2000
+    global_sparsity = 4000
     auc_wt, auc_wt_bar = [], []
     for ind in range(num_runs * k_fold):
         for num_passes in [5]:
@@ -113,4 +113,4 @@ def result_summary_13_realsim():
         np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
 
 
-result_summary_00_simu()
+result_summary_13_realsim()

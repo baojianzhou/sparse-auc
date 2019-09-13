@@ -485,7 +485,7 @@ def run_sht_am_by_sm(id_=None, model='wt', num_passes=1, global_sparsity=2000):
 
 
 def run_test_result():
-    run_sht_am_by_sm(None, 'wt', 5, 2000)
+    run_sht_am_by_sm(None, 'wt', 5, 4000)
 
 
 def main():
