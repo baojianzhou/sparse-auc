@@ -443,7 +443,7 @@ def run_sht_am_by_sm(model='wt', num_passes=1, global_sparsity=100):
     all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
     # selected model
     selected_model = dict()
-    for result in all_results['sht_am'][num_passes]:
+    for result in all_results['sht_am'][num_passes][global_sparsity]:
         run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = result[
             'algo_para']
         mean_auc = np.mean(result['list_auc_%s' % model])
