@@ -67,6 +67,21 @@ def result_summary_00_simu():
     plt.errorbar(x=passes_list, y=y, yerr=yerr, c='blue', label='SPAM-L2')
     plt.ylim([0.5, 1.])
 
+    y, yerr = [], []
+    for num_passes in passes_list:
+        auc_wt, auc_wt_bar = [], []
+        for ind in range(num_runs * k_fold):
+            f_name = data_path + 're_task_%02d_elastic_net.pkl' % ind
+            auc_wt.append(pkl.load(open(f_name, 'rb'))['spam_elastic_net'][num_passes]['auc_wt'])
+            auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['spam_elastic_net'][num_passes]['auc_wt_bar'])
+        print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
+        y.append(np.mean(auc_wt))
+        yerr.append(np.std(auc_wt))
+
+    print('test')
+    plt.errorbar(x=passes_list, y=y, yerr=yerr,linestyle='--', c='green', label='SPAM-L1/L2')
+    plt.ylim([0.5, 1.])
+
     for sparsity in [50, 100, 150, 200, 250, 300]:
         y, yerr = [], []
         for num_passes in [1, 5, 10, 15, 20, 25, 30]:
