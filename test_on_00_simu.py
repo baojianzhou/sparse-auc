@@ -699,31 +699,24 @@ def run_testing():
         task_id = 0
     results_spam_l2 = dict()
     results_sht_am = dict()
+    results_elastic_net = dict()
     for num_passes in [1, 5, 10, 15, 20]:
         results_spam_l2[num_passes] = run_spam_l2_by_sm(model='wt', num_passes=num_passes)
+        results_elastic_net[num_passes] = run_spam_elastic_net_by_sm(
+            model='wt', num_passes=num_passes)
         results_sht_am[num_passes] = dict()
         for sparsity in [100, 200, 400, 800]:
             re = run_sht_am_by_sm(model='wt', num_passes=num_passes, global_sparsity=sparsity)
             results_sht_am[num_passes][sparsity] = re
     file_name = 're_task_%02d.pkl' % task_id
     pkl.dump({'spam_l2': results_spam_l2,
-              'sht_am': results_sht_am}, open(os.path.join(data_path, file_name), 'wb'))
-
-
-def run_testing_elastic_net():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 0
-    results_spam_l2 = dict()
-    for num_passes in [1, 5, 10, 15, 20, 25, 30]:
-        results_spam_l2[num_passes] = run_spam_elastic_net_by_sm(model='wt', num_passes=num_passes)
-    file_name = 're_task_%02d_elastic_net.pkl' % task_id
-    pkl.dump({'spam_elastic_net': results_spam_l2}, open(os.path.join(data_path, file_name), 'wb'))
+              'sht_am': results_sht_am,
+              'spam_elastic_net': results_elastic_net},
+             open(os.path.join(data_path, file_name), 'wb'))
 
 
 def main():
-    run_model_selection()
+    run_testing()
 
 
 if __name__ == '__main__':
