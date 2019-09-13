@@ -64,7 +64,7 @@ def result_summary_00_simu():
         yerr.append(np.std(auc_wt))
 
     print('test')
-    plt.errorbar(x=passes_list, y=y, yerr=yerr, label='SPAM-L2')
+    plt.errorbar(x=passes_list, y=y, yerr=yerr, c='blue', label='SPAM-L2')
     plt.ylim([0.5, 1.])
 
     for sparsity in [50, 100, 150, 200, 250, 300]:
@@ -78,10 +78,11 @@ def result_summary_00_simu():
                 auc_wt_bar.append(
                     pkl.load(open(f_name, 'rb'))['sht_am'][num_passes][sparsity]['auc_wt_bar'])
             print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
-            y.append(np.mean(auc_wt_bar))
+            y.append(np.mean(auc_wt))
             yerr.append(np.std(auc_wt))
-        plt.errorbar(x=passes_list, y=y, yerr=yerr, label='%03d' % sparsity)
+        plt.errorbar(x=passes_list, y=y, yerr=yerr, label='HT(k=%03d)' % sparsity)
         print('\n')
+    plt.legend()
     plt.show()
 
 
