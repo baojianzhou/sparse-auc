@@ -283,6 +283,7 @@ def _generate_dataset_simu(data_path, num_tr, task_id, mu,
 def generate_dataset():
     root_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     for task_id in range(25):
+        print('generate data: %02d' % task_id)
         _generate_dataset_simu(data_path=os.path.join(root_path, '00_%s' % 'simu'),
                                num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.1)
 
