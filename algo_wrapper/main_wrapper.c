@@ -350,10 +350,11 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
     }
     sht_am_para *para = malloc(sizeof(sht_am_para));
     PyArrayObject *x_tr_, *y_tr_;
-    if (!PyArg_ParseTuple(args, "O!O!iddiiii",
+    if (!PyArg_ParseTuple(args, "O!O!iiddiiii",
                           &PyArray_Type, &x_tr_,
                           &PyArray_Type, &y_tr_,
                           &para->para_sparsity,
+                          &para->para_b,
                           &para->para_xi,
                           &para->para_l2_reg,
                           &para->para_num_passes,
@@ -378,8 +379,8 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
 
     // summary of the data
     printf("--------------------------------------------------------------\n");
-    printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
-           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
+    printf("num_tr: %d p: %d block_size: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
+           para->num_tr, para->p, para->para_b, para->x_tr[0], para->y_tr[0]);
     printf("para_xi: %04e para_l2_reg: %04e\n", para->para_xi, para->para_l2_reg);
     printf("num_passes: %d step_len: %d is_sparse: %d \n",
            para->para_num_passes, para->para_step_len, para->is_sparse);

@@ -207,6 +207,7 @@ typedef struct {
     ////////////////////////////////////
 
     int p;
+    int para_b; // mini-batch size
     int num_tr;
     int num_classes;
     double para_xi;     // the constant factor of the step size.

@@ -853,7 +853,7 @@ bool _algo_spam(const double *x_tr,
             // current learning rate
             eta_t = 2. / (para_xi * t + 1.);
 
-            // update a(wt), b(wt), and alpha(wt)
+            // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
@@ -1045,7 +1045,7 @@ bool _algo_spam_sparse(const double *x_values,
             // current learning rate
             eta_t = 2. / (para_xi * t + 1.);
 
-            // update a(wt), b(wt), and alpha(wt)
+            // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
@@ -1174,6 +1174,7 @@ bool _algo_sht_am(const double *x_tr,
                   const double *y_tr,
                   int p,
                   int n,
+                  int b,
                   double para_xi,
                   double para_l2_reg,
                   int para_sparsity,
@@ -1192,11 +1193,14 @@ bool _algo_sht_am(const double *x_tr,
     // wt --> 0.0
     double *wt = malloc(sizeof(double) * p);
     cblas_dcopy(p, zero_vector, 1, wt, 1);
+
     // wt_bar --> 0.0
     double *wt_bar = malloc(sizeof(double) * p);
     cblas_dcopy(p, zero_vector, 1, wt_bar, 1);
+
     // gradient
     double *grad_wt = malloc(sizeof(double) * p);
+
     // proxy vector
     double *u = malloc(sizeof(double) * p);
 
@@ -1248,35 +1252,35 @@ bool _algo_sht_am(const double *x_tr,
     for (int i = 0; i < para_num_passes; i++) {
         // for each training sample j
         // printf("epoch: %d\n", i);
-        for (int j = 0; j < n; j++) {
-            // receive training sample zt=(xt,yt)
-            const double *cur_xt = x_tr + j * p;
-            double cur_yt = y_tr[j];
-
-            // current learning rate
-            eta_t = 2. / (para_xi * t + 1.);
-
-            // update a(wt), b(wt), and alpha(wt)
+        for (int j = 0; j < n / b; j++) { // n/b is the total number of blocks.
+            // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
 
-            double weight;
-            if (cur_yt > 0) {
-                weight = 2. * (1.0 - prob_p) * (cblas_ddot(p, wt, 1, cur_xt, 1) - a_wt);
-                weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
-            } else {
-                weight = 2.0 * prob_p * (cblas_ddot(p, wt, 1, cur_xt, 1) - b_wt);
-                weight += 2.0 * (1.0 + alpha_wt) * prob_p;
-            }
-            if (para_verbose > 0) {
-                printf("cur_iter: %05d lr: %.4f a_wt: %.4f b_wt: %.4f alpha_wt: %.4f "
-                       "weight: %.4f\n", j, eta_t, a_wt, b_wt, alpha_wt, weight);
-            }
+            // current learning rate
+            eta_t = 2. / (para_xi * t + 1.);
 
-            // calculate the gradient
-            cblas_dcopy(p, cur_xt, 1, grad_wt, 1);
-            cblas_dscal(p, weight, grad_wt, 1);
+            // receive a block of training samples to calculate the gradient
+            cblas_dcopy(p, zero_vector, 1, grad_wt, 1);
+            for (int kk = 0; kk < b; kk++) {
+                const double *cur_xt = x_tr + j * b * p + kk * p;
+                double cur_yt = y_tr[j * b + kk];
+                double weight;
+                if (cur_yt > 0) {
+                    weight = 2. * (1.0 - prob_p) * (cblas_ddot(p, wt, 1, cur_xt, 1) - a_wt);
+                    weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
+                } else {
+                    weight = 2.0 * prob_p * (cblas_ddot(p, wt, 1, cur_xt, 1) - b_wt);
+                    weight += 2.0 * (1.0 + alpha_wt) * prob_p;
+                }
+                if (para_verbose > 0) {
+                    printf("cur_iter: %05d lr: %.4f a_wt: %.4f b_wt: %.4f alpha_wt: %.4f "
+                           "weight: %.4f\n", j, eta_t, a_wt, b_wt, alpha_wt, weight);
+                }
+                // calculate the gradient
+                cblas_daxpy(p, weight, cur_xt, 1, grad_wt, 1);
+            }
 
             //gradient descent step: u= wt - eta * grad(wt)
             cblas_dcopy(p, wt, 1, u, 1);
@@ -1336,13 +1340,14 @@ bool _algo_sht_am(const double *x_tr,
 }
 
 
-bool _algo_sht_am_sparse(const double *x_values,
-                         const int *x_indices,
-                         const int *x_positions,
-                         const int *x_len_list,
-                         const double *y_tr,
-                         int p,
-                         int n,
+bool _algo_sht_am_sparse(const double *x_values,// the values of these nonzeros.
+                         const int *x_indices,  // the inidices of these nonzeros.
+                         const int *x_positions,// the start indices of these nonzeros.
+                         const int *x_len_list, // the list of sizes of nonzeros.
+                         const double *y_tr,    // the vector of training samples.
+                         int p,                 // the dimension of the features of the dataset
+                         int n,                 // the total number of training samples.
+                         int b,
                          int para_sparsity,
                          double para_xi,
                          double para_l2_reg,
@@ -1430,7 +1435,7 @@ bool _algo_sht_am_sparse(const double *x_values,
             // current learning rate
             eta_t = 2. / (para_xi * t + 1.);
 
-            // update a(wt), b(wt), and alpha(wt)
+            // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(p, wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
@@ -1535,6 +1540,7 @@ bool algo_sht_am(sht_am_para *para, sht_am_results *results) {
                                    para->y_tr,
                                    para->p,
                                    para->num_tr,
+                                   para->para_b,
                                    para->para_sparsity,
                                    para->para_xi,
                                    para->para_l2_reg,
@@ -1548,6 +1554,7 @@ bool algo_sht_am(sht_am_para *para, sht_am_results *results) {
                             para->y_tr,
                             para->p,
                             para->num_tr,
+                            para->para_b,
                             para->para_xi,
                             para->para_l2_reg,
                             para->para_sparsity,
