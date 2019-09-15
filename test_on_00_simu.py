@@ -55,95 +55,57 @@ def get_run_fold_index_by_task_id(method, task_start, task_end, num_passes, num_
         return para_space[task_start:task_end]
 
 
-def run_single_ms_spam_l2(para):
+def run_single_ms_spam_l2(para, data):
     """
     Model selection of SPAM-l2
     :return:
     """
-    run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
+    task_id, fold_id, num_passes, para_c, para_beta, k_fold = para
     s_time = time.time()
-    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
-                     task_id=(run_id * 5 + fold_id))
-    para_spaces = {'conf_num_runs': num_runs,
-                   'conf_k_fold': k_fold,
-                   'para_num_passes': num_passes,
-                   'para_beta': para_beta,
-                   'para_l1_reg': 0.0,  # no l1 regularization needed.
-                   'para_xi': para_xi,
-                   'para_fold_id': fold_id,
-                   'para_run_id': run_id,
-                   'para_verbose': 0,
-                   'para_is_sparse': 0,  # not sparse data
-                   'para_step_len': 400000,
-                   'para_reg_opt': 1,
-                   'data_id': 00,
-                   'data_name': '00_simu'}
-    tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-    te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+    tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
     print('number of tr: %d number of te: %d' % (len(tr_index), len(te_index)))
     # cross validate based on tr_index
-    list_auc_wt = np.zeros(para_spaces['conf_k_fold'])
-    list_auc_wt_bar = np.zeros(para_spaces['conf_k_fold'])
-    kf = KFold(n_splits=para_spaces['conf_k_fold'], shuffle=False)
+    list_auc_wt = np.zeros(k_fold)
+    list_auc_wt_bar = np.zeros(k_fold)
+    kf = KFold(n_splits=k_fold, shuffle=False)  # Folding is fixed.
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
-        sub_x_tr = data['x_tr'][tr_index[sub_tr_ind]]
-        sub_y_tr = data['y_tr'][tr_index[sub_tr_ind]]
-        re = c_algo_spam(np.asarray(sub_x_tr, dtype=float),
-                         np.asarray(sub_y_tr, dtype=float),
-                         para_spaces['para_xi'],
-                         para_spaces['para_l1_reg'],
-                         para_spaces['para_beta'],
-                         para_spaces['para_reg_opt'],
-                         para_spaces['para_num_passes'],
-                         para_spaces['para_step_len'],
-                         para_spaces['para_is_sparse'],
-                         para_spaces['para_verbose'])
-        wt = np.asarray(re[0])
-        wt_bar = np.asarray(re[1])
+        sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+        sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
         sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
         sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+        l1_reg, reg_opt, step_len, is_sparse, verbose = 0.0, 1, 10000, 0, 0
+        re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, l1_reg, para_beta, reg_opt, num_passes,
+                         step_len, is_sparse, verbose)
+        wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
         list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
         list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
     run_time = time.time() - s_time
-    print('run_id, fold_id, para_xi, para_beta: ', run_id, fold_id, para_xi, para_beta)
+    print('run_id, fold_id, para_c, para_beta: ', task_id, fold_id, para_c, para_beta)
     print('list_auc_wt:', list_auc_wt)
     print('list_auc_wt_bar:', list_auc_wt_bar)
     print('run_time: %.4f' % run_time)
-    return {'algo_para_name_list': ['run_id', 'fold_id', 'para_xi', 'para_beta',
-                                    'num_passes', 'num_runs', 'k_fold'],
-            'algo_para': para, 'para_spaces': para_spaces,
-            'list_auc_wt': list_auc_wt,
-            'list_auc_wt_bar': list_auc_wt_bar,
-            'run_time': run_time}
+    return {'algo_para_name':
+                ['task_id', 'fold_id', 'num_passes', 'para_c', 'para_beta', 'k_fold'],
+            'algo_para': para, 'list_auc_wt': list_auc_wt,
+            'list_auc_wt_bar': list_auc_wt_bar, 'run_time': run_time}
 
 
-def run_ms_spam_l2(global_passes):
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 0
-    num_runs, k_fold = 5, 5
+def run_ms_spam_l2(task_id, k_fold, num_passes, data):
     all_para_space = []
-    for run_id, fold_id in product(range(num_runs), range(k_fold)):
-        for num_passes in [global_passes]:
-            for para_xi in 10. ** np.arange(-7, -2., .5, dtype=float):
-                for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
-                    para_row = (run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold)
-                    all_para_space.append(para_row)
-    # only run sub-tasks for parallel
-    num_sub_tasks = len(all_para_space) / (num_runs * k_fold)
-    task_start = int(task_id) * num_sub_tasks
-    task_end = int(task_id) * num_sub_tasks + num_sub_tasks
-    list_tasks = all_para_space[task_start:task_end]
+    for fold_id in range(k_fold):
+        for para_c in 10. ** np.arange(-5, -6, .5, dtype=float):
+            for para_beta in 10. ** np.arange(-6, 1, 1, dtype=float):
+                para_row = (task_id, fold_id, num_passes, para_c, para_beta, k_fold)
+                all_para_space.append(para_row)
     list_results = []
-    for task_para in list_tasks:
-        result = run_single_ms_spam_l2(task_para)
+    for task_para in all_para_space:
+        result = run_single_ms_spam_l2(task_para, data)
         list_results.append(result)
     return list_results
 
 
-def run_single_ms_elastic_net(para):
+def run_single_ms_l1l2(para):
     """
     Model selection of SPAM-l2
     :return:
@@ -229,7 +191,7 @@ def run_ms_spam_l1l2(global_passes):
     list_tasks = all_para_space[task_start:task_end]
     list_results = []
     for task_para in list_tasks:
-        result = run_single_ms_elastic_net(task_para)
+        result = run_single_ms_l1l2(task_para)
         list_results.append(result)
     return list_results
 
@@ -296,14 +258,13 @@ def run_single_ms_sht_am(para):
             'run_time': run_time}
 
 
-def run_ms_sht_am(global_passes, global_sparsity):
+def run_ms_sht_am(global_passes):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
     num_runs, k_fold = 5, 5
     all_para_space = []
-    list_sparsity = [global_sparsity]
     list_xi = 10. ** np.arange(-7, -2., .5, dtype=float)
     list_beta = 10. ** np.arange(-6, 1, 1, dtype=float)
     for run_id, fold_id in product(range(num_runs), range(k_fold)):
@@ -549,21 +510,25 @@ def run_model_selection():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    results_sht_am = dict()
-    results_spam_l2 = dict()
-    results_spam_l1l2 = dict()
-    data = pkl.load(open(data_path,''))
-    for num_passes in [1, 5, 10, 15, 20, 30, 40, 50]:
-        s_time = time.time()
-        results_spam_l2[num_passes] = run_ms_spam_l2(num_passes)
-        results_spam_l1l2[num_passes] = run_ms_spam_l1l2(num_passes)
-        results_sht_am[num_passes] = dict()
-        run_ms_sht_am(num_passes, global_sparsity=sparsity)
-        results_sht_am[num_passes][sparsity] = re
-        print(time.time() - s_time)
-    pkl.dump({'sht_am': results_sht_am,
-              'spam_l2': results_spam_l2,
-              'spam_l1l2': results_spam_l1l2},
+    results = dict()
+    tr_list = [1000]
+    mu_list = [0.3]
+    posi_ratio_list = [0.1]
+    for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
+        item = (num_tr, mu, posi_ratio)
+        results[item] = dict()
+        data = pkl.load(open(data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+                             % (task_id, num_tr, mu, posi_ratio), 'rb'))
+        results[item]['spam_l2'] = dict()
+        results[item]['spam_l1l2'] = dict()
+        results[item]['spam_sht_am'] = dict()
+        for num_passes in [1, 5, 10, 15, 20, 30, 40, 50]:
+            s_time = time.time()
+            results[item]['spam_l2'][num_passes] = run_ms_spam_l2(num_passes)
+            results[item]['spam_l1l2'][num_passes] = run_ms_spam_l1l2(num_passes)
+            results[item]['sht_am'] = run_ms_sht_am(num_passes)
+            print(time.time() - s_time)
+    pkl.dump({task_id: results},
              open(os.path.join(data_path, 'ms_task_%02d.pkl' % task_id), 'wb'))
 
 

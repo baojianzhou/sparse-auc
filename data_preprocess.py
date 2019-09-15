@@ -293,8 +293,3 @@ def load_dataset(root_path, name=None):
         print('Unknown dataset name')
     if name == 'realsim':
         return _load_dataset_realsim(data_path=os.path.join(root_path, '13_%s' % name))
-    if name == 'simu':
-        return _generate_dataset_simu(data_path=os.path.join(root_path, '00_%s' % name))
-
-
-generate_dataset()
