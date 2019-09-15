@@ -10,8 +10,6 @@ from itertools import product
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 
-from data_preprocess import load_dataset
-
 try:
     sys.path.append(os.getcwd())
     import sparse_module
@@ -26,128 +24,6 @@ except ImportError:
     print('cannot find the module: sparse_module')
 
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-
-
-def simu_grid_graph(width, height, rand_weight=False):
-    """ Generate a grid graph with size, width x height. Totally there will be
-            width x height number of nodes in this generated graph.
-    :param width:       the width of the grid graph.
-    :param height:      the height of the grid graph.
-    :param rand_weight: the edge costs in this generated grid graph.
-    :return:            1.  list of edges
-                        2.  list of edge costs
-    """
-    np.random.seed()
-    if width < 0 and height < 0:
-        print('Error: width and height should be positive.')
-        return [], []
-    width, height = int(width), int(height)
-    edges, weights = [], []
-    index = 0
-    for i in range(height):
-        for j in range(width):
-            if (index % width) != (width - 1):
-                edges.append((index, index + 1))
-                if index + width < int(width * height):
-                    edges.append((index, index + width))
-            else:
-                if index + width < int(width * height):
-                    edges.append((index, index + width))
-            index += 1
-    edges = np.asarray(edges, dtype=int)
-    # random generate costs of the graph
-    if rand_weight:
-        weights = []
-        while len(weights) < len(edges):
-            weights.append(random.uniform(1., 2.0))
-        weights = np.asarray(weights, dtype=np.float64)
-    else:  # set unit weights for edge costs.
-        weights = np.ones(len(edges), dtype=np.float64)
-    return edges, weights
-
-
-bench_data = {
-    # figure 1 in [1], it has 26 nodes.
-    'fig_1': [475, 505, 506, 507, 508, 509, 510, 511, 512, 539, 540, 541, 542,
-              543, 544, 545, 576, 609, 642, 643, 644, 645, 646, 647, 679, 712],
-    # figure 2 in [1], it has 46 nodes.
-    'fig_2': [439, 440, 471, 472, 473, 474, 504, 505, 506, 537, 538, 539, 568,
-              569, 570, 571, 572, 600, 601, 602, 603, 604, 605, 633, 634, 635,
-              636, 637, 666, 667, 668, 698, 699, 700, 701, 730, 731, 732, 733,
-              763, 764, 765, 796, 797, 798, 830],
-    # figure 3 in [1], it has 92 nodes.
-    'fig_3': [151, 183, 184, 185, 217, 218, 219, 251, 252, 285, 286, 319, 320,
-              352, 353, 385, 386, 405, 406, 407, 408, 409, 419, 420, 437, 438,
-              439, 440, 441, 442, 443, 452, 453, 470, 471, 475, 476, 485, 486,
-              502, 503, 504, 507, 508, 509, 518, 519, 535, 536, 541, 550, 551,
-              568, 569, 583, 584, 601, 602, 615, 616, 617, 635, 636, 648, 649,
-              668, 669, 670, 680, 681, 702, 703, 704, 711, 712, 713, 736, 737,
-              738, 739, 740, 741, 742, 743, 744, 745, 771, 772, 773, 774, 775,
-              776],
-    # figure 4 in [1], it has 132 nodes.
-    'fig_4': [244, 245, 246, 247, 248, 249, 254, 255, 256, 277, 278, 279, 280,
-              281, 282, 283, 286, 287, 288, 289, 290, 310, 311, 312, 313, 314,
-              315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 343, 344, 345,
-              346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 377,
-              378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390,
-              411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423,
-              448, 449, 450, 451, 452, 453, 454, 455, 456, 481, 482, 483, 484,
-              485, 486, 487, 488, 489, 514, 515, 516, 517, 518, 519, 520, 521,
-              547, 548, 549, 550, 551, 552, 553, 579, 580, 581, 582, 583, 584,
-              585, 586, 613, 614, 615, 616, 617, 618, 646, 647, 648, 649, 650,
-              680, 681],
-    # grid size (length).
-    'height': 33,
-    # grid width (width).
-    'width': 33,
-    # the dimension of grid graph is 33 x 33.
-    'p': 33 * 33,
-    # sparsity list of these 4 figures.
-    's': {'fig_1': 26, 'fig_2': 46, 'fig_3': 92, 'fig_4': 132},
-    # sparsity list
-    's_list': [26, 46, 92, 132],
-    'graph': simu_grid_graph(height=33, width=33)
-}
-
-
-def load_data(width, height, num_tr, noise_mu, noise_std, mu, sub_graph, task_id):
-    if os.path.exists(data_path + 'processed_%02d.pkl' % task_id):
-        return pkl.load(open(data_path + 'processed_%02d.pkl' % task_id, 'rb'))
-    p = int(width * height)
-    posi_label = +1
-    nega_label = -1
-    edges, weis = simu_grid_graph(height=height, width=width)  # get grid graph
-    s, n = len(sub_graph), num_tr
-    num_posi, num_nega = n / 2, n / 2
-    # generate training samples and labels
-    labels = [posi_label] * num_posi + [nega_label] * num_nega
-    y_labels = np.asarray(labels, dtype=np.float64)
-    x_data = np.random.normal(noise_mu, noise_std, n * p).reshape(n, p)
-    _ = s * num_posi
-    anomalous_data = np.random.normal(mu, noise_std, _).reshape(num_posi, s)
-    x_data[:num_posi, sub_graph] = anomalous_data
-    rand_indices = np.random.permutation(len(y_labels))
-    x_tr, y_tr = x_data[rand_indices], y_labels[rand_indices]
-    # normalize data by z-score
-    x_mean = np.tile(np.mean(x_tr, axis=0), (len(x_tr), 1))
-    x_std = np.tile(np.std(x_tr, axis=0), (len(x_tr), 1))
-    x_tr = np.nan_to_num(np.divide(x_tr - x_mean, x_std))
-    for i in range(len(x_tr)):
-        x_tr[i] = x_tr[i] / np.linalg.norm(x_tr[i])
-    data = {'x_tr': x_tr[:num_tr], 'y_tr': y_tr[:num_tr], 'subgraph': sub_graph, 'edges': edges,
-            'weights': weis, 'mu': mu, 'noise_mu': noise_mu, 'noise_std': noise_std,
-            'task_id': task_id, 'p': p, 'num_runs': 5, 'num_k_fold': 5, 'n': num_tr}
-    # randomly permute the datasets 25 times for future use.
-    for run_index in range(data['num_runs']):
-        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
-        fake_x = np.zeros(shape=(data['n'], 1))  # just need the number of training samples
-        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
-            # since original data is ordered, we need to shuffle it!
-            rand_perm = np.random.permutation(data['n'])
-            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
-                                                                'te_index': rand_perm[test_index]}
-    pkl.dump(data, open(data_path + 'processed_%02d.pkl' % task_id, 'wb'))
-    return data
 
 
 def get_run_fold_index_by_task_id(method, task_start, task_end, num_passes, num_runs, k_fold):
@@ -186,7 +62,7 @@ def run_single_ms_spam_l2(para):
     """
     run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
-    data = load_data(width=33, height=33, num_tr=1200, noise_mu=0.0,
+    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
                      noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'],
                      task_id=(run_id * 5 + fold_id))
     para_spaces = {'conf_num_runs': num_runs,
@@ -330,7 +206,7 @@ def run_single_ms_elastic_net(para):
             'run_time': run_time}
 
 
-def run_ms_spam_elastic_net(global_passes):
+def run_ms_spam_l1l2(global_passes):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
@@ -448,7 +324,7 @@ def run_ms_sht_am(global_passes, global_sparsity):
     return list_results
 
 
-def run_spam_elastic_net_by_sm(model, num_passes):
+def run_spam_l1l2_by_sm(model, num_passes):
     """
     25 tasks to finish
     :return:
@@ -673,23 +549,22 @@ def run_model_selection():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    results_spam_l2 = dict()
     results_sht_am = dict()
-    results_elastic_net = dict()
-    for num_passes in [1, 5, 10, 15, 20]:
+    results_spam_l2 = dict()
+    results_spam_l1l2 = dict()
+    data = pkl.load(open(data_path,''))
+    for num_passes in [1, 5, 10, 15, 20, 30, 40, 50]:
         s_time = time.time()
         results_spam_l2[num_passes] = run_ms_spam_l2(num_passes)
-        results_elastic_net[num_passes] = run_ms_spam_elastic_net(num_passes)
+        results_spam_l1l2[num_passes] = run_ms_spam_l1l2(num_passes)
         results_sht_am[num_passes] = dict()
-        for sparsity in [100, 200, 400, 800]:
-            re = run_ms_sht_am(num_passes, global_sparsity=sparsity)
-            results_sht_am[num_passes][sparsity] = re
+        run_ms_sht_am(num_passes, global_sparsity=sparsity)
+        results_sht_am[num_passes][sparsity] = re
         print(time.time() - s_time)
-    file_name = 'ms_task_%02d.pkl' % task_id
-    pkl.dump({'spam_l2': results_spam_l2,
-              'sht_am': results_sht_am,
-              'spam_elastic_net': results_elastic_net},
-             open(os.path.join(data_path, file_name), 'wb'))
+    pkl.dump({'sht_am': results_sht_am,
+              'spam_l2': results_spam_l2,
+              'spam_l1l2': results_spam_l1l2},
+             open(os.path.join(data_path, 'ms_task_%02d.pkl' % task_id), 'wb'))
 
 
 def run_testing():
@@ -697,26 +572,25 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    results_spam_l2 = dict()
     results_sht_am = dict()
-    results_elastic_net = dict()
+    results_spam_l2 = dict()
+    results_spam_l1l2 = dict()
     for num_passes in [1, 5, 10, 15, 20]:
         results_spam_l2[num_passes] = run_spam_l2_by_sm(model='wt', num_passes=num_passes)
-        results_elastic_net[num_passes] = run_spam_elastic_net_by_sm(
-            model='wt', num_passes=num_passes)
+        results_spam_l1l2[num_passes] = run_spam_l1l2_by_sm(model='wt', num_passes=num_passes)
         results_sht_am[num_passes] = dict()
-        for sparsity in [100, 200, 400, 800]:
+        for sparsity in [26]:
             re = run_sht_am_by_sm(model='wt', num_passes=num_passes, global_sparsity=sparsity)
             results_sht_am[num_passes][sparsity] = re
     file_name = 're_task_%02d.pkl' % task_id
     pkl.dump({'spam_l2': results_spam_l2,
               'sht_am': results_sht_am,
-              'spam_elastic_net': results_elastic_net},
+              'spam_elastic_net': results_spam_l1l2},
              open(os.path.join(data_path, file_name), 'wb'))
 
 
 def main():
-    run_testing()
+    run_model_selection()
 
 
 if __name__ == '__main__':
