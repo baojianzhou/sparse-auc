@@ -1341,7 +1341,7 @@ bool _algo_sht_am(const double *x_tr,
             cblas_dscal(p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
             _hard_thresholding(u, p, para_sparsity); // k-sparse step.
             // _hard_thresholding_2(aver_grad, p, para_sparsity, u);
-            // cblas_dcopy(p, u, 1, wt, 1);
+            cblas_dcopy(p, u, 1, wt, 1);
             // cblas_dcopy(p, zero_vector, 1, wt, 1);
             // for (int k = 0; k < para_nodes_len; k++) {
             //     wt[para_nodes[k]] = u[para_nodes[k]];

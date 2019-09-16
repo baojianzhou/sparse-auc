@@ -169,7 +169,7 @@ def run_cv_spam_l1l2(task_id, k_fold, num_passes, data):
 
 
 def run_ms_sht_am(task_id, k_fold, num_passes, data):
-    sparsity, b = 1 * len(data['subgraph']), 128
+    sparsity, b = 1 * len(data['subgraph']), 640
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
     s_time = time.time()
@@ -452,26 +452,23 @@ def run_model_selection():
     results = dict()
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.1]
+    posi_ratio_list = [0.5]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
         for fig_i in fig_list:
-            if fig_i != 'fig_2':
-                continue
             item = (num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item]['spam_l2'] = dict()
             results[item]['spam_l1l2'] = dict()
             results[item]['spam_sht_am'] = dict()
-            for num_passes in [20, 10, 15, 20]:
+            for num_passes in [5, 10, 15, 20]:
                 s_time = time.time()
                 re = run_cv_spam_l2(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['spam_l2'][num_passes] = re
-                if False:
-                    re = run_cv_spam_l1l2(task_id, k_fold, num_passes, data[fig_i])
-                    results[item]['spam_l1l2'][num_passes] = re
+                re = run_cv_spam_l1l2(task_id, k_fold, num_passes, data[fig_i])
+                results[item]['spam_l1l2'][num_passes] = re
                 re = run_ms_sht_am(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['sht_am'] = re
             print(time.time() - s_time)
