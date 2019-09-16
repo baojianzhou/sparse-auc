@@ -451,7 +451,7 @@ def run_model_selection():
     k_fold = 5
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.5]
+    posi_ratio_list = [0.1]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
