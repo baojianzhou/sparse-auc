@@ -851,7 +851,7 @@ bool _algo_spam(const double *x_tr,
             double cur_yt = y_tr[j];
 
             // current learning rate
-            eta_t = 2. / (para_xi * t + 1.);
+            eta_t = para_xi / sqrt(t);
 
             // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);

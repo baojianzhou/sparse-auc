@@ -208,15 +208,18 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
     result->t_index = 0;
 
     // summary of the data
-    printf("--------------------------------------------------------------\n");
-    printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
-           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
-    printf("para_xi: %04e para_l1_reg: %04e para_l2_reg: %04e\n",
-           para->para_xi, para->para_l1_reg, para->para_l2_reg);
-    printf("reg_option: %d num_passes: %d step_len: %d is_sparse: %d \n",
-           para->para_reg_opt, para->para_num_passes, para->para_step_len, para->is_sparse);
-    printf("num_eval: %d\n", total_num_eval);
-    printf("--------------------------------------------------------------\n");
+    if (para->verbose > 0) {
+        printf("--------------------------------------------------------------\n");
+        printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
+               para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
+        printf("para_xi: %04e para_l1_reg: %04e para_l2_reg: %04e\n",
+               para->para_xi, para->para_l1_reg, para->para_l2_reg);
+        printf("reg_option: %d num_passes: %d step_len: %d is_sparse: %d \n",
+               para->para_reg_opt, para->para_num_passes, para->para_step_len, para->is_sparse);
+        printf("num_eval: %d\n", total_num_eval);
+        printf("--------------------------------------------------------------\n");
+    }
+
 
     //call SOLAM algorithm
     algo_spam(para, result);
