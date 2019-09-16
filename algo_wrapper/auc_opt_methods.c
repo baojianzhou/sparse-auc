@@ -3,7 +3,6 @@
 //
 #include "auc_opt_methods.h"
 
-
 static inline int __comp_descend(const void *a, const void *b) {
     if (((data_pair *) a)->val < ((data_pair *) b)->val) {
         return 1;
@@ -281,6 +280,34 @@ int _hard_thresholding(double *arr, int n, int k) {
             flag = true; // to handle the multiple cases.
         } else if ((fabs(arr[i]) == kth_largest) && (flag == true)) {
             arr[i] = 0.0;
+        }
+    }
+    free(temp_arr);
+    return 0;
+}
+
+/**
+ * Given the unsorted array, we threshold this array by using Floyd-Rivest algorithm.
+ * @param arr the unsorted array.
+ * @param n, the number of elements in this array.
+ * @param k, the number of k largest elements will be kept.
+ * @return 0, successfully project arr to a k-sparse vector.
+ */
+int _hard_thresholding_2(const double *aver_arr, int n, int k, double *cur_arr) {
+    double *temp_arr = malloc(sizeof(double) * n), kth_largest;
+    for (int i = 0; i < n; i++) {
+        temp_arr[i] = fabs(aver_arr[i]);
+    }
+    _floyd_rivest_select(temp_arr, 0, n - 1, k - 1);
+    kth_largest = temp_arr[k - 1];
+    bool flag = false;
+    for (int i = 0; i < n; i++) {
+        if (fabs(aver_arr[i]) < kth_largest) {
+            cur_arr[i] = 0.0;
+        } else if ((fabs(aver_arr[i]) == kth_largest) && (flag == false)) {
+            flag = true; // to handle the multiple cases.
+        } else if ((fabs(aver_arr[i]) == kth_largest) && (flag == true)) {
+            cur_arr[i] = 0.0;
         }
     }
     free(temp_arr);
@@ -894,7 +921,8 @@ bool _algo_spam(const double *x_tr,
                  */
                 double tmp_l2 = (eta_t * para_l2_reg + 1.);
                 for (int k = 0; k < p; k++) {
-                    wt[k] = sign(u[k]) * fmax(0.0, (fabs(u[k]) - eta_t * para_l1_reg) / tmp_l2);
+                    double sign_uk = (double) (sign(u[k]));
+                    wt[k] = (sign_uk / tmp_l2) * fmax(0.0, fabs(u[k]) - eta_t * para_l1_reg);
                 }
             } else {
                 /**
@@ -1043,7 +1071,7 @@ bool _algo_spam_sparse(const double *x_values,
             double cur_yt = y_tr[j];
 
             // current learning rate
-            eta_t = 2. / (para_xi * t + 1.);
+            eta_t = para_xi / sqrt(t);
 
             // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
@@ -1088,7 +1116,8 @@ bool _algo_spam_sparse(const double *x_values,
                  */
                 double tmp_l2 = (eta_t * para_l2_reg + 1.);
                 for (int k = 0; k < p; k++) {
-                    wt[k] = sign(u[k]) * fmax(0.0, (fabs(u[k]) - eta_t * para_l1_reg) / tmp_l2);
+                    double sign_uk = (double) (sign(u[k]));
+                    wt[k] = (sign_uk / tmp_l2) * fmax(0.0, fabs(u[k]) - eta_t * para_l1_reg);
                 }
             } else {
                 /**
@@ -1181,6 +1210,8 @@ bool _algo_sht_am(const double *x_tr,
                   int para_num_passes,
                   int para_step_len,
                   int para_verbose,
+                  int *para_nodes,
+                  int para_nodes_len,
                   sht_am_results *results) {
 
     // start time clock
@@ -1249,6 +1280,9 @@ bool _algo_sht_am(const double *x_tr,
     results->t_index = 0;
     results->t_eval_time = 0.0;
 
+    double *aver_grad = malloc(sizeof(double) * p);
+    cblas_dcopy(p, zero_vector, 1, aver_grad, 1);
+
     for (int i = 0; i < para_num_passes; i++) {
         // for each training sample j
         // printf("epoch: %d\n", i);
@@ -1259,7 +1293,7 @@ bool _algo_sht_am(const double *x_tr,
             alpha_wt = b_wt - a_wt;
 
             // current learning rate
-            eta_t = 2. / (para_xi * t + 1.);
+            eta_t = para_xi / sqrt(t);
 
             // receive a block of training samples to calculate the gradient
             cblas_dcopy(p, zero_vector, 1, grad_wt, 1);
@@ -1282,6 +1316,14 @@ bool _algo_sht_am(const double *x_tr,
                 cblas_daxpy(p, weight, cur_xt, 1, grad_wt, 1);
             }
 
+            // take average of wt --> wt_bar
+            cblas_dscal(p, (t - 1.) / t, aver_grad, 1);
+            cblas_daxpy(p, 1. / t, grad_wt, 1, aver_grad, 1);
+
+            cblas_dscal(p, 1. / (b * 1.0), grad_wt, 1);
+
+
+
             //gradient descent step: u= wt - eta * grad(wt)
             cblas_dcopy(p, wt, 1, u, 1);
             cblas_daxpy(p, -eta_t, grad_wt, 1, u, 1);
@@ -1298,7 +1340,13 @@ bool _algo_sht_am(const double *x_tr,
              */
             cblas_dscal(p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
             _hard_thresholding(u, p, para_sparsity); // k-sparse step.
-            cblas_dcopy(p, u, 1, wt, 1);
+            // _hard_thresholding_2(aver_grad, p, para_sparsity, u);
+            // cblas_dcopy(p, u, 1, wt, 1);
+            // cblas_dcopy(p, zero_vector, 1, wt, 1);
+            // for (int k = 0; k < para_nodes_len; k++) {
+            //     wt[para_nodes[k]] = u[para_nodes[k]];
+            // }
+
 
             // take average of wt --> wt_bar
             cblas_dscal(p, (t - 1.) / t, wt_bar, 1);
@@ -1329,6 +1377,7 @@ bool _algo_sht_am(const double *x_tr,
     }
     cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
     cblas_dcopy(p, wt, 1, results->wt, 1);
+    free(aver_grad);
     free(nega_x_mean);
     free(posi_x_mean);
     free(u);
@@ -1433,7 +1482,7 @@ bool _algo_sht_am_sparse(const double *x_values,// the values of these nonzeros.
             double cur_yt = y_tr[j];
 
             // current learning rate
-            eta_t = 2. / (para_xi * t + 1.);
+            eta_t = para_xi / sqrt(t);
 
             // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(p, wt, 1, posi_x_mean, 1);
@@ -1561,6 +1610,8 @@ bool algo_sht_am(sht_am_para *para, sht_am_results *results) {
                             para->para_num_passes,
                             para->para_step_len,
                             para->verbose,
+                            para->sub_nodes,
+                            para->nodes_len,
                             results);
     }
 }

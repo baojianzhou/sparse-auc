@@ -216,6 +216,9 @@ typedef struct {
     int para_num_passes; // number of epochs of the processing. default is one.
     int para_step_len;
     int verbose;
+
+    int *sub_nodes;
+    int nodes_len;
 } sht_am_para;
 
 typedef struct {
