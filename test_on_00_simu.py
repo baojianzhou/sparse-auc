@@ -434,9 +434,9 @@ def run_model_selection():
                 re = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['spam_l1l2'][num_passes] = re
                 re = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
-                results[item]['sht_am'] = re
+                results[item]['sht_am'][num_passes] = re
                 re = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
-                results[item]['graph_am'] = re
+                results[item]['graph_am'][num_passes] = re
                 exit()
             print(time.time() - s_time)
         f_name = os.path.join(data_path, 'ms_task_%02d_mu_%.1f_posi_ratio_%.1f.pkl' %
