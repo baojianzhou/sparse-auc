@@ -14,11 +14,29 @@
 
 // This is the only third part library needed.
 #include <cblas.h>
+#include "fast_pcst.h"
 
 #define sign(x) (x > 0) - (x < 0)
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define swap(a, b) { register double temp=(a);(a)=(b);(b)=temp; }
+
+typedef struct {
+    Array *nodes;
+    Array *edges;
+    double prize;
+    double cost;
+} Tree;
+
+typedef struct {
+    Array *re_nodes;
+    Array *re_edges;
+    double *prizes;
+    double *costs;
+    int num_pcst;
+    double run_time;
+    int num_iter;
+} GraphStat;
 
 typedef struct {
     double val;
@@ -57,6 +75,54 @@ typedef struct {
     double b;
     double alpha;
 } solam_results;
+
+
+GraphStat *make_graph_stat(int p, int m);
+
+bool free_graph_stat(GraphStat *graph_stat);
+
+bool head_proj_exact(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int g, double C, double delta, int max_iter, double err_tol, int root,
+        PruningMethod pruning, double epsilon, int n, int m, int verbose,
+        GraphStat *stat);
+
+bool head_proj_approx(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int g, double C, double delta, int max_iter, double err_tol, int root,
+        PruningMethod pruning, double epsilon, int n, int m, int verbose,
+        GraphStat *stat);
+
+bool tail_proj_exact(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int g, double C, double nu, int max_iter, double err_tol, int root,
+        PruningMethod pruning, double epsilon, int n, int m, int verbose,
+        GraphStat *stat);
+
+bool tail_proj_approx(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int g, double C, double nu, int max_iter, double err_tol, int root,
+        PruningMethod pruning, double epsilon, int n, int m, int verbose,
+        GraphStat *stat);
+
+
+bool cluster_grid_pcst(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int n, int m, int target_num_clusters, double lambda,
+        int root, PruningMethod pruning, int verbose,
+        GraphStat *stat);
+
+bool cluster_grid_pcst_binsearch(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int n, int m, int target_num_clusters, int root, int sparsity_low,
+        int sparsity_high, int max_num_iter, PruningMethod pruning,
+        int verbose, GraphStat *stat);
+
+bool head_tail_binsearch(
+        const EdgePair *edges, const double *costs, const double *prizes,
+        int n, int m, int target_num_clusters, int root, int sparsity_low,
+        int sparsity_high, int max_num_iter, PruningMethod pruning,
+        int verbose, GraphStat *stat);
 
 
 /**
@@ -231,6 +297,58 @@ typedef struct {
     int t_index;
 } sht_am_results;
 
+typedef struct {
+    double *x_tr;
+    double *y_tr;
+
+    EdgePair *edges;
+    double *weights;
+    int m;
+
+    ////////////////////////////////////
+    /**
+     * In some cases, the dataset is sparse.
+     * We will use sparse representation to save memory.
+     * sparse_x_values:
+     *      matrix of nonzeros. Notice: first element of each row is the len
+     * sparse_x_indices:
+     *      matrix of nonzeros indices. Notice: first element of each row is the len
+     * the number of columns in this sparse matrix.
+     */
+    double *sparse_x_values;
+    int *sparse_x_indices;
+    int *sparse_x_positions;
+    int *sparse_x_len_list;
+    bool is_sparse; // to check the data is sparse or not.
+    ////////////////////////////////////
+
+
+
+    int p;
+    int para_b; // mini-batch size
+    int num_tr;
+    int num_classes;
+    double para_xi;     // the constant factor of the step size.
+    double para_l2_reg; // regularization parameter for l2-norm
+    int para_sparsity; // the para_sparsity parameter
+    int para_num_passes; // number of epochs of the processing. default is one.
+    int para_step_len;
+    int verbose;
+
+    int *sub_nodes;
+    int nodes_len;
+} graph_am_para;
+
+typedef struct {
+    double *wt;
+    double *wt_bar;
+    double *t_run_time;
+    double *t_auc;
+    double t_eval_time;
+    int *t_indices;
+    int t_index;
+} graph_am_results;
+
 /**
  *
  * This function implements the algorithm proposed in the following paper.
@@ -255,5 +373,31 @@ typedef struct {
  * @return
  */
 bool algo_sht_am(sht_am_para *para, sht_am_results *results);
+
+
+/**
+ *
+ * This function implements the algorithm proposed in the following paper.
+ * Stochastic Proximal Algorithms for AUC Maximization.
+ * ---
+ * @inproceedings{natole2018stochastic,
+ * title={Stochastic proximal algorithms for AUC maximization},
+ * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
+ * booktitle={International Conference on Machine Learning},
+ * pages={3707--3716},
+ * year={2018}}
+ * ---
+ *
+ *
+ * Info
+ * ---
+ * Do not use the function directly. Instead, call it by Python Wrapper.
+ *
+ * @param para: related input parameters.
+ * @param results
+ * @author Baojian Zhou(Email: bzhou6@albany.edu)
+ * @return
+ */
+bool algo_graph_am(graph_am_para *para, graph_am_results *results);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H

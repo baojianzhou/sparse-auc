@@ -430,15 +430,15 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
 
 static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     /*
-     * Wrapper of the StoIHT for AUC algorithm
+     * Wrapper of the Graph for AUC algorithm
      */
     if (self != NULL) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    sht_am_para *para = malloc(sizeof(sht_am_para));
-    PyArrayObject *x_tr_, *y_tr_, *sub_nodes_;
-    if (!PyArg_ParseTuple(args, "O!O!iiddiiiiO!",
+    graph_am_para *para = malloc(sizeof(graph_am_para));
+    PyArrayObject *x_tr_, *y_tr_, *sub_nodes_, *edges_, *weights_;
+    if (!PyArg_ParseTuple(args, "O!O!iiddiiiiO!O!O!",
                           &PyArray_Type, &x_tr_,
                           &PyArray_Type, &y_tr_,
                           &para->para_sparsity,
@@ -449,6 +449,8 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
                           &para->para_step_len,
                           &para->is_sparse,
                           &para->verbose,
+                          &PyArray_Type, &edges_,
+                          &PyArray_Type, &weights_,
                           &PyArray_Type, &sub_nodes_)) { return NULL; }
 
     para->num_tr = (int) x_tr_->dimensions[0];
@@ -456,8 +458,16 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     para->x_tr = (double *) PyArray_DATA(x_tr_);
     para->y_tr = (double *) PyArray_DATA(y_tr_);
     para->sub_nodes = (int *) PyArray_DATA(sub_nodes_);
+    para->m = (int) edges_->dimensions[0];
+    para->edges = malloc(sizeof(EdgePair) * para->m);
+    para->weights = (double *) PyArray_DATA(weights_);
     para->nodes_len = (int) sub_nodes_->dimensions[0];
-    sht_am_results *result = malloc(sizeof(sht_am_results));
+    for (int i = 0; i < para->m; i++) {
+        para->edges[i].first = *(int *) PyArray_GETPTR2(edges_, i, 0);
+        para->edges[i].second = *(int *) PyArray_GETPTR2(edges_, i, 1);
+    }
+
+    graph_am_results *result = malloc(sizeof(graph_am_results));
 
     int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
     result->t_eval_time = 0.0;
@@ -480,7 +490,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     }
 
     //call SOLAM algorithm
-    algo_sht_am(para, result);
+    algo_graph_am(para, result);
     PyObject *results = PyTuple_New(5);
 
     PyObject *wt = PyList_New(para->p);
@@ -502,6 +512,8 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     PyTuple_SetItem(results, 2, t_run_time);
     PyTuple_SetItem(results, 3, t_auc);
     PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
+
+    free(para->edges);
     free(para);
     free(result->wt);
     free(result->wt_bar);
