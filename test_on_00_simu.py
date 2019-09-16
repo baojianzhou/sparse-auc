@@ -385,7 +385,7 @@ def run_graph_am_cv(task_id, k_fold, num_passes, data):
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
-            print(np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+            # print(np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
         if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(task_id, fold_id)]['para'] = algo_para
