@@ -449,7 +449,6 @@ def run_model_selection():
     else:
         task_id = 0
     k_fold = 5
-    results = dict()
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.5]
@@ -457,6 +456,7 @@ def run_model_selection():
     for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+        results = dict()
         for fig_i in fig_list:
             item = (num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
@@ -472,8 +472,9 @@ def run_model_selection():
                 re = run_ms_sht_am(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['sht_am'] = re
             print(time.time() - s_time)
-    f_name = os.path.join(data_path, 'ms_task_%02d.pkl' % task_id)
-    pkl.dump({task_id: results}, open(f_name, 'wb'))
+        f_name = os.path.join(data_path, 'ms_task_%02d_mu_%.1f_posi_ratio_%.1f.pkl' %
+                              (task_id, mu, posi_ratio))
+        pkl.dump({task_id: results}, open(f_name, 'wb'))
 
 
 def run_testing():
