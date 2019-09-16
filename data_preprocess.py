@@ -288,6 +288,9 @@ def generate_dataset():
                                num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.5)
 
 
+generate_dataset()
+
+
 def load_dataset(root_path, name=None):
     if name is None:
         print('Unknown dataset name')
