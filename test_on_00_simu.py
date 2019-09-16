@@ -55,7 +55,37 @@ def get_run_fold_index_by_task_id(method, task_start, task_end, num_passes, num_
         return para_space[task_start:task_end]
 
 
-def run_cv_spam_l2(task_id, k_fold, num_passes, data):
+def run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data):
+    """
+
+    :param task_id:
+    :param fold_id:
+    :param para_c:
+    :param para_beta:
+    :param num_passes:
+    :param data:
+    :return:
+    """
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    l1_reg, reg_opt, step_len, is_sparse, verbose = 0.0, 1, 10000, 0, 0
+    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                     np.asarray(data['y_tr'][tr_index], dtype=float), para_c,
+                     l1_reg, para_beta, reg_opt, num_passes, step_len, is_sparse, verbose)
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    run_time = re[3]
+    return {'algo_para': [task_id, fold_id, para_c, para_beta],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            'run_time': run_time,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_spam_l2_cv(task_id, k_fold, num_passes, data):
     """
     Model selection of SPAM-l2
     :param task_id:
@@ -114,7 +144,39 @@ def run_cv_spam_l2(task_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
-def run_cv_spam_l1l2(task_id, k_fold, num_passes, data):
+def run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes, data):
+    """
+
+    :param task_id:
+    :param fold_id:
+    :param para_c:
+    :param para_beta:
+    :param para_l1:
+    :param num_passes:
+    :param data:
+    :return:
+    """
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    reg_opt, step_len, is_sparse, verbose = 0, 10000, 0, 0
+    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                     np.asarray(data['y_tr'][tr_index], dtype=float),
+                     para_c, para_l1, para_beta, reg_opt, num_passes,
+                     step_len, is_sparse, verbose)
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    run_time = re[3]
+    return {'algo_para': [task_id, fold_id, para_c, para_beta],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            'run_time': run_time,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_spam_l1l2_cv(task_id, k_fold, num_passes, data):
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_l1 = 10. ** np.arange(-5, 3, 1, dtype=float)
@@ -168,7 +230,38 @@ def run_cv_spam_l1l2(task_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
-def run_ms_sht_am(task_id, k_fold, num_passes, data):
+def run_sht_am(task_id, fold_id, para_c, para_beta, sparsity, num_passes, data):
+    """
+    :param task_id:
+    :param fold_id:
+    :param para_c:
+    :param para_beta:
+    :param sparsity:
+    :param num_passes:
+    :param data:
+    :return:
+    """
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    step_len, is_sparse, verbose, b = 10000, 0, 0, len(tr_index)
+    re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
+                       np.asarray(data['y_tr'][tr_index], dtype=float),
+                       sparsity, b, para_c, para_beta, num_passes, step_len,
+                       is_sparse, verbose, np.asarray(data['subgraph'], dtype=np.int32))
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    run_time = re[3]
+    return {'algo_para': [task_id, fold_id, para_c, para_beta],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            'run_time': run_time,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_sht_am_cv(task_id, k_fold, num_passes, data):
     sparsity, b = 1 * len(data['subgraph']), 640
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
@@ -223,226 +316,6 @@ def run_ms_sht_am(task_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
-def run_spam_l1l2_by_sm(model, num_passes):
-    """
-    25 tasks to finish
-    :return:
-    """
-    s_time = time.time()
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 1
-
-    num_runs, k_fold = 5, 5
-    all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
-    # selected model
-    selected_model = dict()
-    for result in all_results['spam_elastic_net'][num_passes]:
-        run_id, fold_id, para_xi, para_beta, para_l1, num_passes, num_runs, k_fold = result[
-            'algo_para']
-        mean_auc = np.mean(result['list_auc_%s' % model])
-        if (run_id, fold_id) not in selected_model:
-            selected_model[(run_id, fold_id)] = (
-                mean_auc, run_id, fold_id, para_xi, para_beta, para_l1)
-        if mean_auc > selected_model[(run_id, fold_id)][0]:
-            selected_model[(run_id, fold_id)] = (
-                mean_auc, run_id, fold_id, para_xi, para_beta, para_l1)
-
-    # select run_id and fold_id by task_id
-    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
-    selected_para_xi, selected_para_beta, selected_para_l1 = selected_model[
-                                                                 (task_id / 5, task_id % 5)][3:6]
-    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
-    # to test it
-    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], task_id=task_id)
-    para_spaces = {'conf_num_runs': num_runs,
-                   'conf_k_fold': k_fold,
-                   'para_num_passes': num_passes,
-                   'para_beta': selected_para_beta,
-                   'para_l1_reg': selected_para_l1,  # no l1 regularization needed.
-                   'para_xi': selected_para_xi,
-                   'para_fold_id': selected_fold_id,
-                   'para_run_id': selected_run_id,
-                   'para_verbose': 0,
-                   'para_is_sparse': 0,
-                   'para_step_len': 2000,
-                   'para_reg_opt': 1,
-                   'data_id': 00,
-                   'data_name': '00_simu'}
-    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
-    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
-    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                     np.asarray(data['y_tr'][tr_index], dtype=float),
-                     para_spaces['para_xi'],
-                     para_spaces['para_l1_reg'],
-                     para_spaces['para_beta'],
-                     para_spaces['para_reg_opt'],
-                     para_spaces['para_num_passes'],
-                     para_spaces['para_step_len'],
-                     para_spaces['para_is_sparse'],
-                     para_spaces['para_verbose'])
-    wt = np.asarray(re[0])
-    wt_bar = np.asarray(re[1])
-    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
-                           y_score=np.dot(data['x_tr'][te_index], wt))
-    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
-                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
-    print('run_id, fold_id, para_xi, para_r: ',
-          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
-    run_time = time.time() - s_time
-    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
-    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
-          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
-          'run_time': run_time}
-    return re
-
-
-def run_spam_l2_by_sm(model, num_passes):
-    """
-    25 tasks to finish
-    :return:
-    """
-    s_time = time.time()
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 1
-
-    num_runs, k_fold = 5, 5
-    all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
-    # selected model
-    selected_model = dict()
-    for result in all_results['spam_l2'][num_passes]:
-        run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = result['algo_para']
-        mean_auc = np.mean(result['list_auc_%s' % model])
-        if (run_id, fold_id) not in selected_model:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
-        if mean_auc > selected_model[(run_id, fold_id)][0]:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
-
-    # select run_id and fold_id by task_id
-    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
-    selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
-    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
-    # to test it
-    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], task_id=task_id)
-    para_spaces = {'conf_num_runs': num_runs,
-                   'conf_k_fold': k_fold,
-                   'para_num_passes': num_passes,
-                   'para_beta': selected_para_beta,
-                   'para_l1_reg': 0.0,  # no l1 regularization needed.
-                   'para_xi': selected_para_xi,
-                   'para_fold_id': selected_fold_id,
-                   'para_run_id': selected_run_id,
-                   'para_verbose': 0,
-                   'para_is_sparse': 0,
-                   'para_step_len': 2000,
-                   'para_reg_opt': 1,
-                   'data_id': 00,
-                   'data_name': '00_simu'}
-    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
-    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
-    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                     np.asarray(data['y_tr'][tr_index], dtype=float),
-                     para_spaces['para_xi'],
-                     para_spaces['para_l1_reg'],
-                     para_spaces['para_beta'],
-                     para_spaces['para_reg_opt'],
-                     para_spaces['para_num_passes'],
-                     para_spaces['para_step_len'],
-                     para_spaces['para_is_sparse'],
-                     para_spaces['para_verbose'])
-    wt = np.asarray(re[0])
-    wt_bar = np.asarray(re[1])
-    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
-                           y_score=np.dot(data['x_tr'][te_index], wt))
-    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
-                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
-    print('run_id, fold_id, para_xi, para_r: ',
-          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
-    run_time = time.time() - s_time
-    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
-    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
-          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
-          'run_time': run_time}
-    return re
-
-
-def run_sht_am_by_sm(model, num_passes, global_sparsity):
-    """
-    25 tasks to finish
-    :return:
-    """
-    s_time = time.time()
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 1
-    num_runs, k_fold = 5, 5
-    all_results = pkl.load(open(data_path + 'ms_task_%02d.pkl' % task_id, 'rb'))
-    # selected model
-    selected_model = dict()
-    for result in all_results['sht_am'][num_passes][global_sparsity]:
-        run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = result[
-            'algo_para']
-        mean_auc = np.mean(result['list_auc_%s' % model])
-        if (run_id, fold_id) not in selected_model:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
-        if mean_auc > selected_model[(run_id, fold_id)][0]:
-            selected_model[(run_id, fold_id)] = (mean_auc, run_id, fold_id, para_xi, para_beta)
-
-    # select run_id and fold_id by task_id
-    selected_run_id, selected_fold_id = selected_model[(task_id / 5, task_id % 5)][1:3]
-    selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
-    print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
-    # to test it
-    data = load_data(width=33, height=33, num_tr=1000, noise_mu=0.0,
-                     noise_std=1.0, mu=0.3, sub_graph=bench_data['fig_1'], task_id=task_id)
-    para_spaces = {'conf_num_runs': num_runs,
-                   'conf_k_fold': k_fold,
-                   'para_num_passes': num_passes,
-                   'para_sparsity': global_sparsity,
-                   'para_beta': selected_para_beta,
-                   'para_l1_reg': 0.0,  # no l1 regularization needed.
-                   'para_xi': selected_para_xi,
-                   'para_fold_id': selected_fold_id,
-                   'para_run_id': selected_run_id,
-                   'para_verbose': 0,
-                   'para_is_sparse': 0,
-                   'para_step_len': 2000,
-                   'para_reg_opt': 1,
-                   'data_id': 00,
-                   'data_name': '00_simu'}
-    tr_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['tr_index']
-    te_index = data['run_%d_fold_%d' % (selected_run_id, selected_fold_id)]['te_index']
-    re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
-                       np.asarray(data['y_tr'][tr_index], dtype=float),
-                       para_spaces['para_sparsity'],
-                       para_spaces['para_xi'],
-                       para_spaces['para_beta'],
-                       para_spaces['para_num_passes'],
-                       para_spaces['para_step_len'],
-                       para_spaces['para_is_sparse'],
-                       para_spaces['para_verbose'])
-    wt = np.asarray(re[0])
-    wt_bar = np.asarray(re[1])
-    auc_wt = roc_auc_score(y_true=data['y_tr'][te_index],
-                           y_score=np.dot(data['x_tr'][te_index], wt))
-    auc_wt_bar = roc_auc_score(y_true=data['y_tr'][te_index],
-                               y_score=np.dot(data['x_tr'][te_index], wt_bar))
-    print('run_id, fold_id, para_xi, para_r: ',
-          selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
-    run_time = time.time() - s_time
-    print('auc_wt:', auc_wt, 'auc_wt_bar:', auc_wt_bar, 'run_time', run_time)
-    re = {'algo_para': [selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta],
-          'para_spaces': para_spaces, 'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
-          'run_time': run_time}
-    return re
-
-
 def run_model_selection():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -465,11 +338,11 @@ def run_model_selection():
             results[item]['spam_sht_am'] = dict()
             for num_passes in [5, 10, 15, 20]:
                 s_time = time.time()
-                re = run_cv_spam_l2(task_id, k_fold, num_passes, data[fig_i])
+                re = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['spam_l2'][num_passes] = re
-                re = run_cv_spam_l1l2(task_id, k_fold, num_passes, data[fig_i])
+                re = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['spam_l1l2'][num_passes] = re
-                re = run_ms_sht_am(task_id, k_fold, num_passes, data[fig_i])
+                re = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
                 results[item]['sht_am'] = re
             print(time.time() - s_time)
         f_name = os.path.join(data_path, 'ms_task_%02d_mu_%.1f_posi_ratio_%.1f.pkl' %
@@ -482,25 +355,44 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    results_sht_am = dict()
-    results_spam_l2 = dict()
-    results_spam_l1l2 = dict()
-    for num_passes in [1, 5, 10, 15, 20]:
-        results_spam_l2[num_passes] = run_spam_l2_by_sm(model='wt', num_passes=num_passes)
-        results_spam_l1l2[num_passes] = run_spam_l1l2_by_sm(model='wt', num_passes=num_passes)
-        results_sht_am[num_passes] = dict()
-        for sparsity in [26]:
-            re = run_sht_am_by_sm(model='wt', num_passes=num_passes, global_sparsity=sparsity)
-            results_sht_am[num_passes][sparsity] = re
-    file_name = 're_task_%02d.pkl' % task_id
-    pkl.dump({'spam_l2': results_spam_l2,
-              'sht_am': results_sht_am,
-              'spam_elastic_net': results_spam_l1l2},
-             open(os.path.join(data_path, file_name), 'wb'))
+    k_fold = 5
+    tr_list = [1000]
+    mu_list = [0.3]
+    posi_ratio_list = [0.3]
+    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
+    for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
+        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+        f_name = data_path + 'ms_task_%02d_mu_%.1f_posi_ratio_%.1f.pkl'
+        models = pkl.load(open(f_name % (task_id, mu, posi_ratio)))
+        results = dict()
+        for fig_i in fig_list:
+            item = (num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item]['spam_l2'] = dict()
+            results[item]['spam_l1l2'] = dict()
+            results[item]['spam_sht_am'] = dict()
+            for num_passes, fold_id in product([5, 10, 15, 20], range(k_fold)):
+                key = (task_id, fold_id)
+                # -------
+                _, _, _, para_c, para_beta, _ = models['spam_l2'][0][key]['para']
+                re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data[fig_i])
+                results[item]['spam_l2'] = re
+                # -------
+                _, _, _, para_c, para_beta, para_l1, _ = models['spam_l1l2'][0][key]['para']
+                re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes,
+                                   data[fig_i])
+                results[item]['spam_l1l2'] = re
+                # -------
+                _, _, _, para_c, para_beta, s, _ = models['sht_am'][0][key]['para']
+                re = run_sht_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
+                results[item]['sht_am'] = re
+        f_name = 're_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+        pkl.dump({task_id: results}, open(f_name % (task_id, num_tr, mu, posi_ratio), 'wb'))
 
 
 def main():
-    run_model_selection()
+    run_testing()
 
 
 if __name__ == '__main__':
