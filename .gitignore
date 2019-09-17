@@ -107,3 +107,4 @@ venv.bak/
 cmake-build-debug
 .swp
 *.*~
+slurm_run.sh
