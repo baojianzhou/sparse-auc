@@ -71,6 +71,7 @@ typedef struct {
 
 typedef struct {
     double *wt;
+    double *wt_bar;
     double a;
     double b;
     double alpha;

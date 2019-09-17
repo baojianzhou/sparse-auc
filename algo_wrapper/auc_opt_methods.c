@@ -1427,9 +1427,6 @@ bool algo_da_solam_func(da_solam_para *para, da_solam_results *results) {
 
 bool __solam(solam_para *para, solam_results *results) {
 
-    //clock()
-    long int time_start = clock();
-
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
     int *rand_id = para->para_rand_ind;
