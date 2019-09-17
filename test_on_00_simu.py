@@ -415,7 +415,11 @@ def run_model_selection():
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
+<<<<<<< HEAD
     posi_ratio_list = [0.1]
+=======
+    posi_ratio_list = [0.3]
+>>>>>>> 6ac78c9d6cc1c025e93e16ebe2ace8779a79159f
     fig_list = ['fig_4']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
