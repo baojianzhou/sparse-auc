@@ -468,6 +468,25 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
+def run_opauc(task_id, fold_id, para_eta, para_lambda, data):
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    re = c_algo_opauc(np.asarray(data['x_tr'][tr_index], dtype=float),
+                      np.asarray(data['y_tr'][tr_index], dtype=float),
+                      data['p'], len(tr_index), para_eta, para_lambda)
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    run_time = re[3]
+    return {'algo_para': [task_id, fold_id, para_eta, para_lambda],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            'run_time': run_time,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
 def run_solam_cv(task_id, k_fold, num_passes, data):
     list_xi = np.arange(1, 101, 9, dtype=float)
     list_r = 10 ** np.arange(-1, 6, 1, dtype=float)
@@ -523,6 +542,25 @@ def run_solam_cv(task_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
+def run_solam(task_id, fold_id, para_xi, para_r, num_passes, data):
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    re = c_algo_solam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                      np.asarray(data['y_tr'][tr_index], dtype=float),
+                      para_xi, para_r, num_passes, 0)
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    run_time = re[3]
+    return {'algo_para': [task_id, fold_id, para_xi, para_r],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            'run_time': run_time,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
 def run_model_selection():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -568,7 +606,7 @@ def run_testing():
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
         f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
-        models = pkl.load(open(f_name, 'rb'))[task_id]
+        models = pkl.load(open(f_name, 'rb'))
         for fold_id in range(k_fold):
             item = (num_tr, mu, posi_ratio, fig_i, num_passes)
             print(item)
@@ -590,15 +628,24 @@ def run_testing():
             re = run_sht_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
             results[item_ext]['sht_am'] = re
             # -------
-            _, _, _, para_c, para_beta, s, _ = models[item]['sht_am'][0][key]['para']
+            _, _, _, para_c, para_beta, s, _ = models[item]['graph_am'][0][key]['para']
             re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
             results[item_ext]['graph_am'] = re
+            # -------
+            if False:
+                _, _, _, para_eta, para_lambda, _ = models[item]['opauc'][0][key]['para']
+                re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
+                results[item_ext]['opauc'] = re
+            # -------
+            _, _, _, para_xi, para_r, _ = models[item]['solam'][0][key]['para']
+            re = run_solam(task_id, fold_id, para_xi, para_r, num_passes, data[fig_i])
+            results[item_ext]['solam'] = re
     f_name = 'results_task_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
 
 def main():
-    run_model_selection()
+    run_testing()
 
 
 if __name__ == '__main__':
