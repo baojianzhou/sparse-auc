@@ -475,7 +475,7 @@ def run_testing():
             re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
             results[item_ext]['graph_am'] = re
     f_name = 'results_task_%02d.pkl'
-    pkl.dump(results, open(f_name % task_id, 'wb'))
+    pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
 
 def main():

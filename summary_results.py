@@ -151,6 +151,34 @@ def result_summary_00_simu_ms():
     pkl.dump(models, open(data_path + 'models.pkl', 'wb'))
 
 
-data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-models = pkl.load(open(data_path + 'models.pkl', 'rb'))
-print(len(models))
+def result_summary_00_simu_re():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    models = dict()
+    for task_id in product(range(25)):
+        f_name = os.path.join(data_path, 'results_task_%02d.pkl' % task_id)
+        re = pkl.load(open(f_name, 'rb'))
+        for key in re:
+            models[key] = re[key]
+    for num_tr, mu, p_ratio, fig_i, num_passes in product([1000], [0.3], [0.1, 0.3, 0.5],
+                                                          ['fig_1', 'fig_2', 'fig_3', 'fig_4'],
+                                                          [10]):
+        print('-' * 50 + '\nposi_ratio:%.1f fig_i: %s' % (p_ratio, fig_i))
+        for model in ['auc_wt', 'auc_wt_bar']:
+            print('---')
+            for method in ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am']:
+                re1 = np.mean(
+                    [models[(i, j, num_tr, mu, p_ratio, fig_i, num_passes)][method][model]
+                     for i, j in product(range(25), range(5))])
+                re2 = np.std([models[(i, j, num_tr, mu, p_ratio, fig_i, num_passes)][method][model]
+                              for i, j in product(range(25), range(5))])
+                print(method, model, re1, re2)
+
+
+def test():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    models = pkl.load(open(data_path + 'models.pkl', 'rb'))
+    print(len(models))
+
+
+if __name__ == '__main__':
+    result_summary_00_simu_re()
