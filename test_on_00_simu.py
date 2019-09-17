@@ -14,6 +14,7 @@ try:
 
     try:
         from sparse_module import c_algo_spam
+        from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sht_am
         from sparse_module import c_algo_graph_am
     except ImportError:
@@ -410,6 +411,62 @@ def run_graph_am_cv(task_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
+def run_opauc_cv(task_id, k_fold, num_passes, data):
+    list_eta = 2. ** np.arange(-12, 1, 1, dtype=float)
+    list_lambda = 2. ** np.arange(-10, 3, 1, dtype=float)
+    s_time = time.time()
+    auc_wt, auc_wt_bar = dict(), dict()
+    for fold_id, para_eta, para_lambda in product(range(k_fold), list_eta, list_lambda):
+        # only run sub-tasks for parallel
+        algo_para = (task_id, fold_id, num_passes, para_eta, para_lambda, k_fold)
+        tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        # cross validate based on tr_index
+        if (task_id, fold_id) not in auc_wt:
+            auc_wt[(task_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+            auc_wt_bar[(task_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+        list_auc_wt = np.zeros(k_fold)
+        list_auc_wt_bar = np.zeros(k_fold)
+        list_num_nonzeros_wt = np.zeros(k_fold)
+        list_num_nonzeros_wt_bar = np.zeros(k_fold)
+        kf = KFold(n_splits=k_fold, shuffle=False)
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(
+                kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
+            re = c_algo_opauc(sub_x_tr, sub_y_tr, data['p'], len(sub_tr_ind),
+                              para_eta, para_lambda)
+            wt = np.asarray(re[0])
+            wt_bar = np.asarray(re[1])
+            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
+            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        # print(np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        # print('run_time: %.4f' % (time.time() - s_time))
+        if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
+            auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
+            auc_wt[(task_id, fold_id)]['para'] = algo_para
+            auc_wt[(task_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
+        if auc_wt_bar[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
+            auc_wt_bar[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
+            auc_wt_bar[(task_id, fold_id)]['para'] = algo_para
+            auc_wt_bar[(task_id, fold_id)]['num_nonzeros'] = float(
+                np.mean(list_num_nonzeros_wt_bar))
+
+    run_time = time.time() - s_time
+
+    print('-' * 40 + ' graph-am ' + '-' * 40)
+    print('run_time: %.4f' % run_time)
+    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
+    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
+    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
+    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
+                                          for _ in auc_wt_bar]))
+    return auc_wt, auc_wt_bar
+
+
 def run_model_selection():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -418,19 +475,21 @@ def run_model_selection():
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.2]
-    fig_list = ['fig_1']
+    posi_ratio_list = [0.3]
+    fig_list = ['fig_2']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
         item = (num_tr, mu, posi_ratio, fig_i, num_passes)
         results[item] = dict()
-        results[item]['spam_l2'] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
-        results[item]['spam_l1l2'] = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
-        results[item]['sht_am'] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
-        results[item]['graph_am'] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
-        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
+        if False:
+            results[item]['spam_l2'] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
+            results[item]['spam_l1l2'] = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
+            results[item]['sht_am'] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
+            results[item]['graph_am'] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['opauc'] = run_opauc_cv(task_id, k_fold, num_passes, data[fig_i])
+        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_opauc.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
         pkl.dump({task_id: results}, open(f_name, 'wb'))
 
@@ -482,7 +541,7 @@ def run_testing():
 
 
 def main():
-    run_testing()
+    run_model_selection()
 
 
 if __name__ == '__main__':

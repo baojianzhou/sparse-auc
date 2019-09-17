@@ -140,7 +140,7 @@ bool head_tail_binsearch(
  * year={2016}
  * }
  */
-bool algo_solam(solam_para *para, solam_results *results);
+bool __solam(solam_para *para, solam_results *results);
 
 /**
  * SOLAM: Stochastic Online AUC Maximization for sparse data
@@ -157,7 +157,7 @@ bool algo_solam(solam_para *para, solam_results *results);
  * year={2016}
  * }
  */
-bool algo_solam_sparse(solam_para_sparse *para, solam_results *results);
+bool __solam_sparse(solam_para_sparse *para, solam_results *results);
 
 
 typedef struct {
@@ -399,5 +399,11 @@ bool algo_sht_am(sht_am_para *para, sht_am_results *results);
  * @return
  */
 bool algo_graph_am(graph_am_para *para, graph_am_results *results);
+
+void algo_opauc(const double *x_tr,
+                const double *y_tr,
+                int p,
+                int n,
+                double eta, double lambda, double *wt, double *wt_bar);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H

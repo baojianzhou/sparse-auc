@@ -285,7 +285,7 @@ def generate_dataset():
     for task_id in range(25):
         print('generate data: %02d' % task_id)
         _generate_dataset_simu(data_path=os.path.join(root_path, '00_%s' % 'simu'),
-                               num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.5)
+                               num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.3)
 
 
 generate_dataset()

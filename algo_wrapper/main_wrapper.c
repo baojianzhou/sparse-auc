@@ -54,7 +54,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     result->a = 0.0;
     result->b = 0.0;
     //call SOLAM algorithm
-    algo_solam(para, result);
+    __solam(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);
@@ -105,7 +105,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     result->a = 0.0;
     result->b = 0.0;
     //call SOLAM algorithm
-    algo_solam_sparse(para, result);
+    __solam_sparse(para, result);
     PyObject *results = PyTuple_New(3);
     PyObject *wt = PyList_New(para->p);
     PyObject *a = PyFloat_FromDouble(result->a);
@@ -699,6 +699,41 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
 }
 
 
+static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
+    /**
+     * Wrapper of the SPAM algorithm with sparse data.
+     */
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    PyArrayObject *x_tr, *y_tr;
+    int p, n;
+    double eta, lambda;
+
+    if (!PyArg_ParseTuple(args, "O!O!iidd",
+                          &PyArray_Type, &x_tr,
+                          &PyArray_Type, &y_tr,
+                          &p, &n, &eta, &lambda)) { return NULL; }
+    double *wt = malloc(sizeof(double) * p);
+    double *wt_bar = malloc(sizeof(double) * p);
+    algo_opauc((double *) PyArray_DATA(x_tr),
+               (double *) PyArray_DATA(y_tr), p, n, eta, lambda, wt, wt_bar);
+    PyObject *results = PyTuple_New(2);
+    PyObject *p_wt = PyList_New(p);
+    PyObject *p_wt_bar = PyList_New(p);
+    for (int i = 0; i < p; i++) {
+        PyList_SetItem(p_wt, i, PyFloat_FromDouble(wt[i]));
+        PyList_SetItem(p_wt_bar, i, PyFloat_FromDouble(wt_bar[i]));
+    }
+    PyTuple_SetItem(results, 0, p_wt);
+    PyTuple_SetItem(results, 1, p_wt_bar);
+    free(wt);
+    free(wt_bar);
+    return results;
+}
+
+
 // wrap_algo_solam_sparse
 static PyMethodDef sparse_methods[] = {
         {"c_test",                 (PyCFunction) test,                      METH_VARARGS, "docs"},
@@ -711,6 +746,7 @@ static PyMethodDef sparse_methods[] = {
         {"c_algo_sht_am_sparse",   (PyCFunction) wrap_algo_sht_am_sparse,   METH_VARARGS, "docs"},
         {"c_algo_graph_am",        (PyCFunction) wrap_algo_graph_am,        METH_VARARGS, "docs"},
         {"c_algo_graph_am_sparse", (PyCFunction) wrap_algo_graph_am_sparse, METH_VARARGS, "docs"},
+        {"c_algo_opauc",           (PyCFunction) wrap_algo_opauc,           METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */
@@ -720,5 +756,7 @@ PyMODINIT_FUNC initsparse_module() {
 }
 
 int main() {
+
+
     printf("test of main wrapper!\n");
 }
