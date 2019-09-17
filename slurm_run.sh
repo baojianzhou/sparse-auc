@@ -7,7 +7,7 @@
 #SBATCH --job-name=sparse-run
 #SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%a.out
 #SBATCH --array=00-24
-#SBATCH --nodelist=ceashpc-07
+#SBATCH --nodelist=ceashpc-03
 #SBATCH --time=12:00:00
 #SBATCH --partition=ceashpc
 #SBATCH --mem=2G
