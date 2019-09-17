@@ -451,27 +451,29 @@ def run_testing():
                               (task_id, num_tr, mu, posi_ratio, fig_i))
         models = pkl.load(open(f_name, 'rb'))[task_id]
         for fold_id in range(k_fold):
-            item = (task_id, fold_id, num_tr, mu, posi_ratio, fig_i, num_passes)
+            item = (num_tr, mu, posi_ratio, fig_i, num_passes)
             print(item)
-            results[item] = dict()
+            item_ext = (task_id, fold_id, num_tr, mu, posi_ratio, fig_i, num_passes)
+            results[item_ext] = dict()
             key = (task_id, fold_id)
             # -------
+            print(models[item]['spam_l2'][0][key]['para'])
             _, _, _, para_c, para_beta, _ = models[item]['spam_l2'][0][key]['para']
             re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data[fig_i])
-            results[item]['spam_l2'] = re
+            results[item_ext]['spam_l2'] = re
             # -------
             _, _, _, para_c, para_beta, para_l1, _ = models[item]['spam_l1l2'][0][key]['para']
             re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes,
                                data[fig_i])
-            results[item]['spam_l1l2'] = re
+            results[item_ext]['spam_l1l2'] = re
             # -------
             _, _, _, para_c, para_beta, s, _ = models[item]['sht_am'][0][key]['para']
             re = run_sht_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
-            results[item]['sht_am'] = re
+            results[item_ext]['sht_am'] = re
             # -------
             _, _, _, para_c, para_beta, s, _ = models[item]['sht_am'][0][key]['para']
             re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
-            results[item]['graph_am'] = re
+            results[item_ext]['graph_am'] = re
     f_name = 'results_task_%02d.pkl'
     pkl.dump(results, open(f_name % task_id, 'wb'))
 
