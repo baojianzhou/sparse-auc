@@ -443,7 +443,7 @@ def run_testing():
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.1, 0.3, 0.5]
+    posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(
