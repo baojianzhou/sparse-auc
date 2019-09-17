@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import numpy as np
 import pickle as pkl
 from itertools import product
@@ -73,13 +74,14 @@ def result_summary_00_simu():
         for ind in range(num_runs * k_fold):
             f_name = data_path + 're_task_%02d_elastic_net.pkl' % ind
             auc_wt.append(pkl.load(open(f_name, 'rb'))['spam_elastic_net'][num_passes]['auc_wt'])
-            auc_wt_bar.append(pkl.load(open(f_name, 'rb'))['spam_elastic_net'][num_passes]['auc_wt_bar'])
+            auc_wt_bar.append(
+                pkl.load(open(f_name, 'rb'))['spam_elastic_net'][num_passes]['auc_wt_bar'])
         print(np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar))
         y.append(np.mean(auc_wt))
         yerr.append(np.std(auc_wt))
 
     print('test')
-    plt.errorbar(x=passes_list, y=y, yerr=yerr,linestyle='--', c='green', label='SPAM-L1/L2')
+    plt.errorbar(x=passes_list, y=y, yerr=yerr, linestyle='--', c='green', label='SPAM-L1/L2')
     plt.ylim([0.5, 1.])
 
     for sparsity in [100, 200, 400, 800]:
@@ -130,4 +132,22 @@ def result_summary_13_realsim():
         np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
 
 
-result_summary_00_simu()
+def result_summary_00_simu_ms():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    k_fold, num_passes = 5, 10
+    tr_list = [1000]
+    mu_list = [0.3]
+    posi_ratio_list = [0.1, 0.3, 0.5]
+    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
+    models = dict()
+    for task_id, num_tr, mu, posi_ratio, fig_i in product(
+            range(25), tr_list, mu_list, posi_ratio_list, fig_list):
+        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
+                              (task_id, num_tr, mu, posi_ratio, fig_i))
+        re = pkl.load(open(f_name, 'rb'))[task_id]
+        for key in re:
+            models[key] = re[key]
+    pkl.dump(models, open(data_path + 'models.pkl', 'wb'))
+
+
+result_summary_00_simu_ms()
