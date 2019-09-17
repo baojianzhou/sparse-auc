@@ -137,7 +137,7 @@ def result_summary_00_simu_ms():
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.1, 0.3, 0.5]
+    posi_ratio_list = [0.3, 0.5]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     models = dict()
     for task_id, num_tr, mu, posi_ratio, fig_i in product(
@@ -146,8 +146,11 @@ def result_summary_00_simu_ms():
                               (task_id, num_tr, mu, posi_ratio, fig_i))
         re = pkl.load(open(f_name, 'rb'))[task_id]
         for key in re:
-            models[key] = re[key]
+            (num_tr, mu, posi_ratio, fig_i, num_passes) = key
+            models[(task_id, num_tr, mu, posi_ratio, fig_i, num_passes)] = re[key]
     pkl.dump(models, open(data_path + 'models.pkl', 'wb'))
 
 
-result_summary_00_simu_ms()
+data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+models = pkl.load(open(data_path + 'models.pkl', 'rb'))
+print(len(models))
