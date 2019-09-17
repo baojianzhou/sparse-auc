@@ -449,7 +449,7 @@ def run_testing():
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
         f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
-        models = pkl.load(open(f_name % (task_id, mu, posi_ratio), 'rb'))[task_id]
+        models = pkl.load(open(f_name, 'rb'))[task_id]
         for fold_id in range(k_fold):
             item = (task_id, fold_id, num_tr, mu, posi_ratio, fig_i, num_passes)
             print(item)
