@@ -52,6 +52,10 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     result->wt_bar = malloc(sizeof(double) * para->p);
     result->a = 0.0;
     result->b = 0.0;
+    if(para->verbose >0){
+        printf("num_tr: %d p: %d xi: %.4f r: %.4f num_passes: %d\n",
+               para->num_tr, para->p, para->para_xi, para->para_r, para->para_num_pass);
+    }
     __solam(para, result);
     PyObject *results = PyTuple_New(4);
     PyObject *wt = PyList_New(para->p);

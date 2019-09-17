@@ -1429,7 +1429,6 @@ bool __solam(solam_para *para, solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
-    int *rand_id = para->para_rand_ind;
     int num_tr = para->num_tr;
     double *zero_v = malloc(sizeof(double) * (para->p + 2));
     double *one_v = malloc(sizeof(double) * (para->p + 2));
@@ -1473,8 +1472,8 @@ bool __solam(solam_para *para, solam_results *results) {
             break;
         }
         for (int j = 0; j < num_tr; j++) {
-            double *t_feat = x_train + rand_id[j] * n_dim;
-            double *t_label = y_train + rand_id[j];
+            double *t_feat = x_train + j * n_dim;
+            double *t_label = y_train + j;
             double n_ga = sc / sqrt(n_t);
             if (*t_label > 0) { // if it is positive case
                 n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
@@ -1543,6 +1542,7 @@ bool __solam(solam_para *para, solam_results *results) {
             n_t = n_t + 1.;
         }
         n_cnt += 1;
+
     }
     cblas_dcopy(n_dim, n_v1_, 1, results->wt, 1);
     results->a = n_v1_[n_dim];

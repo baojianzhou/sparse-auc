@@ -469,8 +469,8 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
 
 
 def run_solam_cv(task_id, k_fold, num_passes, data):
-    list_xi = 2. ** np.arange(1, 101, 9, dtype=float)
-    list_r = 2. ** np.arange(-1, 6, 1, dtype=float)
+    list_xi = np.arange(1, 101, 9, dtype=float)
+    list_r = 10 ** np.arange(-1, 6, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for fold_id, para_xi, para_r in product(range(k_fold), list_xi, list_r):
@@ -513,7 +513,7 @@ def run_solam_cv(task_id, k_fold, num_passes, data):
 
     run_time = time.time() - s_time
 
-    print('-' * 40 + ' graph-am ' + '-' * 40)
+    print('-' * 40 + ' solam ' + '-' * 40)
     print('run_time: %.4f' % run_time)
     print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
     print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
@@ -532,7 +532,7 @@ def run_model_selection():
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.3]
-    fig_list = ['fig_2']
+    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
@@ -544,8 +544,9 @@ def run_model_selection():
             results[item]['spam_l1l2'] = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
             results[item]['sht_am'] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
             results[item]['graph_am'] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
-        results[item]['opauc'] = run_opauc_cv(task_id, k_fold, num_passes, data[fig_i])
-        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_opauc.pkl' %
+            results[item]['opauc'] = run_opauc_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['solam'] = run_solam_cv(task_id, k_fold, num_passes, data[fig_i])
+        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_solam.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
         pkl.dump({task_id: results}, open(f_name, 'wb'))
 
