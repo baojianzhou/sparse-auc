@@ -130,4 +130,4 @@ def result_summary_13_realsim():
         np.mean(auc_wt), np.std(auc_wt), np.mean(auc_wt_bar), np.std(auc_wt_bar)))
 
 
-result_summary_13_realsim()
+result_summary_00_simu()

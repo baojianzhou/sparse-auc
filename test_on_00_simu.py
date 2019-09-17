@@ -415,12 +415,17 @@ def run_model_selection():
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
+<<<<<<< HEAD
     posi_ratio_list = [0.3]
     fig_list = ['fig_4']
+=======
+    posi_ratio_list = [0.5]
+    fig_list = ['fig_1']
+    results = dict()
+>>>>>>> 93cdbf0e065bcf68c73cfd24a6acb352e3b9975b
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        results = dict()
         item = (num_tr, mu, posi_ratio, fig_i, num_passes)
         results[item] = dict()
         results[item]['spam_l2'] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
@@ -437,42 +442,42 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    k_fold = 5
+    k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.3]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
-    for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
+    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        f_name = data_path + 'ms_task_%02d_mu_%.1f_posi_ratio_%.1f.pkl'
-        models = pkl.load(open(f_name % (task_id, mu, posi_ratio)))
+        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
+                              (task_id, num_tr, mu, posi_ratio, fig_i))
+        models = pkl.load(open(f_name % (task_id, mu, posi_ratio), 'rb'))[task_id]
         results = dict()
-        for fig_i in fig_list:
-            item = (num_tr, mu, posi_ratio, fig_i)
-            results[item] = dict()
-            results[item]['spam_l2'] = dict()
-            results[item]['spam_l1l2'] = dict()
-            results[item]['spam_sht_am'] = dict()
-            for num_passes, fold_id in product([5, 10, 15, 20], range(k_fold)):
-                key = (task_id, fold_id)
-                # -------
-                _, _, _, para_c, para_beta, _ = models['spam_l2'][0][key]['para']
-                re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data[fig_i])
-                results[item]['spam_l2'] = re
-                # -------
-                _, _, _, para_c, para_beta, para_l1, _ = models['spam_l1l2'][0][key]['para']
-                re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes,
-                                   data[fig_i])
-                results[item]['spam_l1l2'] = re
-                # -------
-                _, _, _, para_c, para_beta, s, _ = models['sht_am'][0][key]['para']
-                re = run_sht_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
-                results[item]['sht_am'] = re
-                # -------
-                _, _, _, para_c, para_beta, s, _ = models['sht_am'][0][key]['para']
-                re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
-                results[item]['sht_am'] = re
+        item = (num_tr, mu, posi_ratio, fig_i, num_passes)
+        results[item] = dict()
+        results[item]['spam_l2'] = dict()
+        results[item]['spam_l1l2'] = dict()
+        results[item]['spam_sht_am'] = dict()
+        for fold_id in range(k_fold):
+            key = (task_id, fold_id)
+            # -------
+            _, _, _, para_c, para_beta, _ = models[item]['spam_l2'][0][key]['para']
+            re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data[fig_i])
+            results[item]['spam_l2'] = re
+            # -------
+            _, _, _, para_c, para_beta, para_l1, _ = models[item]['spam_l1l2'][0][key]['para']
+            re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes,
+                               data[fig_i])
+            results[item]['spam_l1l2'] = re
+            # -------
+            _, _, _, para_c, para_beta, s, _ = models[item]['sht_am'][0][key]['para']
+            re = run_sht_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
+            results[item]['sht_am'] = re
+            # -------
+            _, _, _, para_c, para_beta, s, _ = models[item]['sht_am'][0][key]['para']
+            re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
+            results[item]['sht_am'] = re
         f_name = 're_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         pkl.dump({task_id: results}, open(f_name % (task_id, num_tr, mu, posi_ratio), 'wb'))
 
