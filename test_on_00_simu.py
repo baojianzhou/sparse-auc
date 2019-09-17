@@ -331,10 +331,13 @@ def run_graph_am(task_id, fold_id, para_c, para_beta, sparsity, num_passes, data
     tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
     step_len, is_sparse, verbose, b = 10000, 0, 0, len(tr_index)
-    re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
-                       np.asarray(data['y_tr'][tr_index], dtype=float),
-                       sparsity, b, para_c, para_beta, num_passes, step_len,
-                       is_sparse, verbose, np.asarray(data['subgraph'], dtype=np.int32))
+    re = c_algo_graph_am(np.asarray(data['x_tr'][tr_index], dtype=float),
+                         np.asarray(data['y_tr'][tr_index], dtype=float),
+                         sparsity, b, para_c, para_beta, num_passes, step_len,
+                         is_sparse, verbose,
+                         np.asarray(data['edges'], dtype=np.int32),
+                         np.asarray(data['weights'], dtype=float),
+                         np.asarray(data['subgraph'], dtype=np.int32))
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     run_time = re[3]
@@ -479,7 +482,7 @@ def run_testing():
 
 
 def main():
-    run_model_selection()
+    run_testing()
 
 
 if __name__ == '__main__':
