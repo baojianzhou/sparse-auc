@@ -201,4 +201,6 @@ def test():
 
 
 if __name__ == '__main__':
-    combine_results()
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
+    pass
