@@ -159,7 +159,7 @@ def result_summary_00_simu_re():
         re = pkl.load(open(f_name, 'rb'))
         for key in re:
             models[key] = re[key]
-    for num_tr, mu, p_ratio, fig_i, num_passes in product([1000], [0.3], [0.1],
+    for num_tr, mu, p_ratio, fig_i, num_passes in product([1000], [0.3], [0.3],
                                                           ['fig_1', 'fig_2', 'fig_3', 'fig_4'],
                                                           [10]):
         print('-' * 50 + '\nposi_ratio:%.1f fig_i: %s' % (p_ratio, fig_i))
