@@ -444,7 +444,7 @@ def run_testing():
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(
-            range(25), tr_list, mu_list, posi_ratio_list, fig_list):
+            tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
         f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
