@@ -467,13 +467,14 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
 
     run_time = time.time() - s_time
 
-    print('-' * 40 + ' graph-am ' + '-' * 40)
+    print('-' * 40 + ' opauc ' + '-' * 40)
     print('run_time: %.4f' % run_time)
-    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
-    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
-    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
-    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
-                                          for _ in auc_wt_bar]))
+    if False:
+        print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
+        print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
+        print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
+        print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
+                                              for _ in auc_wt_bar]))
     return auc_wt, auc_wt_bar
 
 
