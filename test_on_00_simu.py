@@ -418,6 +418,14 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
     for fold_id, para_eta, para_lambda in product(range(k_fold), list_eta, list_lambda):
+
+        if fold_id >= 1:
+            for fold_id_ in range(1, 5):
+                for key in auc_wt[(task_id, 0)]:
+                    auc_wt[(task_id, fold_id_)] = auc_wt[(task_id, 0)][key]
+                    auc_wt_bar[(task_id, fold_id_)] = auc_wt_bar[(task_id, 0)][key]
+            break
+
         # only run sub-tasks for parallel
         algo_para = (task_id, fold_id, num_passes, para_eta, para_lambda, k_fold)
         tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
@@ -585,7 +593,7 @@ def run_model_selection():
             results[item]['graph_am'] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
             results[item]['solam'] = run_solam_cv(task_id, k_fold, num_passes, data[fig_i])
         results[item]['opauc'] = run_opauc_cv(task_id, k_fold, num_passes, data[fig_i])
-        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_solam.pkl' %
+        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_opauc.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
         pkl.dump({task_id: results}, open(f_name, 'wb'))
 
