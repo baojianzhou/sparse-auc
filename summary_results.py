@@ -186,8 +186,8 @@ def combine_results():
         print(task_id, num_tr, mu, posi_ratio, fig_i)
         f_name1 = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
                                (task_id, num_tr, mu, posi_ratio, fig_i))
-        re1 = pkl.load(open(f_name1, 'rb'))[task_id]
-        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_solam.pkl' %
+        re1 = pkl.load(open(f_name1, 'rb'))
+        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_opauc.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
         re2 = pkl.load(open(f_name, 'rb'))[task_id]
         re1[re1.keys()[0]].update(re2[re2.keys()[0]])
@@ -201,7 +201,7 @@ def test():
 
 
 if __name__ == '__main__':
-    result_summary_00_simu_re()
+    combine_results()
     exit()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
