@@ -653,7 +653,7 @@ def run_testing():
 
 
 def main():
-    run_model_selection()
+    run_testing()
 
 
 if __name__ == '__main__':
