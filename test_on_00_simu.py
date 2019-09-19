@@ -479,6 +479,7 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
 
 
 def run_opauc(task_id, fold_id, para_eta, para_lambda, data):
+    s_time = time.time()
     tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
     re = c_algo_opauc(np.asarray(data['x_tr'][tr_index], dtype=float),
@@ -486,13 +487,12 @@ def run_opauc(task_id, fold_id, para_eta, para_lambda, data):
                       data['p'], len(tr_index), para_eta, para_lambda)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
-    run_time = re[3]
     return {'algo_para': [task_id, fold_id, para_eta, para_lambda],
             'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                     y_score=np.dot(data['x_tr'][te_index], wt)),
             'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
                                         y_score=np.dot(data['x_tr'][te_index], wt_bar)),
-            'run_time': run_time,
+            'run_time': time.time() - s_time,
             'nonzero_wt': np.count_nonzero(wt),
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
