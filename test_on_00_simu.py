@@ -587,12 +587,11 @@ def run_model_selection():
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
         item = (num_tr, mu, posi_ratio, fig_i, num_passes)
         results[item] = dict()
-        if False:
-            results[item]['spam_l2'] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
-            results[item]['spam_l1l2'] = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
-            results[item]['sht_am'] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
-            results[item]['graph_am'] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
-            results[item]['solam'] = run_solam_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['spam_l2'] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['spam_l1l2'] = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['sht_am'] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['graph_am'] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
+        results[item]['solam'] = run_solam_cv(task_id, k_fold, num_passes, data[fig_i])
         results[item]['opauc'] = run_opauc_cv(task_id, k_fold, num_passes, data[fig_i])
         f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_opauc.pkl' %
                               (task_id, num_tr, mu, posi_ratio, fig_i))
@@ -642,10 +641,9 @@ def run_testing():
             re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
             results[item_ext]['graph_am'] = re
             # -------
-            if False:
-                _, _, _, para_eta, para_lambda, _ = models[item]['opauc'][0][key]['para']
-                re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
-                results[item_ext]['opauc'] = re
+            _, _, _, para_eta, para_lambda, _ = models[item]['opauc'][0][key]['para']
+            re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
+            results[item_ext]['opauc'] = re
             # -------
             _, _, _, para_xi, para_r, _ = models[item]['solam'][0][key]['para']
             re = run_solam(task_id, fold_id, para_xi, para_r, num_passes, data[fig_i])

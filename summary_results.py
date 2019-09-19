@@ -163,7 +163,7 @@ def result_summary_00_simu_re():
                                                           ['fig_1', 'fig_2', 'fig_3', 'fig_4'],
                                                           [10]):
         print('-' * 50 + '\nposi_ratio:%.1f fig_i: %s' % (p_ratio, fig_i))
-        print('\t\t\t'.join(['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam']))
+        print('\t\t\t'.join(['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']))
         for model in ['auc_wt', 'nonzero_wt']:
             for method in ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam']:
                 re1 = np.mean(
@@ -201,7 +201,7 @@ def test():
 
 
 if __name__ == '__main__':
-    combine_results()
+    result_summary_00_simu_re()
     exit()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
