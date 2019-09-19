@@ -641,6 +641,7 @@ def run_testing():
             re = run_graph_am(task_id, fold_id, para_c, para_beta, s, num_passes, data[fig_i])
             results[item_ext]['graph_am'] = re
             # -------
+            print('test')
             _, _, _, para_eta, para_lambda, _ = models[item]['opauc'][0][(0, 0)]['para']
             re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
             results[item_ext]['opauc'] = re
