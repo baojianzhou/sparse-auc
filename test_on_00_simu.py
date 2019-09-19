@@ -580,7 +580,7 @@ def run_model_selection():
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.3]
-    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
+    fig_list = ['fig_4']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
