@@ -602,7 +602,7 @@ def run_testing():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
-        task_id = 0
+        task_id = 24
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
@@ -642,7 +642,7 @@ def run_testing():
             results[item_ext]['graph_am'] = re
             # -------
             print('test')
-            _, _, _, para_eta, para_lambda, _ = models[item]['opauc'][0][(0, 0)]['para']
+            _, _, _, para_eta, para_lambda, _ = models[item]['opauc'][0][(task_id, 0)]['para']
             re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
             results[item_ext]['opauc'] = re
             # -------
