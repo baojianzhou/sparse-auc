@@ -159,6 +159,7 @@ def result_summary_00_simu_re():
         re = pkl.load(open(f_name, 'rb'))
         for key in re:
             models[key] = re[key]
+    results = dict()
     for num_tr, mu, p_ratio, fig_i, num_passes in product([1000], [0.3], [0.3],
                                                           ['fig_1', 'fig_2', 'fig_3', 'fig_4'],
                                                           [10]):
@@ -173,6 +174,70 @@ def result_summary_00_simu_re():
                               for i, j in product(range(25), range(5))])
                 print('%.4f$\pm$%.4f &' % (re1, re2)),
             print('')
+
+
+def show_test():
+    import matplotlib.pyplot as plt
+    from pylab import rcParams
+    color_list = ['b', 'g', 'm', 'r', 'y', 'k']
+    marker_list = ['X', 'o', 'P', 's', '*', '<']
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    models = dict()
+    for task_id in product(range(25)):
+        f_name = os.path.join(data_path, 'results_task_%02d.pkl' % task_id)
+        re = pkl.load(open(f_name, 'rb'))
+        for key in re:
+            models[key] = re[key]
+    rcParams['figure.figsize'] = 16, 4
+
+    fig, ax = plt.subplots(1, 4)
+    for ii in range(4):
+        ax[ii].grid(b=True, which='both', color='lightgray',
+                    linestyle='dotted', axis='both')
+    for ind, simu in enumerate(['Simu1', 'Simu2', 'Simu3', 'Simu4']):
+        ax[ind].set_title(simu)
+    results = dict()
+    for fig_i in ['fig_1', 'fig_2', 'fig_3', 'fig_4']:
+        results[fig_i] = dict()
+        for method in ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']:
+            results[fig_i][method] = np.zeros(5)
+            for ind, p_ratio in enumerate([0.1, 0.2, 0.3, 0.4, 0.5]):
+                for num_tr, mu, num_passes in product([1000], [0.3], [10]):
+                    for model in ['auc_wt']:
+                        re1 = np.mean(
+                            [models[(i, j, num_tr, mu, p_ratio, fig_i, num_passes)][method][model]
+                             for i, j in product(range(25), range(5))])
+                        results[fig_i][method][ind] = re1
+        for item in results[fig_i]:
+            print(item, results[fig_i][item])
+        print('-' * 50)
+
+    method_list = ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']
+    title_list = ['SPAM-L2', 'spam-L1L2', 'sht-am', 'graph-am',
+                  'solam', 'opauc']
+    for fig_ind, fig_i in enumerate(['fig_1', 'fig_2', 'fig_3', 'fig_4']):
+        for method_ind, method in enumerate(method_list):
+            ax[fig_ind].plot([0.1, 0.2, 0.3, 0.4, 0.5],
+                             results[fig_i][method],
+                             c=color_list[method_ind], linestyle='-',
+                             markerfacecolor='none',
+                             marker=marker_list[method_ind], markersize=8.,
+                             markeredgewidth=1.2, linewidth=1.2,
+                             label=title_list[method_ind])
+    ax[0].set_ylabel(r'AUC score')
+    for i in range(4):
+        ax[i].set_xlabel(r'Imbalanced Ratio')
+        ax[i].set_yticks([0.5, 0.6, 0.7, 0.8, 0.9, 1.05])
+    ax[3].legend(loc='lower right', fontsize=15., borderpad=0.1,
+                 labelspacing=0.2, handletextpad=0.1)
+    plt.setp(ax[1].get_yticklabels(), visible=False)
+    plt.setp(ax[2].get_yticklabels(), visible=False)
+    plt.setp(ax[3].get_yticklabels(), visible=False)
+    plt.subplots_adjust(wspace=0.0, hspace=0.0)
+    f_name = 'results_exp_simu.png'
+    print('save fig to: %s' % f_name)
+    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='png')
+    plt.close()
 
 
 def combine_results():
@@ -201,7 +266,7 @@ def test():
 
 
 if __name__ == '__main__':
-    result_summary_00_simu_re()
+    show_test()
     exit()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
