@@ -159,13 +159,13 @@ def result_summary_00_simu_re():
         re = pkl.load(open(f_name, 'rb'))
         for key in re:
             models[key] = re[key]
-    for num_tr, mu, p_ratio, fig_i, num_passes in product([1000], [0.3], [0.4],
+    for num_tr, mu, p_ratio, fig_i, num_passes in product([1000], [0.3], [0.3],
                                                           ['fig_1', 'fig_2', 'fig_3', 'fig_4'],
                                                           [10]):
         print('-' * 50 + '\nposi_ratio:%.1f fig_i: %s' % (p_ratio, fig_i))
         print('\t\t\t'.join(['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']))
         for model in ['auc_wt', 'nonzero_wt']:
-            for method in ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam']:
+            for method in ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']:
                 re1 = np.mean(
                     [models[(i, j, num_tr, mu, p_ratio, fig_i, num_passes)][method][model]
                      for i, j in product(range(25), range(5))])
