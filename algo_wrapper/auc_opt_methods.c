@@ -3127,23 +3127,33 @@ void algo_opauc(const double *x_tr,
     free(center_p);
 }
 
-void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n, double eta, double radius) {
+void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
+                double para_g, double para_r) {
     double delta = 0.1;
+    double kappa = 1.0;
     int m = (int) floor(0.5 * log2((2.0 * n) / log2(n))) - 1;
     int n_0 = (int) floor((double) n / (double) m);
-    double r = 2.0 * sqrt(3.0) * radius;
+    double r = 2.0 * sqrt(3.0) * para_r;
     double beta = 9.0;
     double d = 2.0 * sqrt(2.0) * r;
     double *v_sum = malloc(sizeof(double) * (p + 2));
     double *v1 = malloc(sizeof(double) * (p + 2));
     double *v = malloc(sizeof(double) * (p + 2));
-    double alpha1 = 0.0, alpha, t = 0.0;
+    double alpha1 = 0.0, alpha, t = 0.0, sp = 0.0;
     for (int k = 0; k < m; k++) {
         memset(v_sum, 0, sizeof(double) * (p + 2));
         cblas_dcopy(p, v1, 1, v, 1);
         alpha = alpha1;
         for (int kk = 0; kk < n_0; kk++) {
-            double *xt = x_tr +
+            double *xt = x_tr + (k * n_0 + kk) * p;
+            double yt = y_tr[k * n_0 + kk];
+            double wx = cblas_ddot(p, xt, 1, v, 1);
+            if (yt > 0) {
+
+            } else {
+                sp++;
+                p = sp / (t + 1);
+            }
         }
     }
 }

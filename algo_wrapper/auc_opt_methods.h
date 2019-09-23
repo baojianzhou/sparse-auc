@@ -407,4 +407,30 @@ void algo_opauc(const double *x_tr,
                 int n,
                 double eta, double lambda, double *wt, double *wt_bar);
 
+/**
+ *
+ * This function implements the algorithm, FSAUC, proposed in the following paper:
+ * ---
+ * @inproceedings{liu2018fast,
+ * title={Fast stochastic AUC maximization with O (1/n)-convergence rate},
+ * author={Liu, Mingrui and Zhang, Xiaoxuan and Chen, Zaiyi and Wang, Xiaoyu and Yang, Tianbao},
+ * booktitle={International Conference on Machine Learning},
+ * pages={3195--3203},
+ * year={2018}}
+ * ---
+ *
+ *
+ * ---
+ * Do not use the function directly. Instead, call it by Python Wrapper.
+ * There are two main model parameters: para_g, para_r.
+ * @param x_tr
+ * @param y_tr
+ * @param p : number of features.
+ * @param n : number of samples, i.e. len(x_tr) == n.
+ * @param para_g
+ * @param para_r
+ */
+void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
+                double para_g, double para_r);
+
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H
