@@ -1905,7 +1905,7 @@ bool __spam(const double *x_tr,
             cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
 
             // to calculate AUC score and run time
-            if (fmod(t, para_step_len) == 0.) {
+            if ((fmod(t, para_step_len) == 0.) || t == 1.) {
                 double eval_start = clock();
                 double *y_pred = malloc(sizeof(double) * n);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
@@ -1920,7 +1920,7 @@ bool __spam(const double *x_tr,
                 results->t_indices[results->t_index] = i * n + j;
                 results->t_index++;
                 if (para_verbose > 0) {
-                    printf("current auc score: %.4f\n", auc);
+                    printf("current auc score: %.4f, t:  %.f\n", auc, t);
                 }
             }
             // increase time
@@ -2314,7 +2314,7 @@ bool __sht_am(const double *x_tr,
             cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
 
             // to calculate AUC score and run time
-            if (fmod(t, para_step_len) == 0.) {
+            if ((fmod(t, para_step_len) == 0.) || j == 0) {
                 double eval_start = clock();
                 double *y_pred = malloc(sizeof(double) * n);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
@@ -2328,7 +2328,7 @@ bool __sht_am(const double *x_tr,
                 results->t_auc[results->t_index] = auc;
                 results->t_indices[results->t_index] = i * n + j;
                 results->t_index++;
-                if (para_verbose > 0) {
+                if (para_verbose == 0) {
                     printf("current auc score: %.4f\n", auc);
                 }
             }
@@ -2937,7 +2937,7 @@ bool __graph_am(const double *x_tr,
             cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
 
             // to calculate AUC score and run time
-            if (fmod(t, para_step_len) == 0.) {
+            if ((fmod(t, para_step_len) == 0.) || j == 0) {
                 double eval_start = clock();
                 double *y_pred = malloc(sizeof(double) * n);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
