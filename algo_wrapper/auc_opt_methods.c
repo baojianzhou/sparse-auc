@@ -3126,3 +3126,8 @@ void algo_opauc(const double *x_tr,
     free(center_n);
     free(center_p);
 }
+
+void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n, double eta) {
+    double delta=0.1;
+    
+}
