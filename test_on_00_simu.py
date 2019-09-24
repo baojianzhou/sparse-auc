@@ -691,24 +691,31 @@ def run_model_selection():
         pkl.dump({task_id: results}, open(f_name, 'wb'))
 
 
-def run_ms_spam_l1():
+def run_ms(method_name):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    method_name = 'spam_l1'
     k_fold, num_passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = dict()
-        results[item][method_name] = run_spam_l1_cv(task_id, k_fold, num_passes, data[fig_i])
+    if method_name == 'spam_l1':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = run_spam_l1_cv(task_id, k_fold, num_passes, data[fig_i])
+    elif method_name == 'spam_l2':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
     pkl.dump(results, open('ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
@@ -826,7 +833,7 @@ def run_testing_2():
 
 
 def main():
-    run_ms_spam_l1()
+    run_ms(method_name='spam_l2')
 
 
 if __name__ == '__main__':
