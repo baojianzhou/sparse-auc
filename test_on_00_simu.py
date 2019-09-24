@@ -632,7 +632,7 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 24
-    k_fold, num_passes = 5, 10
+    k_fold, passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -641,51 +641,50 @@ def run_testing():
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+        item = (task_id, passes, num_tr, mu, posi_ratio, fig_i)
         for fold_id in range(k_fold):
-            key = (task_id, fold_id, num_tr, mu, posi_ratio, fig_i, num_passes)
+            key = (task_id, fold_id, num_tr, mu, posi_ratio, fig_i, passes)
             # -----------------------
-            method_name = 'spam_l1'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_c, para_l1, _ = ms[item][method_name][0][(task_id, fold_id)]['para']
-            re = run_spam_l1(task_id, fold_id, para_c, para_l1, num_passes, data[fig_i])
-            results[key][method_name] = re
+            method = 'spam_l1'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_c, para_l1, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            re = run_spam_l1(task_id, fold_id, para_c, para_l1, passes, data[fig_i])
+            results[key][method] = re
             # -----------------------
-            method_name = 'spam_l2'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_c, para_beta, _ = ms[item][method_name][0][(task_id, fold_id)]['para']
-            re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data[fig_i])
-            results[key][method_name] = re
+            method = 'spam_l2'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_c, para_beta, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            re = run_spam_l2(task_id, fold_id, para_c, para_beta, passes, data[fig_i])
+            results[key][method] = re
             # -----------------------
-            method_name = 'spam_l1l2'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_c, para_beta, para_l1, _ = ms[item][method_name][0][(task_id, fold_id)][
-                'para']
-            re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes,
-                               data[fig_i])
-            results[key][method_name] = re
+            method = 'spam_l1l2'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            temp = ms[item][method][0][(task_id, fold_id)]['para']
+            _, _, _, para_c, para_beta, para_l1, _ = temp
+            re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, passes, data[fig_i])
+            results[key][method] = re
             # -----------------------
-            method_name = 'solam'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_xi, para_r, _ = ms[item][method_name][0][(task_id, fold_id)]['para']
-            re = run_solam(task_id, fold_id, para_xi, para_r, num_passes, data[fig_i])
-            results[key][method_name] = re
+            method = 'solam'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_xi, para_r, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            re = run_solam(task_id, fold_id, para_xi, para_r, passes, data[fig_i])
+            results[key][method] = re
             # -----------------------
-            method_name = 'sht_am'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method_name][0][(task_id, fold_id)]['para']
-            re = run_sht_am(task_id, fold_id, para_c, sparsity, num_passes, data[fig_i])
-            results[key][method_name] = re
+            method = 'sht_am'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            re = run_sht_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
+            results[key][method] = re
             # -----------------------
-            method_name = 'graph_am'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method_name][0][key]['para']
-            re = run_graph_am(task_id, fold_id, para_c, sparsity, num_passes, data[fig_i])
-            results[key][method_name] = re
+            method = 'graph_am'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_c, sparsity, _ = ms[item][method][0][key]['para']
+            re = run_graph_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
+            results[key][method] = re
             # -----------------------
-            method_name = 'opauc'
-            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'rb'))
-            _, _, _, para_eta, para_lambda, _ = ms[item][method_name][0][(task_id, 0)]['para']
+            method = 'opauc'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(task_id, 0)]['para']
             re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
             results[key]['opauc'] = re
     f_name = 'results_task_%02d.pkl'
