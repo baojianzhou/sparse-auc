@@ -503,14 +503,6 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
     for fold_id, para_eta, para_lambda in product(range(k_fold), list_eta, list_lambda):
-
-        if fold_id >= 1:
-            for fold_id_ in range(1, 5):
-                for key in auc_wt[(task_id, 0)]:
-                    auc_wt[(task_id, fold_id_)] = auc_wt[(task_id, 0)][key]
-                    auc_wt_bar[(task_id, fold_id_)] = auc_wt_bar[(task_id, 0)][key]
-            break
-
         # only run sub-tasks for parallel
         algo_para = (task_id, fold_id, num_passes, para_eta, para_lambda, k_fold)
         tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
@@ -551,15 +543,13 @@ def run_opauc_cv(task_id, k_fold, num_passes, data):
                 np.mean(list_num_nonzeros_wt_bar))
 
     run_time = time.time() - s_time
-
     print('-' * 40 + ' opauc ' + '-' * 40)
     print('run_time: %.4f' % run_time)
-    if False:
-        print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
-        print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
-        print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
-        print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
-                                              for _ in auc_wt_bar]))
+    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
+    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
+    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
+    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
+                                          for _ in auc_wt_bar]))
     return auc_wt, auc_wt_bar
 
 
@@ -740,6 +730,13 @@ def run_ms(method_name):
             item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item][method_name] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
+    elif method_name == 'opauc':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = run_opauc_cv(task_id, k_fold, num_passes, data[fig_i])
     pkl.dump(results, open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
@@ -857,7 +854,7 @@ def run_testing_2():
 
 
 def main():
-    run_ms(method_name='graph_am')
+    run_ms(method_name='opauc')
 
 
 if __name__ == '__main__':
