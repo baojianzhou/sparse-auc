@@ -10,7 +10,6 @@ function [v_bar, p_hat, A, A_p, A_n, n_p, n_n] = SOLAM1( v1, X, y, R, gamma, ...
 delta = 0.1;
 kappa = get_kappa(X); % kappa = max(max(X));
 [d,n] = size(X);
-m = n_p + n_n; 
 
 % initial results
 alpha1 = A*v1; alpha = alpha1;
@@ -37,7 +36,7 @@ else
 end
 
 for i = 1:n
-    p_hat = ((i+m-1)*p_hat+(y(i)==1))/(i+m);
+    p_hat = ((i+(n_p + n_n)-1)*p_hat+(y(i)==1))/(i+(n_p + n_n));
     
     % compute gradient
     % pred = v'*[X(:,i);0;0]; 
