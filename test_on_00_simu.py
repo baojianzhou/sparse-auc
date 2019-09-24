@@ -734,7 +734,6 @@ def run_ms(method_name):
             item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item][method_name] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
-
     pkl.dump(results, open('ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
@@ -852,7 +851,7 @@ def run_testing_2():
 
 
 def main():
-    run_ms(method_name='spam_l1l2')
+    run_ms(method_name='sht_am')
 
 
 if __name__ == '__main__':
