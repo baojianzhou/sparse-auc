@@ -616,8 +616,6 @@ def run_solam_cv(task_id, k_fold, num_passes, data):
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
-        # print(np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
-        # print('run_time: %.4f' % (time.time() - s_time))
         if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(task_id, fold_id)]['para'] = algo_para
@@ -716,6 +714,21 @@ def run_ms(method_name):
             item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item][method_name] = run_spam_l2_cv(task_id, k_fold, num_passes, data[fig_i])
+    elif method_name == 'spam_l1l2':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = run_spam_l1l2_cv(task_id, k_fold, num_passes, data[fig_i])
+    elif method_name == 'solam':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = run_solam_cv(task_id, k_fold, num_passes, data[fig_i])
+
     pkl.dump(results, open('ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
@@ -833,7 +846,7 @@ def run_testing_2():
 
 
 def main():
-    run_ms(method_name='spam_l2')
+    run_ms(method_name='solam')
 
 
 if __name__ == '__main__':
