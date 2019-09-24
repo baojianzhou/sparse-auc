@@ -3169,12 +3169,22 @@ void project_onto_l1(const double *w, int p, double r, double *proj_v) {
 }
 
 void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
-                double para_g, double para_r) {
-    int m = (int) floor(0.5 * log2((2.0 * n) / log2(n))) - 1;
-    int n_0 = (int) floor((double) n / (double) m);
-    double r = 2.0 * sqrt(3.0) * para_r;
-    double beta = 9.0;
-    double d = 2.0 * sqrt(2.0) * r;
+                double para_r, double para_g, int num_passes, double *wt, double *wt_bar) {
+    double kappa = 1.0; //assume that kappa=1.0 for normalized data samples.
+    double global_n = n * num_passes;
+
+    // all initialize parameters
+    int m = (int) floor(0.5 * log2((2.0 * global_n) / log2(global_n))) - 1;
+    int n0 = (int) floor(global_n / (double) m);
+    double R0 = 2. * sqrt(1. + 2. * kappa * kappa) * para_r;
+    double beta = 1. + 8.0 * kappa * kappa;
+    double D0 = 2.0 * sqrt(2.0) * kappa * R0;
+    double *v_bar = malloc(sizeof(double) * (p + 2));
+    memset(v_bar, 0, sizeof(double) * (p + 2));
+    double alpha_bar = 0.0;
+
+    double Rk = R0;
+
 
     double *vec_v1 = malloc(sizeof(double) * (p + 2));
 
@@ -3183,10 +3193,9 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
     double *w_bar = malloc(sizeof(double) * p);
 
 
-    double Rk = 0.0, R = para_r;
+    double R = para_r;
     double *gw = malloc(sizeof(double) * p);
     double *vec_temp = malloc(sizeof(double) * p);
-    double gamma = Rk, R0 = 1.;
 
     int K = 1; // number of alternative projections.
 
@@ -3201,16 +3210,15 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
     memset(vec_a_p, 0, sizeof(double) * p);
     double *vec_a_n = malloc(sizeof(double) * p), n_n = 0.0;
     memset(vec_a_n, 0, sizeof(double) * p);
-    double *v_bar = malloc(sizeof(double) * (p + 2));
-    memset(v_bar, 0, sizeof(double) * (p + 2));
 
     for (int k = 0; k < m; k++) {
+
+        double gamma = (sqrt(beta) / (sqrt(3. * n0) * para_g)) * R0;
 
         cblas_dcopy(p + 2, v_bar, 1, vec_v1, 1);
 
         // some parameters for each stage
         double delta = 0.1;
-        double kappa = 1.0; // set to 1.0 (assume the data is normalized.).
         double alpha1 = cblas_ddot(p + 2, vec_a, 1, vec_v1, 1);
         double alpha = alpha1;
         cblas_dcopy(p, vec_v1, 1, vec_w1, 1);
@@ -3225,19 +3233,21 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
         double alpha_bar = 0.0;
         double gamma_bar = 0.0;
 
+        double D;
 
         double D0 = 2.0 * sqrt(2.0) * kappa * R0;
         D0 += (4.0 * sqrt(2.0) * kappa * (2.0 + sqrt(2.0 * log(12.0 / delta))) *
                (1.0 + 2.0 * kappa) * R) /
-              sqrt(min(p_hat, 1.0 - p_hat) * (double) n_0 - sqrt(2.0 * n_0 * log(12.0 / delta)));
+              sqrt(min(p_hat, 1.0 - p_hat) * (double) n0 - sqrt(2.0 * n0 * log(12.0 / delta)));
         if (k == 0) {
             // the first stage
             D0 = 2.0 * sqrt(2.0) * kappa * R0;
         }
 
-        for (int kk = 0; kk < n_0; kk++) {
-            const double *xt = x_tr + (k * n_0 + kk) * p;
-            double yt = y_tr[k * n_0 + kk];
+        for (int kk = 0; kk < n0; kk++) {
+            int global_index = k * n0 + kk;
+            const double *xt = x_tr + (global_index % n) * p;
+            double yt = y_tr[global_index % n];
             double is_posi = (yt == 1.0 ? 1. : 0.0);
             double is_nega = (yt == -1.0 ? 1. : 0.0);
             p_hat = ((n_p + n_n + kk) * p_hat + is_posi) / (kk + 1. + (n_p + n_n));
@@ -3293,7 +3303,8 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
             b_bar = (gamma_bar_old * b_bar + gamma * b) / gamma_bar;
             alpha_bar = (gamma_bar_old * alpha_bar + gamma * alpha) / gamma_bar;
         }//inner-stage
-
+        Rk /= 2.0;
+        gamma /= 2.0;
         cblas_dcopy(p, vec_a_n, 1, vec_a, 1);
         cblas_dscal(p, 1. / n_n, vec_a, 1);
         cblas_daxpy(p, -1. / n_p, vec_a_p, 1, vec_a, 1);
@@ -3302,5 +3313,13 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
         cblas_dcopy(p, w_bar, 1, v_bar, 1);
         v_bar[p] = a_bar;
         v_bar[p + 1] = b_bar;
+        // update beta and D
+        double tmp1 = pow(kappa * (1. + 2. * kappa) * (2. + sqrt(2. * log(12. / delta))), 2.);
+        double tmp2 = fmin(p_hat, 1. - p_hat) - sqrt(2. * log(12. / delta) / n0);
+        beta = (1. + 8.0 * pow(kappa, 2.)) + (32. * tmp1) / tmp2; //update beta
+        tmp1 = 4. * sqrt(2.) * (2. + sqrt(2. * log(12. / delta))) * (1. + 2. * kappa) * R;
+        tmp2 = sqrt(fmin(p_hat, 1. - p_hat) * n0 - sqrt(2. * n0) * log(12. / delta));
+        D = 2. * sqrt(2) * kappa * Rk + tmp1 / tmp2;
+
     }//outer-stage
 }
