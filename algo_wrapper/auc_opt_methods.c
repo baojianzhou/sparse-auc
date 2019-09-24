@@ -3136,15 +3136,33 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
     double r = 2.0 * sqrt(3.0) * para_r;
     double beta = 9.0;
     double d = 2.0 * sqrt(2.0) * r;
+    double *A = malloc(sizeof(double) * (p + 2));
+    double *A_p = malloc(sizeof(double) * p), n_p = 0.0;
+    double *A_n = malloc(sizeof(double) * p), n_n = 0.0;
+    memset(A, 0, sizeof(double) * (p + 2));
+    memset(A_p, 0, sizeof(double) * p);
+    memset(A_n, 0, sizeof(double) * p);
     double *v_sum = malloc(sizeof(double) * (p + 2));
     double *v1 = malloc(sizeof(double) * (p + 2));
     double *v = malloc(sizeof(double) * (p + 2));
     double alpha1 = 0.0, alpha, t = 0.0, sp = 0.0;
+    double Rk = 0.0, p_hat = 0.0, R = para_r;
     for (int k = 0; k < m; k++) {
         memset(v_sum, 0, sizeof(double) * (p + 2));
         cblas_dcopy(p, v1, 1, v, 1);
         alpha = alpha1;
         for (int kk = 0; kk < n_0; kk++) {
+            double *w_bar = malloc(sizeof(double) * p);
+            double a_bar = 0.0, b_bar = 0.0, alpha_bar = 0.0, gamma_bar = 0.0;
+            double d0 = 2 * sqrt(2) * kappa * Rk;
+            d0 += (4.0 * sqrt(2.0) * kappa * (2.0 + sqrt(2.0 * log(12.0 / delta))) *
+                   (1.0 + 2.0 * kappa) * R) /
+                  sqrt(min(p_hat, 1 - p_hat) * n - sqrt(2 * n * log(12 / delta)));
+            if (k == 0) {
+                // the first stage
+                d0 = 2.0 * sqrt(2.0) * kappa * Rk;
+            }
+
             double *xt = x_tr + (k * n_0 + kk) * p;
             double yt = y_tr[k * n_0 + kk];
             double wx = cblas_ddot(p, xt, 1, v, 1);
