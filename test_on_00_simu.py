@@ -441,12 +441,11 @@ def run_graph_am(task_id, fold_id, para_c, para_beta, sparsity, num_passes, data
 def run_graph_am_cv(task_id, k_fold, num_passes, data):
     sparsity = 1 * len(data['subgraph'])
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-    list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
-    for fold_id, para_c, para_beta in product(range(k_fold), list_c, list_beta):
+    for fold_id, para_c in product(range(k_fold), list_c):
         # only run sub-tasks for parallel
-        algo_para = (task_id, fold_id, num_passes, para_c, para_beta, sparsity, k_fold)
+        algo_para = (task_id, fold_id, num_passes, para_c, sparsity, k_fold)
         tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (task_id, fold_id) not in auc_wt:
@@ -462,7 +461,7 @@ def run_graph_am_cv(task_id, k_fold, num_passes, data):
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
             sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
-            b = len(sub_x_tr)
+            b, para_beta = len(sub_x_tr), 0.0
             re = c_algo_graph_am(sub_x_tr, sub_y_tr, sparsity, b, para_c, para_beta, num_passes,
                                  step_len, is_sparse, verbose,
                                  np.asarray(data['edges'], dtype=np.int32),
@@ -734,6 +733,13 @@ def run_ms(method_name):
             item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item][method_name] = run_sht_am_cv(task_id, k_fold, num_passes, data[fig_i])
+    elif method_name == 'graph_am':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = run_graph_am_cv(task_id, k_fold, num_passes, data[fig_i])
     pkl.dump(results, open('ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
@@ -851,7 +857,7 @@ def run_testing_2():
 
 
 def main():
-    run_ms(method_name='sht_am')
+    run_ms(method_name='graph_am')
 
 
 if __name__ == '__main__':

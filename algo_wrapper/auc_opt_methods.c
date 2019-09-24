@@ -2937,7 +2937,7 @@ bool __graph_am(const double *x_tr,
             cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
 
             // to calculate AUC score and run time
-            if ((fmod(t, para_step_len) == 0.) || j == 0) {
+            if ((fmod(t, para_step_len) == 0.)) {
                 double eval_start = clock();
                 double *y_pred = malloc(sizeof(double) * n);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
