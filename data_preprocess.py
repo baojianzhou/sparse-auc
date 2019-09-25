@@ -137,23 +137,29 @@ def _load_dataset_09_sector(data_path):
     number of features: 55,197 (notice: some features are all zeros.)
     :return:
     """
-    if os.path.exists(data_path + 'processed_sector_normalized.pkl'):
-        return pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
+    if os.path.exists(os.path.join(data_path, 'processed_sector_normalized.pkl')):
+        return pkl.load(open(os.path.join(data_path, 'processed_sector_normalized.pkl'), 'rb'))
     data = dict()
-    data['x_tr'] = []
+    data['x_tr_vals'] = []
+    data['x_tr_indices'] = []
+    data['x_tr_lens'] = []
+    data['x_tr_posis'] = []
     data['y_tr'] = []
     max_id, max_nonzero = 0, 0
     words_freq = dict()
     # training part
-    with open(data_path + 'sector.scale', 'rb') as f:
+    with open(data_path + '/lib-svm-data/sector.scale', 'rb') as f:
         for row in f.readlines():
             items = row.lstrip().rstrip().split(' ')
             data['y_tr'].append(int(items[0]) - 1)
             items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
             # each feature value pair.
-            data['x_tr'].append(items)
+            data['x_tr_indices'].extend([_[0] for _ in items])
+            data['x_tr_vals'].extend([_[1] for _ in items])
+            data['x_tr_lens'].append(len(items))
+
             max_id = max(max([item[0] for item in items]), max_id)
-            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            max_nonzero = max(len(items), max_nonzero)
             for item in items:
                 word = item[0]
                 if word not in words_freq:
@@ -162,21 +168,28 @@ def _load_dataset_09_sector(data_path):
 
     assert len(data['y_tr']) == 6412  # total samples in train
     # testing part
-    with open(data_path + 'sector.t.scale', 'rb') as f:
+    with open(data_path + '/lib-svm-data/sector.t.scale', 'rb') as f:
         for row in f.readlines():
             items = row.lstrip().rstrip().split(' ')
             data['y_tr'].append(int(items[0]) - 1)
             items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
             # each feature value pair.
-            data['x_tr'].append(items)
+            data['x_tr_indices'].extend([_[0] for _ in items])
+            data['x_tr_vals'].extend([_[1] for _ in items])
+            data['x_tr_lens'].append(len(items))
+
             max_id = max(max([item[0] for item in items]), max_id)
-            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            max_nonzero = max(len(items), max_nonzero)
             for item in items:
                 word = item[0]
                 if word not in words_freq:
                     words_freq[word] = 0
                 words_freq[word] += 1
-
+    # update positions
+    prev_posi = 0
+    for i in range(len(data['y_tr'])):
+        data['x_tr_posis'].append(prev_posi)
+        prev_posi += data['x_tr_lens'][i]
     print('maximal length is: %d' % max_nonzero)
     data['y_tr'] = np.asarray(data['y_tr'])
     assert len(data['y_tr']) == 9619  # total samples in the dataset
@@ -202,6 +215,9 @@ def _load_dataset_09_sector(data_path):
     # randomly permute the datasets 100 times for future use.
     data['num_runs'] = 5
     data['num_k_fold'] = 5
+    data['x_tr_indices'] = np.asarray(data['x_tr_indices'])
+    data['x_tr_vals'] = np.asarray(data['x_tr_vals'])
+    data['x_tr_lens'] = np.asarray(data['x_tr_lens'])
     for run_index in range(data['num_runs']):
         kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
         fake_x = np.zeros(shape=(data['n'], 1))  # just need the number of training samples
@@ -210,7 +226,7 @@ def _load_dataset_09_sector(data_path):
             rand_perm = np.random.permutation(data['n'])
             data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
                                                                 'te_index': rand_perm[test_index]}
-    pkl.dump(data, open(data_path + 'processed_sector_normalized.pkl', 'wb'))
+    pkl.dump(data, open(os.path.join(data_path, 'processed_sector_normalized.pkl'), 'wb'))
     return data
 
 
@@ -378,3 +394,12 @@ def load_dataset(root_path, name=None):
         return _load_dataset_13_realsim(data_path=os.path.join(root_path, '13_%s' % name))
     elif name == 'sector':
         return _load_dataset_09_sector(data_path=os.path.join(root_path, '09_%s' % name))
+
+
+def main():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
+    load_dataset(root_path=data_path, name='sector')
+
+
+if __name__ == '__main__':
+    main()

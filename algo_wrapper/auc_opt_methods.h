@@ -142,69 +142,12 @@ bool __solam(const double *x_tr,
  * year={2016}
  * }
  */
-bool __solam_sparse(const double *x_tr_vals,
-                    const int *x_tr_indices,
-                    const int *x_tr_lens,
-                    const double *y_tr,
-                    int num_tr, int p,
+bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
+                    const int *x_tr_lens, const int *x_tr_posis,
+                    const double *y_tr, int num_tr, int p,
                     double para_r, double para_xi, int para_num_pass, int verbose,
                     solam_results *results);
 
-
-typedef struct {
-    double *x_tr;
-    double *y_tr;
-    int p;
-    int num_tr;
-    int verbose;
-    int *para_rand_ind; // to random shuffle the training samples
-    double para_xi; // the parameter xi, to control the learning rate.
-    double para_r; // the parameter R, to control the wt, the radius of the ball of wt.
-    int para_s; // para_sparsity
-    int para_num_pass; // number of passes, under online setting, it should be 1.
-} da_solam_para;
-
-typedef struct {
-    double *wt;
-    double a;
-    double b;
-    double alpha;
-} da_solam_results;
-
-bool algo_da_solam_func(da_solam_para *para, da_solam_results *results);
-
-typedef struct {
-    double *x_tr;
-    double *y_tr;
-
-    ////////////////////////////////////
-    /**
-     * In some cases, the dataset is sparse.
-     * We will use sparse representation to save memory.
-     * sparse_x_values:
-     *      matrix of nonzeros. Notice: first element of each row is the len
-     * sparse_x_indices:
-     *      matrix of nonzeros indices. Notice: first element of each row is the len
-     * the number of columns in this sparse matrix.
-     */
-    double *sparse_x_values;
-    int *sparse_x_indices;
-    int *sparse_x_positions;
-    int *sparse_x_len_list;
-    bool is_sparse; // to check the data is sparse or not.
-    ////////////////////////////////////
-
-    int p;
-    int num_tr;
-    int num_classes;
-    double para_xi;     // the constant factor of the step size.
-    double para_l2_reg; // regularization parameter for l2-norm
-    double para_l1_reg; // regularization parameter for l1-norm
-    int para_num_passes; // number of epochs of the processing. default is one.
-    int para_step_len;
-    int para_reg_opt; // option of regularization: 0: l2^2 1: l1/l2 mixed norm.
-    int verbose;
-} spam_para;
 
 typedef struct {
     double *wt;
@@ -239,8 +182,34 @@ typedef struct {
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-bool algo_spam(spam_para *para, spam_results *results);
+bool __spam(const double *x_tr,
+            const double *y_tr,
+            int p,
+            int n,
+            double para_xi,
+            double para_l1_reg,
+            double para_l2_reg,
+            int para_num_passes,
+            int para_step_len,
+            int para_reg_opt,
+            int para_verbose,
+            spam_results *results);
 
+bool __spam_sparse(const double *x_values,
+                   const int *x_indices,
+                   const int *x_positions,
+                   const int *x_len_list,
+                   const double *y_tr,
+                   int p,
+                   int n,
+                   double para_xi,
+                   double para_l1_reg,
+                   double para_l2_reg,
+                   int num_passes,
+                   int step_len,
+                   int reg_opt,
+                   int verbose,
+                   spam_results *results);
 
 typedef struct {
     double *x_tr;

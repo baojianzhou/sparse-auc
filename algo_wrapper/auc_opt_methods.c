@@ -1380,7 +1380,7 @@ bool __solam(const double *x_tr,
 }
 
 bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
-                    const int *x_tr_lens, const double *y_tr,
+                    const int *x_tr_lens, const int *x_tr_posis, const double *y_tr,
                     int num_tr, int p, double para_r, double para_xi, int para_num_pass,
                     int verbose, solam_results *results) {
 
@@ -1425,13 +1425,11 @@ bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
         if (n_cnt > para_num_pass) {
             break;
         }
-        int prev_x_tr = 0;
         for (int j = 0; j < num_tr; j++) {
             // to hold the sparse data
             int s_len = x_tr_lens[j];
-            const int *xt_indices = x_tr_indices + prev_x_tr;
-            const double *xt_vals = x_tr_vals + prev_x_tr;
-            prev_x_tr += s_len;
+            const int *xt_indices = x_tr_indices + x_tr_posis[j];
+            const double *xt_vals = x_tr_vals + x_tr_posis[j];
             double n_ga = sc / sqrt(n_t);
             if (y_tr[j] > 0) { // if it is positive case
                 n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
@@ -1817,7 +1815,7 @@ bool __spam_sparse(const double *x_values,
             alpha_wt = b_wt - a_wt;
 
             double weight;
-            double dot_prod = _sparse_dot(cur_indices, cur_xt, x_len_list[j], wt);
+            double dot_prod = _sparse_dot(cur_xt, cur_indices, x_len_list[j], wt);
             if (cur_yt > 0) {
                 weight = 2. * (1.0 - prob_p) * (dot_prod - a_wt);
                 weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
@@ -1883,7 +1881,7 @@ bool __spam_sparse(const double *x_values,
                 for (int q = 0; q < n; q++) {
                     cur_xt = x_values + x_positions[q];
                     cur_indices = x_indices + x_positions[q];
-                    y_pred[q] = _sparse_dot(cur_indices, cur_xt, x_len_list[q], wt_bar);
+                    y_pred[q] = _sparse_dot(cur_xt, cur_indices, x_len_list[q], wt_bar);
                 }
                 double auc = _auc_score(y_tr, y_pred, n);
                 free(y_pred);
@@ -1918,24 +1916,6 @@ bool __spam_sparse(const double *x_values,
     return true;
 }
 
-bool algo_spam(spam_para *para, spam_results *results) {
-    if (para->is_sparse) {
-        // sparse case (for sparse data).
-        return __spam_sparse(para->sparse_x_values,
-                             para->sparse_x_indices,
-                             para->sparse_x_positions,
-                             para->sparse_x_len_list,
-                             para->y_tr, para->p, para->num_tr, para->para_xi,
-                             para->para_l1_reg, para->para_l2_reg, para->para_num_passes,
-                             para->para_step_len, para->para_reg_opt, para->verbose, results);
-    } else {
-        // non-sparse case
-        return __spam(para->x_tr, para->y_tr, para->p, para->num_tr,
-                      para->para_xi, para->para_l1_reg, para->para_l2_reg,
-                      para->para_num_passes, para->para_step_len, para->para_reg_opt,
-                      para->verbose, results);
-    }
-}
 
 bool __sht_am(const double *x_tr,
               const double *y_tr,
