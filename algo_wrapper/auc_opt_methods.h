@@ -44,30 +44,10 @@ typedef struct {
 } data_pair;
 
 typedef struct {
-    double *x_tr;
-    double *y_tr;
-    int p;
-    int num_tr;
-    int verbose;
-    int *para_rand_ind; // to random shuffle the training samples
-    double para_xi; // the parameter xi, to control the learning rate.
-    double para_r; // the parameter R, to control the wt, the radius of the ball of wt.
-    int para_num_pass; // number of passes, under online setting, it should be 1.
-} solam_para;
-
-typedef struct {
-    int *x_tr_indices;
-    double *x_tr_values;
-    double *y_tr;
-    int max_nonzero; // the dimension of sparse matrix
-    int p;
-    int num_tr;
-    int verbose;
-    int *para_rand_ind; // to random shuffle the training samples
-    double para_xi; // the parameter xi, to control the learning rate.
-    double para_r; // the parameter R, to control the wt, the radius of the ball of wt.
-    int para_num_pass; // number of passes, under online setting, it should be 1.
-} solam_para_sparse;
+    double *vals;
+    int *indices;
+    int len;
+} sparse_arr;
 
 typedef struct {
     double *wt;
@@ -141,7 +121,11 @@ bool head_tail_binsearch(
  * year={2016}
  * }
  */
-bool __solam(solam_para *para, solam_results *results);
+bool __solam(const double *x_tr,
+             const double *y_tr,
+             int num_tr, int p,
+             double para_r, double para_xi, int para_num_pass, int verbose,
+             solam_results *results);
 
 /**
  * SOLAM: Stochastic Online AUC Maximization for sparse data
@@ -158,7 +142,13 @@ bool __solam(solam_para *para, solam_results *results);
  * year={2016}
  * }
  */
-bool __solam_sparse(solam_para_sparse *para, solam_results *results);
+bool __solam_sparse(const double *x_tr_vals,
+                    const int *x_tr_indices,
+                    const int *x_tr_lens,
+                    const double *y_tr,
+                    int num_tr, int p,
+                    double para_r, double para_xi, int para_num_pass, int verbose,
+                    solam_results *results);
 
 
 typedef struct {
