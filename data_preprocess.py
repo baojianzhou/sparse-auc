@@ -65,7 +65,7 @@ def data_process_13_ad():
                   'data_y': np.asarray(data_y)}, open('processed-13-ad.pkl', 'wb'))
 
 
-def _load_dataset_realsim(data_path):
+def _load_dataset_13_realsim(data_path):
     """
     number of classes: 2
     number of samples: 72,309
@@ -128,6 +128,89 @@ def _load_dataset_realsim(data_path):
             data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
                                                                 'te_index': rand_perm[test_index]}
     pkl.dump(data, open(os.path.join(data_path, 'processed_realsim.pkl'), 'wb'))
+    return data
+
+
+def _load_dataset_09_sector(data_path):
+    """
+    number of samples: 9,619
+    number of features: 55,197 (notice: some features are all zeros.)
+    :return:
+    """
+    if os.path.exists(data_path + 'processed_sector_normalized.pkl'):
+        return pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
+    data = dict()
+    data['x_tr'] = []
+    data['y_tr'] = []
+    max_id, max_nonzero = 0, 0
+    words_freq = dict()
+    # training part
+    with open(data_path + 'sector.scale', 'rb') as f:
+        for row in f.readlines():
+            items = row.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
+            # each feature value pair.
+            data['x_tr'].append(items)
+            max_id = max(max([item[0] for item in items]), max_id)
+            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            for item in items:
+                word = item[0]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+
+    assert len(data['y_tr']) == 6412  # total samples in train
+    # testing part
+    with open(data_path + 'sector.t.scale', 'rb') as f:
+        for row in f.readlines():
+            items = row.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
+            # each feature value pair.
+            data['x_tr'].append(items)
+            max_id = max(max([item[0] for item in items]), max_id)
+            max_nonzero = max(len(data['x_tr'][-1]), max_nonzero)
+            for item in items:
+                word = item[0]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+
+    print('maximal length is: %d' % max_nonzero)
+    data['y_tr'] = np.asarray(data['y_tr'])
+    assert len(data['y_tr']) == 9619  # total samples in the dataset
+    data['n'] = 9619
+    data['p'] = 55197
+    data['max_nonzero'] = max_nonzero  # maximal number of nonzero features.
+    print(max_id)
+    assert (max_id + 1) == data['p']  # to make sure the number of features is p
+    assert len(np.unique(data['y_tr'])) == 105  # we have total 105 classes.
+    rand_ind = np.random.permutation(len(np.unique(data['y_tr'])))
+    posi_classes = rand_ind[:len(np.unique(data['y_tr'])) / 2]
+    nega_classes = rand_ind[len(np.unique(data['y_tr'])) / 2:]
+    posi_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in posi_classes]
+    nega_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in nega_classes]
+    data['y_tr'][posi_indices] = 1
+    data['y_tr'][nega_indices] = -1
+    print('number of positive: %d' % len(posi_indices))
+    print('number of negative: %d' % len(nega_indices))
+    print('%d features frequency is less than 10!' %
+          len([word for word in words_freq if words_freq[word] <= 10]))
+    data['num_posi'] = len(posi_indices)
+    data['num_nega'] = len(nega_indices)
+    # randomly permute the datasets 100 times for future use.
+    data['num_runs'] = 5
+    data['num_k_fold'] = 5
+    for run_index in range(data['num_runs']):
+        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
+        fake_x = np.zeros(shape=(data['n'], 1))  # just need the number of training samples
+        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
+            # since original data is ordered, we need to shuffle it!
+            rand_perm = np.random.permutation(data['n'])
+            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
+                                                                'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(data_path + 'processed_sector_normalized.pkl', 'wb'))
     return data
 
 
@@ -288,11 +371,10 @@ def generate_dataset():
                                num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.3)
 
 
-generate_dataset()
-
-
 def load_dataset(root_path, name=None):
     if name is None:
         print('Unknown dataset name')
-    if name == 'realsim':
-        return _load_dataset_realsim(data_path=os.path.join(root_path, '13_%s' % name))
+    elif name == 'realsim':
+        return _load_dataset_13_realsim(data_path=os.path.join(root_path, '13_%s' % name))
+    elif name == 'sector':
+        return _load_dataset_09_sector(data_path=os.path.join(root_path, '09_%s' % name))
