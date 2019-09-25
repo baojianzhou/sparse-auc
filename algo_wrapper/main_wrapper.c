@@ -52,7 +52,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     result->wt_bar = malloc(sizeof(double) * para->p);
     result->a = 0.0;
     result->b = 0.0;
-    if(para->verbose >0){
+    if (para->verbose > 0) {
         printf("num_tr: %d p: %d xi: %.4f r: %.4f num_passes: %d\n",
                para->num_tr, para->p, para->para_xi, para->para_r, para->para_num_pass);
     }
@@ -748,17 +748,25 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
         return NULL;
     }
     PyArrayObject *x_tr, *y_tr;
-    int p, n;
-    double eta, lambda;
+    int p, n, num_passes, verbose = 0;
+    double para_r, para_g;
 
-    if (!PyArg_ParseTuple(args, "O!O!iidd",
+    if (!PyArg_ParseTuple(args, "O!O!iiidd",
                           &PyArray_Type, &x_tr,
                           &PyArray_Type, &y_tr,
-                          &p, &n, &eta, &lambda)) { return NULL; }
+                          &p, &n, &num_passes, &para_r, &para_g)) { return NULL; }
+    if (verbose > 0) {
+        // summary of the data
+        printf("--------------------------------------------------------------\n");
+        printf("num_tr: %d p: %d \n", n, p);
+        printf("para_r: %04e para_g: %04e num_passes: %d \n", para_r, para_g, num_passes);
+        printf("--------------------------------------------------------------\n");
+
+    }
     double *wt = malloc(sizeof(double) * p);
     double *wt_bar = malloc(sizeof(double) * p);
-    algo_opauc((double *) PyArray_DATA(x_tr),
-               (double *) PyArray_DATA(y_tr), p, n, eta, lambda, wt, wt_bar);
+    algo_fsauc((double *) PyArray_DATA(x_tr),
+               (double *) PyArray_DATA(y_tr), p, n, para_r, para_g, num_passes, wt, wt_bar);
     PyObject *results = PyTuple_New(2);
     PyObject *p_wt = PyList_New(p);
     PyObject *p_wt_bar = PyList_New(p);
@@ -787,6 +795,7 @@ static PyMethodDef sparse_methods[] = {
         {"c_algo_graph_am",        (PyCFunction) wrap_algo_graph_am,        METH_VARARGS, "docs"},
         {"c_algo_graph_am_sparse", (PyCFunction) wrap_algo_graph_am_sparse, METH_VARARGS, "docs"},
         {"c_algo_opauc",           (PyCFunction) wrap_algo_opauc,           METH_VARARGS, "docs"},
+        {"c_algo_fsauc",           (PyCFunction) wrap_algo_fsauc,           METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */

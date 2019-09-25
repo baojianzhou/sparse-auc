@@ -1,5 +1,4 @@
-function [v_bar, p_hat, A, A_p, A_n, n_p, n_n] = SOLAM1( v1, X, y, R, gamma, ...
-    R0, K, p_hat, A, A_p, A_n, n_p, n_n, init_ep)
+function [v_bar, p_hat, A, A_p, A_n, n_p, n_n] = SOLAM1( v1, X, y, R, gamma, R0, K, p_hat, A, A_p, A_n, n_p, n_n, init_ep)
 % Algorithm 1 (SOLAM)
 % November, 2017
 % xzhang131@uiowa.edu
@@ -30,13 +29,11 @@ gamma_bar = 0;
 if init_ep
     D0 = 2*sqrt(2)*kappa*R0; 
 else
-    D0 = 2*sqrt(2)*kappa*R0+...
-        (4*sqrt(2)*kappa*(2+sqrt(2*log(12/delta)))*(1+2*kappa)*R)...
-        /sqrt( min(p_hat,1-p_hat)*n - sqrt(2*n*log(12/delta)) );
+    D0 = 2*sqrt(2)*kappa*R0 + (4*sqrt(2)*kappa*(2+sqrt(2*log(12/delta)))*(1+2*kappa)*R)/sqrt( min(p_hat,1-p_hat)*n - sqrt(2*n*log(12/delta)) );
 end
-
+mm = (n_p + n_n);
 for i = 1:n
-    p_hat = ((i+(n_p + n_n)-1)*p_hat+(y(i)==1))/(i+(n_p + n_n));
+    p_hat = ((i+m-1)*p_hat+(y(i)==1))/(i+mm);
     
     % compute gradient
     % pred = v'*[X(:,i);0;0]; 

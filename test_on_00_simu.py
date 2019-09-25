@@ -18,6 +18,7 @@ try:
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sht_am
         from sparse_module import c_algo_graph_am
+        from sparse_module import c_algo_fsauc
     except ImportError:
         print('cannot find some function(s) in sparse_module')
         pass
@@ -284,6 +285,59 @@ def cv_opauc(task_id, k_fold, num_passes, data):
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         print(np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
         print('run_time: %.4f' % (time.time() - s_time1))
+        if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
+            auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
+            auc_wt[(task_id, fold_id)]['para'] = algo_para
+            auc_wt[(task_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
+        if auc_wt_bar[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
+            auc_wt_bar[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
+            auc_wt_bar[(task_id, fold_id)]['para'] = algo_para
+            auc_wt_bar[(task_id, fold_id)]['num_nonzeros'] = float(
+                np.mean(list_num_nonzeros_wt_bar))
+
+    run_time = time.time() - s_time
+    print('-' * 40 + ' opauc ' + '-' * 40)
+    print('run_time: %.4f' % run_time)
+    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
+    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
+    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
+    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
+                                          for _ in auc_wt_bar]))
+    return auc_wt, auc_wt_bar
+
+
+def cv_fsauc(task_id, k_fold, num_passes, data):
+    list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+    list_g = 2. ** np.arange(-10, -2, 1, dtype=float)
+    auc_wt, auc_wt_bar = dict(), dict()
+    s_time = time.time()
+    for fold_id, para_r, para_g in product(range(k_fold), list_r, list_g):
+        # only run sub-tasks for parallel
+        algo_para = (task_id, fold_id, num_passes, para_r, para_g, k_fold)
+        tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        # cross validate based on tr_index
+        if (task_id, fold_id) not in auc_wt:
+            auc_wt[(task_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+            auc_wt_bar[(task_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+        list_auc_wt = np.zeros(k_fold)
+        list_auc_wt_bar = np.zeros(k_fold)
+        list_num_nonzeros_wt = np.zeros(k_fold)
+        list_num_nonzeros_wt_bar = np.zeros(k_fold)
+        kf = KFold(n_splits=k_fold, shuffle=False)
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(
+                kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
+            re = c_algo_fsauc(sub_x_tr, sub_y_tr, data['p'], len(sub_tr_ind),
+                              num_passes, para_r, para_g)
+            wt = np.asarray(re[0])
+            wt_bar = np.asarray(re[1])
+            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
+            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(task_id, fold_id)]['para'] = algo_para
@@ -624,6 +678,13 @@ def run_ms(method_name):
             item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item][method_name] = cv_opauc(task_id, k_fold, num_passes, data[fig_i])
+    elif method_name == 'fsauc':
+        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+            f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+            data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+            item = (task_id, num_passes, num_tr, mu, posi_ratio, fig_i)
+            results[item] = dict()
+            results[item][method_name] = cv_fsauc(task_id, k_fold, num_passes, data[fig_i])
     pkl.dump(results, open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
@@ -686,13 +747,19 @@ def run_testing():
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(task_id, 0)]['para']
             re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
-            results[key]['opauc'] = re
+            results[key][method] = re
+            # -----------------------
+            method = 'fsauc'
+            ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+            _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(task_id, 0)]['para']
+            re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
+            results[key][method] = re
     f_name = 'results_task_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
 
 def main():
-    run_testing()
+    run_ms(method_name='fsauc')
 
 
 if __name__ == '__main__':

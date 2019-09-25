@@ -1,5 +1,4 @@
-function [v_bar_s, AUCs, itrs, timing] = ASOLAM(X, y, X_test, y_test, ...
-    R, K, gamma)
+function [v_bar_s, AUCs, itrs, timing] = ASOLAM(X, y, X_test, y_test, R, K, gamma)
 % Algorithm 1 (SOLAM): not finished yet
 % November, 2017
 % xzhang131@uiowa.edu
@@ -24,8 +23,7 @@ p_hat = 0;
 sample = randsample(n,n,'false');
 for k = 1:m  
     ran = sample((k-1)*n0+1:k*n0);  
-    [v_bar, p_hat, A, A_p, A_n, n_p, n_n] = SOLAM1(v_bar, X(:,ran), y(ran,1), ...
-        R, gamma, Rk, K, p_hat, A, A_p, A_n, n_p, n_n, k==1); 
+    [v_bar, p_hat, A, A_p, A_n, n_p, n_n] = SOLAM1(v_bar, X(:,ran), y(ran,1), R, gamma, Rk, K, p_hat, A, A_p, A_n, n_p, n_n, k==1); 
     
     % update
     Rk = Rk/2;

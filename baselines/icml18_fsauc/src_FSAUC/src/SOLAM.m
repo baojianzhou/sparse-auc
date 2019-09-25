@@ -1,5 +1,4 @@
-function [itrs, v_bar_s, AUCs, timing] ...
-    = SOLAM( v, X, y, X_test, y_test, zeta, R, n_delta, l1)
+function [itrs, v_bar_s, AUCs, timing] = SOLAM( v, X, y, X_test, y_test, zeta, R, n_delta, l1)
 % SOLAM Algorithm
 % November 1, 2017
 % xzhang131@uiowa.edu

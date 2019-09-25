@@ -24,12 +24,19 @@ Output:
     aucs: results on iterates indexed by res_idx
     time:
 """
-# https://stackoverflow.com/questions/22053050/difference-between-numpy-array-shape-r-1-and-r singleton
+import os
+import time
 import numpy as np
+from itertools import product
 from sklearn import metrics
+from sklearn.model_selection import KFold
+from sklearn.metrics import roc_auc_score
+import pickle as pkl
 # from proj_l1ball import euclidean_proj_l1ball
 import timeit
 from scipy.sparse import isspmatrix
+
+data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
 
 
 def auc_fs(x_tr, y_tr, x_te, y_te, options):
@@ -185,18 +192,3 @@ def ProjectOntoL1Ball(v, b):
         theta = (sv[rho] - b) / (rho + 1)
         w = np.sign(v) * np.maximum(nm - theta, 0)
     return w
-
-# u = sort(abs(v),'descend');
-# sv = cumsum(u);
-# rho = find(u > (sv - b) ./ (1:length(u))', 1, 'last');
-# theta = max(0, (sv(rho) - b) / rho);
-# w = sign(v) .* max(abs(v) - theta, 0)
-#
-#    u = np.sort(v)[::-1]
-#    cssv = np.cumsum(u)
-#    # get the number of > 0 components of the optimal solution
-#    rho = np.nonzero(u * np.arange(1, n+1) > (cssv - s))[0][-1]
-#    # compute the Lagrange multiplier associated to the simplex constraint
-#    theta = float(cssv[rho] - s) / rho
-#    # compute the projection by thresholding v using theta
-#    w = (v - theta).clip(min=0)
