@@ -256,6 +256,8 @@ def cv_opauc(task_id, k_fold, num_passes, data):
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
     for fold_id, para_eta, para_lambda in product(range(k_fold), list_eta, list_lambda):
+        if fold_id == 1:
+            break
         # only run sub-tasks for parallel
         algo_para = (task_id, fold_id, num_passes, para_eta, para_lambda, k_fold)
         tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
@@ -267,7 +269,6 @@ def cv_opauc(task_id, k_fold, num_passes, data):
         list_auc_wt_bar = np.zeros(k_fold)
         list_num_nonzeros_wt = np.zeros(k_fold)
         list_num_nonzeros_wt_bar = np.zeros(k_fold)
-        s_time1 = time.time()
         kf = KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
@@ -283,8 +284,9 @@ def cv_opauc(task_id, k_fold, num_passes, data):
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
-        print(np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
-        print('run_time: %.4f' % (time.time() - s_time1))
+        print('fold-id:%d AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.4f' %
+              (fold_id, float(np.mean(list_auc_wt)), float(np.mean(list_auc_wt_bar)),
+               time.time() - s_time))
         if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(task_id, fold_id)]['para'] = algo_para
@@ -294,7 +296,17 @@ def cv_opauc(task_id, k_fold, num_passes, data):
             auc_wt_bar[(task_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(task_id, fold_id)]['num_nonzeros'] = float(
                 np.mean(list_num_nonzeros_wt_bar))
-
+    # to save some model selection time.
+    for fold_id in range(k_fold):
+        if (task_id, fold_id) not in auc_wt:
+            auc_wt[(task_id, fold_id)] = {
+                'auc': auc_wt[(task_id, 0)]['auc'],
+                'para': auc_wt[(task_id, 0)]['para'],
+                'num_nonzeros': auc_wt[(task_id, 0)]['num_nonzeros']}
+            auc_wt_bar[(task_id, fold_id)] = {
+                'auc': auc_wt_bar[(task_id, 0)]['auc'],
+                'para': auc_wt_bar[(task_id, 0)]['para'],
+                'num_nonzeros': auc_wt_bar[(task_id, 0)]['num_nonzeros']}
     run_time = time.time() - s_time
     print('-' * 40 + ' opauc ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -759,7 +771,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='fsauc')
+    run_ms(method_name='opauc')
 
 
 if __name__ == '__main__':
