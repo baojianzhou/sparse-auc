@@ -1897,7 +1897,7 @@ bool __spam_sparse(const double *x_tr_vals,
                 for (int k = 0; k < p; k++) {
                     double sign_uk = (double) (sign(u[k]));
                     results->wt[k] = (sign_uk / tmp_l2) *
-                            fmax(0.0, fabs(u[k]) - eta_t * para_l1_reg);
+                                     fmax(0.0, fabs(u[k]) - eta_t * para_l1_reg);
                 }
             } else {
                 /**
@@ -2746,7 +2746,10 @@ void algo_opauc(const double *x_tr,
                 const double *y_tr,
                 int p,
                 int n,
-                double eta, double lambda, double *wt, double *wt_bar) {
+                double eta,
+                double lambda,
+                double *wt,
+                double *wt_bar) {
     double num_p = 0.0, num_n = 0.0;
     double *center_p = malloc(sizeof(double) * p);
     double *center_n = malloc(sizeof(double) * p);
@@ -2894,9 +2897,20 @@ void project_onto_l1(const double *w, int p, double r, double *proj_v) {
     free(abs_w);
 }
 
-void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
-                double para_r, double para_g, int num_passes, double *wt, double *wt_bar) {
-    double kappa = 1.0; //assume that kappa=1.0 for normalized data samples.
+void _algo_fsauc(const double *x_tr,
+                 const double *y_tr,
+                 int p,
+                 int n,
+                 double para_r,
+                 double para_g,
+                 int num_passes,
+                 double *wt,
+                 double *wt_bar) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+    //assume that kappa=1.0 for normalized data samples.
+    double kappa = 1.0;
     double global_n = n * num_passes;
 
     // all initialize parameters
@@ -2983,21 +2997,21 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
             int global_index = k * n0 + kk;
             const double *xt = x_tr + (global_index % n) * p;
             double yt = y_tr[global_index % n];
-            double is_posi = (yt == 1.0 ? 1. : 0.0);
-            double is_nega = (yt == -1.0 ? 1. : 0.0);
-            p_hat = ((n_posi_nega + kk) * p_hat + is_posi) / (kk + 1. + n_posi_nega);
+            double is_posi_yt = is_posi(yt);
+            double is_nega_yt = is_nega(yt);
+            p_hat = ((n_posi_nega + kk) * p_hat + is_posi_yt) / (kk + 1. + n_posi_nega);
 
             // this is update a_p, a_n, n_p, n_n
-            cblas_daxpy(p, is_posi, xt, 1, vec_a_p, 1); // 89: A_p = A_p + (X*(y==1))';
-            cblas_daxpy(p, is_nega, xt, 1, vec_a_n, 1); // 90: A_n = A_n + (X*(y==-1))';
-            n_p += is_posi; // 91: n_p = n_p + sum(y==1);
-            n_n += is_nega; // 92: n_n = n_n + sum(y==-1);
+            cblas_daxpy(p, is_posi_yt, xt, 1, vec_a_p, 1); // 89: A_p = A_p + (X*(y==1))';
+            cblas_daxpy(p, is_nega_yt, xt, 1, vec_a_n, 1); // 90: A_n = A_n + (X*(y==-1))';
+            n_p += is_posi_yt; // 91: n_p = n_p + sum(y==1);
+            n_n += is_nega_yt; // 92: n_n = n_n + sum(y==-1);
 
             // compute gradient
             double pred = cblas_ddot(p, vec_w, 1, xt, 1);
-            double temp = 2. * (is_nega * p_hat - is_posi * (1. - p_hat));
-            double ga = 2. * is_posi * (1. - p_hat) * (a - pred);
-            double gb = 2. * is_nega * p_hat * (b - pred);
+            double temp = 2. * (is_nega_yt * p_hat - is_posi_yt * (1. - p_hat));
+            double ga = 2. * is_posi_yt * (1. - p_hat) * (a - pred);
+            double gb = 2. * is_nega_yt * p_hat * (b - pred);
             memset(gw, 0, sizeof(double) * p);
             cblas_daxpy(p, (1. + alpha) * temp - ga - gb, xt, 1, gw, 1);
             double galpha = temp * pred - 2.0 * p_hat * (1. - p_hat) * alpha;
@@ -3079,6 +3093,225 @@ void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
         beta_prev = beta_next;
     }//outer-stage
 
+    free(vec_a_n);
+    free(vec_a_p);
+    free(vec_a);
+    free(gw);
+    free(vec_temp);
+    free(vec_v1);
+    free(vec_w);
+    free(vec_w1);
+    free(v_bar);
+}
+
+void _algo_fsauc_sparse(const double *x_tr_vals,
+                        const int *x_tr_indices,
+                        const int *x_tr_posis,
+                        const int *x_tr_lens,
+                        const double *y_tr,
+                        int p,
+                        int n,
+                        double para_r,
+                        double para_g,
+                        int num_passes,
+                        double *wt,
+                        double *wt_bar) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+    //assume that kappa=1.0 for normalized data samples.
+    double kappa = 1.0;
+    double global_n = n * num_passes;
+
+    // all initialize parameters
+    int m = (int) floor(0.5 * log2((2.0 * global_n) / log2(global_n))) - 1;
+    int n0 = (int) floor(global_n / (double) m);
+    double R0 = 2. * sqrt(1. + 2. * pow(kappa, 2.)) * para_r;
+    double beta_prev = 1. + 8.0 * pow(kappa, 2.);
+    double *v_bar = malloc(sizeof(double) * (p + 2));
+    memset(v_bar, 0, sizeof(double) * (p + 2));
+    memset(wt, 0, sizeof(double) * p);
+    memset(wt_bar, 0, sizeof(double) * p);
+
+    double Rk = R0;
+
+
+    double *vec_v1 = malloc(sizeof(double) * (p + 2));
+
+    double *vec_w = malloc(sizeof(double) * p);
+    double *vec_w1 = malloc(sizeof(double) * p);
+    double *w_bar = malloc(sizeof(double) * p);
+
+
+    double R = para_r;
+    double *gw = malloc(sizeof(double) * p);
+    double *vec_temp = malloc(sizeof(double) * p);
+
+    int K = 1; // number of alternative projections.
+
+
+
+    //some global updates
+    // v_bar, p_hat, A, A_p, A_n, n_p, n_n
+    double p_hat = 0.0;
+    double *vec_a = malloc(sizeof(double) * (p + 2));
+    memset(vec_a, 0, sizeof(double) * (p + 2));
+    double *vec_a_p = malloc(sizeof(double) * p), n_p = 0.0;
+    memset(vec_a_p, 0, sizeof(double) * p);
+    double *vec_a_n = malloc(sizeof(double) * p), n_n = 0.0;
+    memset(vec_a_n, 0, sizeof(double) * p);
+
+    double gamma = para_g;
+    double *zero_vec = malloc(sizeof(double) * p);
+    memset(zero_vec, 0, sizeof(double) * p);
+    double *xt = malloc(sizeof(double) * p);
+    for (int k = 0; k < m; k++) {
+
+        cblas_dcopy(p + 2, v_bar, 1, vec_v1, 1);
+        // some parameters for each stage
+        double delta = 0.1;
+        double alpha1 = cblas_ddot(p + 2, vec_a, 1, vec_v1, 1);
+        double alpha = alpha1;
+        cblas_dcopy(p, vec_v1, 1, vec_w1, 1);
+        cblas_dcopy(p, vec_w1, 1, vec_w, 1);
+        double a1 = vec_v1[p];
+        double b1 = vec_v1[p + 1];
+        double a = a1;
+        double b = b1;
+        memset(w_bar, 0, sizeof(double) * p);
+        double a_bar = 0.0;
+        double b_bar = 0.0;
+        double alpha_bar = 0.0;
+
+        double D0 = 2.0 * sqrt(2.0) * kappa * R0;
+        if (k != 0) {
+            // not in the first stage
+
+            D0 += (4.0 * sqrt(2.0) * kappa * (2.0 + sqrt(2.0 * log(12.0 / delta))) *
+                   (1.0 + 2.0 * kappa) * R) /
+                  sqrt(min(p_hat, 1.0 - p_hat) * (double) n0 - sqrt(2.0 * n0 * log(12.0 / delta)));
+            if (D0 <= 0.0) {
+                printf("D0 is negative!");
+                free(vec_a_n);
+                free(vec_a_p);
+                free(vec_a);
+                free(gw);
+                free(vec_temp);
+                free(vec_v1);
+                free(vec_w);
+                free(vec_w1);
+                free(v_bar);
+                exit(0);
+            }
+        }
+
+        double n_posi_nega = n_p + n_n;
+        for (int kk = 0; kk < n0; kk++) {
+            int global_index = k * n0 + kk;
+            const int *xt_indices = x_tr_indices + x_tr_posis[global_index % n];
+            const double *xt_vals = x_tr_vals + x_tr_posis[global_index % n];
+            cblas_dcopy(p, zero_vec, 1, xt, 1);
+            for (int tt = 0; tt < x_tr_lens[global_index % n]; tt++) {
+                xt[xt_indices[tt]] = xt_vals[tt];
+            }
+            double yt = y_tr[global_index % n];
+            double is_posi_yt = is_posi(yt);
+            double is_nega_yt = is_nega(yt);
+            p_hat = ((n_posi_nega + kk) * p_hat + is_posi_yt) / (kk + 1. + n_posi_nega);
+
+            // this is update a_p, a_n, n_p, n_n
+            cblas_daxpy(p, is_posi_yt, xt, 1, vec_a_p, 1); // 89: A_p = A_p + (X*(y==1))';
+            cblas_daxpy(p, is_nega_yt, xt, 1, vec_a_n, 1); // 90: A_n = A_n + (X*(y==-1))';
+            n_p += is_posi_yt; // 91: n_p = n_p + sum(y==1);
+            n_n += is_nega_yt; // 92: n_n = n_n + sum(y==-1);
+
+            // compute gradient
+            double pred = cblas_ddot(p, vec_w, 1, xt, 1);
+            double temp = 2. * (is_nega_yt * p_hat - is_posi_yt * (1. - p_hat));
+            double ga = 2. * is_posi_yt * (1. - p_hat) * (a - pred);
+            double gb = 2. * is_nega_yt * p_hat * (b - pred);
+            memset(gw, 0, sizeof(double) * p);
+            cblas_daxpy(p, (1. + alpha) * temp - ga - gb, xt, 1, gw, 1);
+            double galpha = temp * pred - 2.0 * p_hat * (1. - p_hat) * alpha;
+
+            // updates w,a,b,alpha
+            cblas_daxpy(p, -gamma, gw, 1, vec_w, 1); // w = w-gamma*gw;
+            a += -gamma * ga; // a = a-gamma*ga;
+            b += -gamma * gb; // b = b-gamma*gb;
+            alpha += gamma * galpha;
+
+            // project: w,a,b
+            for (int j = 0; j < K; j++) {
+                project_onto_l1(vec_w, p, R, vec_temp); //project w on L1 ball.
+                cblas_dcopy(p, vec_temp, 1, vec_w, 1);
+                a = sign(a) * fmin(fabs(a), R * kappa); //project a
+                b = sign(b) * fmin(fabs(b), R * kappa); //project b
+                // 65:72
+                cblas_dcopy(p, vec_w1, 1, vec_temp, 1);
+                cblas_daxpy(p, -1., vec_w, 1, vec_temp, 1);
+                double v_norm = cblas_ddot(p, vec_temp, 1, vec_temp, 1);
+                v_norm += (a - a1) * (a - a1) + (b - b1) * (b - b1);
+                v_norm = sqrt(v_norm);
+                if (v_norm > R0) {
+                    double tmp = R0 / v_norm;
+                    cblas_dscal(p, tmp, vec_w, 1);
+                    cblas_daxpy(p, 1., vec_w1, 1, vec_temp, 1);
+                    a = a1 + tmp * a;
+                    b = b1 + tmp * b;
+                }
+            }
+            //project: alpha
+            double tmp = fmin(fmin(D0 + alpha1, 2. * R * kappa), alpha);
+            alpha = fmax(-D0 + alpha1, fmax(-2 * R * kappa, tmp));
+
+            // 80:86
+            cblas_dscal(p, 1. / (kk + 1.), w_bar, 1);
+            cblas_daxpy(p, 1. / (kk + 1.), vec_w, 1, w_bar, 1);
+            a_bar = (kk * a_bar + a) / (kk + 1.);
+            b_bar = (kk * b_bar + b) / (kk + 1.);
+            alpha_bar = (kk * alpha_bar + alpha) / (kk + 1.);
+        }//inner-stage
+        Rk /= 2.0;
+
+
+        cblas_dcopy(p, vec_a_n, 1, vec_a, 1); // 93: A = [A_n/n_n - A_p/n_p,0,0];
+        cblas_dscal(p, 1. / n_n, vec_a, 1);
+        cblas_daxpy(p, -1. / n_p, vec_a_p, 1, vec_a, 1);
+        vec_a[p] = 0.0;
+        vec_a[p + 1] = 0.0;
+
+        cblas_dcopy(p, w_bar, 1, v_bar, 1); // 94: v_bar = [w_bar;a_bar;b_bar];
+        v_bar[p] = a_bar;
+        v_bar[p + 1] = b_bar;
+        // update beta and D
+        double tmp1 = pow(kappa * (1. + 2. * kappa) * (2. + sqrt(2. * log(12. / delta))), 2.);
+        double tmp2 = fmin(p_hat, 1. - p_hat) - sqrt(2. * log(12. / delta) / n0);
+        double beta_next = (1. + 8.0 * pow(kappa, 2.)) + (32. * tmp1) / tmp2; //update beta
+
+        if (beta_next <= 0.0) {
+            printf("beta_next is negative!");
+            free(vec_a_n);
+            free(vec_a_p);
+            free(vec_a);
+            free(gw);
+            free(vec_temp);
+            free(vec_v1);
+            free(vec_w);
+            free(vec_w1);
+            free(v_bar);
+            exit(0);
+        }
+
+        cblas_dcopy(p, v_bar, 1, wt, 1);
+        cblas_dscal(p, 1. / (k + 1.), wt_bar, 1);
+        cblas_daxpy(p, 1. / (k + 1.), wt, 1, wt_bar, 1);
+
+        // to make sure the step size is not increasing.
+        gamma = fmin(sqrt(beta_next / beta_prev) * (gamma / 2.), gamma);
+        beta_prev = beta_next;
+    }//outer-stage
+    free(xt);
+    free(zero_vec);
     free(vec_a_n);
     free(vec_a_p);
     free(vec_a);

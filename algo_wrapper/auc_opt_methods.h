@@ -373,7 +373,27 @@ void algo_opauc(const double *x_tr,
  * @param para_g
  * @param para_r
  */
-void algo_fsauc(const double *x_tr, const double *y_tr, int p, int n,
-                double para_r, double para_g, int num_passes, double *wt, double *wt_bar);
+void _algo_fsauc(const double *x_tr,
+                const double *y_tr,
+                int p,
+                int n,
+                double para_r,
+                double para_g,
+                int num_passes,
+                double *wt,
+                double *wt_bar);
+
+void _algo_fsauc_sparse(const double *x_tr_vals,
+                        const int *x_tr_indices,
+                        const int *x_tr_posis,
+                        const int *x_tr_lens,
+                        const double *y_tr,
+                        int p,
+                        int n,
+                        double para_r,
+                        double para_g,
+                        int num_passes,
+                        double *wt,
+                        double *wt_bar);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H

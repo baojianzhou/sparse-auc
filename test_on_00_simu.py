@@ -708,7 +708,7 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 24
-    k_fold, passes = 5, 10
+    k_fold, passes = 1, 10
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -774,7 +774,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='opauc')
+    run_testing()
 
 
 if __name__ == '__main__':

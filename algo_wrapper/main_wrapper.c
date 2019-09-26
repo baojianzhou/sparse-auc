@@ -680,10 +680,42 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     return results;
 }
 
-static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
+
+static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
     /**
-     * Wrapper of the FSAUC algorithm.
+     * Wrapper of the SPAM algorithm with sparse data.
      */
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    PyArrayObject *x_tr, *y_tr;
+    int p, n;
+    double eta, lambda;
+
+    if (!PyArg_ParseTuple(args, "O!O!iidd",
+                          &PyArray_Type, &x_tr,
+                          &PyArray_Type, &y_tr,
+                          &p, &n, &eta, &lambda)) { return NULL; }
+    double *wt = malloc(sizeof(double) * p);
+    double *wt_bar = malloc(sizeof(double) * p);
+    algo_opauc((double *) PyArray_DATA(x_tr),
+               (double *) PyArray_DATA(y_tr), p, n, eta, lambda, wt, wt_bar);
+    PyObject *results = PyTuple_New(2);
+    PyObject *p_wt = PyList_New(p);
+    PyObject *p_wt_bar = PyList_New(p);
+    for (int i = 0; i < p; i++) {
+        PyList_SetItem(p_wt, i, PyFloat_FromDouble(wt[i]));
+        PyList_SetItem(p_wt_bar, i, PyFloat_FromDouble(wt_bar[i]));
+    }
+    PyTuple_SetItem(results, 0, p_wt);
+    PyTuple_SetItem(results, 1, p_wt_bar);
+    free(wt);
+    free(wt_bar);
+    return results;
+}
+
+static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
     if (self != NULL) {
         printf("error: unknown error !!\n");
         return NULL;
@@ -695,7 +727,11 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "O!O!iiidd",
                           &PyArray_Type, &x_tr,
                           &PyArray_Type, &y_tr,
-                          &p, &n, &num_passes, &para_r, &para_g)) { return NULL; }
+                          &p,
+                          &n,
+                          &num_passes,
+                          &para_r,
+                          &para_g)) { return NULL; }
     if (verbose > 0) {
         // summary of the data
         printf("--------------------------------------------------------------\n");
@@ -706,8 +742,66 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
     }
     double *wt = malloc(sizeof(double) * p);
     double *wt_bar = malloc(sizeof(double) * p);
-    algo_fsauc((double *) PyArray_DATA(x_tr),
-               (double *) PyArray_DATA(y_tr), p, n, para_r, para_g, num_passes, wt, wt_bar);
+    _algo_fsauc((double *) PyArray_DATA(x_tr),
+                (double *) PyArray_DATA(y_tr),
+                p, n, para_r, para_g, num_passes, wt, wt_bar);
+    PyObject *results = PyTuple_New(2);
+    PyObject *p_wt = PyList_New(p);
+    PyObject *p_wt_bar = PyList_New(p);
+    for (int i = 0; i < p; i++) {
+        PyList_SetItem(p_wt, i, PyFloat_FromDouble(wt[i]));
+        PyList_SetItem(p_wt_bar, i, PyFloat_FromDouble(wt_bar[i]));
+    }
+    PyTuple_SetItem(results, 0, p_wt);
+    PyTuple_SetItem(results, 1, p_wt_bar);
+    free(wt);
+    free(wt_bar);
+    return results;
+}
+
+
+static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
+    int p, num_tr, para_num_passes, para_step_len, verbose = 0;
+    double para_r, para_g;
+    if (!PyArg_ParseTuple(args,
+                          "O!O!O!O!O!iiiddii",
+                          &PyArray_Type, &x_values,
+                          &PyArray_Type, &x_indices,
+                          &PyArray_Type, &x_positions,
+                          &PyArray_Type, &x_len_list,
+                          &PyArray_Type, &y_tr,
+                          &p,
+                          &num_tr,
+                          &para_num_passes,
+                          &para_r,
+                          &para_g,
+                          &para_step_len,
+                          &verbose)) { return NULL; }
+    if (verbose > 0) {
+        // summary of the data
+        printf("--------------------------------------------------------------\n");
+        printf("num_tr: %d p: %d \n", num_tr, p);
+        printf("para_r: %04e para_g: %04e num_passes: %d \n", para_r, para_g, para_num_passes);
+        printf("--------------------------------------------------------------\n");
+    }
+    double *wt = malloc(sizeof(double) * p);
+    double *wt_bar = malloc(sizeof(double) * p);
+    _algo_fsauc_sparse((double *) PyArray_DATA(x_values),
+                       (int *) PyArray_DATA(x_indices),
+                       (int *) PyArray_DATA(x_positions),
+                       (int *) PyArray_DATA(x_len_list),
+                       (double *) PyArray_DATA(y_tr),
+                       p,
+                       num_tr,
+                       para_r,
+                       para_g,
+                       para_num_passes,
+                       wt, wt_bar);
     PyObject *results = PyTuple_New(2);
     PyObject *p_wt = PyList_New(p);
     PyObject *p_wt_bar = PyList_New(p);
@@ -736,6 +830,8 @@ static PyMethodDef sparse_methods[] = {
         {"c_algo_solam_sparse",    (PyCFunction) wrap_algo_solam_sparse,    METH_VARARGS, "docs"},
         {"c_algo_sht_am_sparse",   (PyCFunction) wrap_algo_sht_am_sparse,   METH_VARARGS, "docs"},
         {"c_algo_spam_sparse",     (PyCFunction) wrap_algo_spam_sparse,     METH_VARARGS, "docs"},
+        {"c_algo_fsauc_sparse",    (PyCFunction) wrap_algo_fsauc_sparse,    METH_VARARGS, "docs"},
+        {"c_algo_opauc_sparse",    (PyCFunction) wrap_algo_opauc_sparse,    METH_VARARGS, "docs"},
         {"c_algo_graph_am_sparse", (PyCFunction) wrap_algo_graph_am_sparse, METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
