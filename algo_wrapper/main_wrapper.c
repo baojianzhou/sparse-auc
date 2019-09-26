@@ -104,6 +104,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     }
     solam_results *result = malloc(sizeof(solam_results));
     result->wt = malloc(sizeof(double) * p);
+    result->wt_bar = malloc(sizeof(double) * p);
     result->a = 0.0;
     result->b = 0.0;
     __solam_sparse((double *) PyArray_DATA(x_tr_values),
@@ -112,17 +113,25 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
                    (int *) PyArray_DATA(x_tr_posis),
                    (double *) PyArray_DATA(y_tr), num_tr, p,
                    para_r, para_xi, para_num_pass, verbose, result);
-    PyObject *results = PyTuple_New(3);
+    if (verbose > 0) {
+        printf("norm(wt): %.4f\n", cblas_ddot(p, result->wt, 1, result->wt, 1));
+        printf("norm(wt-bar): %.4f\n", cblas_ddot(p, result->wt_bar, 1, result->wt_bar, 1));
+    }
+    PyObject *results = PyTuple_New(4);
     PyObject *wt = PyList_New(p);
+    PyObject *wt_bar = PyList_New(p);
     PyObject *a = PyFloat_FromDouble(result->a);
     PyObject *b = PyFloat_FromDouble(result->b);
     for (int i = 0; i < p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
+        PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
     }
     PyTuple_SetItem(results, 0, wt);
-    PyTuple_SetItem(results, 1, a);
-    PyTuple_SetItem(results, 2, b);
+    PyTuple_SetItem(results, 1, wt_bar);
+    PyTuple_SetItem(results, 2, a);
+    PyTuple_SetItem(results, 3, b);
     free(result->wt);
+    free(result->wt_bar);
     free(result);
     return results;
 }

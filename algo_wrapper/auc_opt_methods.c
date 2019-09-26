@@ -981,6 +981,35 @@ bool head_tail_binsearch(
     return true;
 }
 
+/**
+ * A full vector y dot product with a sparse vector x.
+ *
+ * ---
+ * x is presented as three elements:
+ * 1. x_indices: the nonzero indices.
+ * 2. x_values: the nonzeros.
+ * 3. x_len: the number of nonzeros.
+ * For example,
+ * x = {0, 1.0, 0, 0, 0, 0.1, 0.5}, then
+ * x_indices = {1,5,6}
+ * x_values = {1.0,0.1,0.5}
+ * x_len = 3.
+ * ---
+ *
+ * @param x_indices: the nonzero indices of the sparse vector x. starts from 0 index.
+ * @param x_values: the nonzeros values of the sparse vector x.
+ * @param x_len: the number of nonzeros in sparse vector x.
+ * @param y
+ * @return
+ */
+double _sparse_dot(const double *x_values, const int *x_indices, int x_len, const double *y) {
+    double result = 0.0;
+    for (int i = 0; i < x_len; i++) {
+        result += x_values[i] * y[x_indices[i]];
+    }
+    return result;
+}
+
 
 /**
  * calculate the TPR, FPR, and AUC score.
@@ -1085,34 +1114,6 @@ void _sparse_to_full(const double *sparse_v, const int *sparse_indices,
     }
 }
 
-/**
- * A full vector y dot product with a sparse vector x.
- *
- * ---
- * x is presented as three elements:
- * 1. x_indices: the nonzero indices.
- * 2. x_values: the nonzeros.
- * 3. x_len: the number of nonzeros.
- * For example,
- * x = {0, 1.0, 0, 0, 0, 0.1, 0.5}, then
- * x_indices = {1,5,6}
- * x_values = {1.0,0.1,0.5}
- * x_len = 3.
- * ---
- *
- * @param x_indices: the nonzero indices of the sparse vector x. starts from 0 index.
- * @param x_values: the nonzeros values of the sparse vector x.
- * @param x_len: the number of nonzeros in sparse vector x.
- * @param y
- * @return
- */
-double _sparse_dot(const double *x_values, const int *x_indices, int x_len, const double *y) {
-    double result = 0.0;
-    for (int i = 0; i < x_len; i++) {
-        result += x_values[i] * y[x_indices[i]];
-    }
-    return result;
-}
 
 /**
  * A full vector y + a scaled sparse vector x, i.e., alpha*x + y --> y
@@ -1247,13 +1248,16 @@ int _hard_thresholding(double *arr, int n, int k) {
 
 bool __solam(const double *x_tr,
              const double *y_tr,
-             int num_tr, int p,
-             double para_r, double para_xi, int para_num_pass, int verbose,
+             int num_tr,
+             int p,
+             double para_r,
+             double para_xi,
+             int para_num_pass,
+             int verbose,
              solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
-
     double *zero_v = malloc(sizeof(double) * (p + 2));
     double *one_v = malloc(sizeof(double) * (p + 2));
     for (int i = 0; i < p + 2; i++) {
@@ -1289,12 +1293,17 @@ bool __solam(const double *x_tr,
     double n_a_p1;
     double n_a_p1_;
     double n_p1_;
+
+    cblas_dcopy(p, n_v0_, 1, results->wt, 1);
+    cblas_dcopy(p, n_v0_, 1, results->wt_bar, 1);
+
     while (true) {
         if (n_cnt > para_num_pass) {
             break;
         }
         for (int j = 0; j < num_tr; j++) {
             const double *xt = x_tr + j * p;
+
             double n_ga = sc / sqrt(n_t);
             if (y_tr[j] > 0) { // if it is positive case
                 n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
@@ -1302,8 +1311,8 @@ bool __solam(const double *x_tr,
                 double n_a = n_v0[p];
                 cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
                 double vt_dot = cblas_ddot(p, v_wt, 1, xt, 1);
-                double weight =
-                        2. * (1. - n_p1_) * (vt_dot - n_a) - 2. * (1. + n_a_p0) * (1. - n_p1_);
+                double weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
+                weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
                 cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
                 v_p_dv[p] = -2. * (1. - n_p1_) * (vt_dot - n_a);
                 v_p_dv[p + 1] = 0.;
@@ -1359,11 +1368,14 @@ bool __solam(const double *x_tr,
             n_g_a0_ = n_g_a1_;
             cblas_dcopy(p + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
             n_a_p0 = n_a_p1;
+            // updates the results.
+
+            cblas_dscal(p, (n_t - 1.) / n_t, results->wt_bar, 1);
+            cblas_daxpy(p, 1. / n_t, n_v1_, 1, results->wt_bar, 1);
             // update the counts
             n_t = n_t + 1.;
         }
         n_cnt += 1;
-
     }
     cblas_dcopy(p, n_v1_, 1, results->wt, 1);
     results->a = n_v1_[p];
@@ -1379,13 +1391,22 @@ bool __solam(const double *x_tr,
     return true;
 }
 
-bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
-                    const int *x_tr_lens, const int *x_tr_posis, const double *y_tr,
-                    int num_tr, int p, double para_r, double para_xi, int para_num_pass,
-                    int verbose, solam_results *results) {
+bool __solam_sparse(const double *x_tr_vals,
+                    const int *x_tr_indices,
+                    const int *x_tr_lens,
+                    const int *x_tr_posis,
+                    const double *y_tr,
+                    int num_tr,
+                    int p,
+                    double para_r,
+                    double para_xi,
+                    int para_num_pass,
+                    int verbose,
+                    solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
+
     double *zero_v = malloc(sizeof(double) * (p + 2));
     double *one_v = malloc(sizeof(double) * (p + 2));
     for (int i = 0; i < p + 2; i++) {
@@ -1421,25 +1442,34 @@ bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
     double n_a_p1;
     double n_a_p1_;
     double n_p1_;
+
+    cblas_dcopy(p, n_v0_, 1, results->wt, 1);
+    cblas_dcopy(p, n_v0_, 1, results->wt_bar, 1);
+
+    double *xt = malloc(sizeof(double) * p);
+
     while (true) {
         if (n_cnt > para_num_pass) {
             break;
         }
         for (int j = 0; j < num_tr; j++) {
-            // to hold the sparse data
-            int s_len = x_tr_lens[j];
+            //get sparse vector to full vector
             const int *xt_indices = x_tr_indices + x_tr_posis[j];
             const double *xt_vals = x_tr_vals + x_tr_posis[j];
+            cblas_dcopy(p, zero_v, 1, xt, 1);
+            for (int kk = 0; kk < x_tr_lens[j]; kk++) {
+                xt[xt_indices[kk]] = xt_vals[kk];
+            }
             double n_ga = sc / sqrt(n_t);
             if (y_tr[j] > 0) { // if it is positive case
                 n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
                 cblas_dcopy(p, n_v0, 1, v_wt, 1);
                 double n_a = n_v0[p];
                 cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = _sparse_dot(xt_vals, xt_indices, s_len, v_wt);
+                double vt_dot = cblas_ddot(p, xt, 1, v_wt, 1);
                 double weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
                 weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
-                _sparse_cblas_daxpy(xt_vals, xt_indices, s_len, weight, v_p_dv);
+                cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
                 v_p_dv[p] = -2. * (1. - n_p1_) * (vt_dot - n_a);
                 v_p_dv[p + 1] = 0.;
                 cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
@@ -1451,9 +1481,9 @@ bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
                 cblas_dcopy(p, n_v0, 1, v_wt, 1);
                 double n_b = n_v0[p + 1];
                 cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = _sparse_dot(xt_vals, xt_indices, s_len, v_wt);
+                double vt_dot = cblas_ddot(p, xt, 1, v_wt, 1);
                 double weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
-                _sparse_cblas_daxpy(xt_vals, xt_indices, s_len, weight, v_p_dv);
+                cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
                 v_p_dv[p] = 0.;
                 v_p_dv[p + 1] = -2. * n_p1_ * (vt_dot - n_b);
                 cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
@@ -1494,6 +1524,9 @@ bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
             n_g_a0_ = n_g_a1_;
             cblas_dcopy(p + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
             n_a_p0 = n_a_p1;
+            // updates the results.
+            cblas_dscal(p, (n_t - 1.) / n_t, results->wt_bar, 1);
+            cblas_daxpy(p, 1. / n_t, n_v1_, 1, results->wt_bar, 1);
             // update the counts
             n_t = n_t + 1.;
         }
@@ -1502,6 +1535,7 @@ bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
     cblas_dcopy(p, n_v1_, 1, results->wt, 1);
     results->a = n_v1_[p];
     results->b = n_v1_[p + 1];
+    free(xt);
     free(n_v1_);
     free(n_v1);
     free(n_v0);
@@ -1792,9 +1826,11 @@ bool __spam_sparse(const double *x_values,
     // initial start time is zero=1.0
     double t = 1.0;
 
-    //intialize the results
+    //initialize the results
     results->t_index = 0;
     results->t_eval_time = 0.0;
+
+    double *tmp_vec = malloc(sizeof(double) * p);
 
     for (int i = 0; i < num_passes; i++) {
         // for each training sample j
@@ -1804,6 +1840,7 @@ bool __spam_sparse(const double *x_values,
             // receive training sample zt=(xt,yt)
             const double *cur_xt = x_values + x_positions[j];
             const int *cur_indices = x_indices + x_positions[j];
+            int s_len = x_len_list[j];
             double cur_yt = y_tr[j];
 
             // current learning rate
@@ -1815,7 +1852,10 @@ bool __spam_sparse(const double *x_values,
             alpha_wt = b_wt - a_wt;
 
             double weight;
-            double dot_prod = _sparse_dot(cur_xt, cur_indices, x_len_list[j], wt);
+            for (int kk = 0; kk < s_len; kk++) {
+                tmp_vec[kk] = wt[cur_indices[kk]];
+            }
+            double dot_prod = cblas_ddot(s_len, cur_xt, 1, tmp_vec, 1);
             if (cur_yt > 0) {
                 weight = 2. * (1.0 - prob_p) * (dot_prod - a_wt);
                 weight -= 2. * (1.0 + alpha_wt) * (1.0 - prob_p);
@@ -1881,7 +1921,11 @@ bool __spam_sparse(const double *x_values,
                 for (int q = 0; q < n; q++) {
                     cur_xt = x_values + x_positions[q];
                     cur_indices = x_indices + x_positions[q];
-                    y_pred[q] = _sparse_dot(cur_xt, cur_indices, x_len_list[q], wt_bar);
+                    s_len = x_len_list[q];
+                    for (int kk = 0; kk < s_len; kk++) {
+                        tmp_vec[kk] = wt_bar[cur_indices[kk]];
+                    }
+                    y_pred[q] = cblas_ddot(s_len, cur_xt, 1, tmp_vec, 1);
                 }
                 double auc = _auc_score(y_tr, y_pred, n);
                 free(y_pred);
@@ -1905,6 +1949,7 @@ bool __spam_sparse(const double *x_values,
     }
     cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
     cblas_dcopy(p, wt, 1, results->wt, 1);
+    free(tmp_vec);
     free(full_v);
     free(nega_x_mean);
     free(posi_x_mean);

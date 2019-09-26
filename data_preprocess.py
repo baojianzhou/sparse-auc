@@ -191,7 +191,11 @@ def _load_dataset_09_sector(data_path):
         data['x_tr_posis'].append(prev_posi)
         prev_posi += data['x_tr_lens'][i]
     print('maximal length is: %d' % max_nonzero)
-    data['y_tr'] = np.asarray(data['y_tr'])
+    data['y_tr'] = np.asarray(data['y_tr'], dtype=float)
+    data['x_tr_vals'] = np.asarray(data['x_tr_vals'], dtype=float)
+    data['x_tr_posis'] = np.asarray(data['x_tr_posis'], dtype=np.int32)
+    data['x_tr_lens'] = np.asarray(data['x_tr_lens'], dtype=np.int32)
+    data['x_tr_indices'] = np.asarray(data['x_tr_indices'], dtype=np.int32)
     assert len(data['y_tr']) == 9619  # total samples in the dataset
     data['n'] = 9619
     data['p'] = 55197
@@ -215,9 +219,6 @@ def _load_dataset_09_sector(data_path):
     # randomly permute the datasets 100 times for future use.
     data['num_runs'] = 5
     data['num_k_fold'] = 5
-    data['x_tr_indices'] = np.asarray(data['x_tr_indices'])
-    data['x_tr_vals'] = np.asarray(data['x_tr_vals'])
-    data['x_tr_lens'] = np.asarray(data['x_tr_lens'])
     for run_index in range(data['num_runs']):
         kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
         fake_x = np.zeros(shape=(data['n'], 1))  # just need the number of training samples

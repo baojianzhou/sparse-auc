@@ -49,7 +49,8 @@ def get_sub_data_by_indices(data, tr_index, sub_tr_ind):
 def pred(data, tr_index, sub_te_ind, wt, wt_bar):
     _ = get_sub_data_by_indices(data, tr_index, sub_te_ind)
     sub_x_te_values, sub_x_te_indices, sub_x_te_positions, sub_x_te_len_list = _
-    y_pred_wt, y_pred_wt_bar = np.zeros_like(sub_te_ind), np.zeros_like(sub_te_ind)
+    y_pred_wt = np.zeros_like(sub_te_ind, dtype=float)
+    y_pred_wt_bar = np.zeros_like(sub_te_ind, dtype=float)
     for i in range(len(sub_te_ind)):
         cur_posi = sub_x_te_positions[i]
         cur_len = sub_x_te_len_list[i]
@@ -238,6 +239,8 @@ def cv_solam(run_id, fold_id, num_passes, data):
     s_time = time.time()
     list_xi = np.arange(1, 101, 9, dtype=float)
     list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+    list_xi = [19.]
+    list_r = [100.]
     auc_wt, auc_wt_bar = dict(), dict()
     for para_xi, para_r in product(list_xi, list_r):
         algo_para = (run_id, fold_id, num_passes, para_xi, para_r)
@@ -262,7 +265,7 @@ def cv_solam(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
                 data['p'], para_r, para_xi, num_passes, 0)
-            wt, wt_bar = np.asarray(re[0]), np.asarray(re[0])  # TODO update this.
+            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
@@ -281,7 +284,6 @@ def cv_solam(run_id, fold_id, num_passes, data):
             auc_wt_bar[(run_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(run_id, fold_id)]['num_nonzeros'] = float(
                 np.mean(list_num_nonzeros_wt_bar))
-        break
 
     run_time = time.time() - s_time
 
