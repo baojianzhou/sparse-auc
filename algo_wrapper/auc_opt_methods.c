@@ -1270,7 +1270,7 @@ bool __solam(const double *x_tr,
     // start of the algorithm
     double sr = para_r;
     double sc = para_xi;
-    double n_p0_ = 0.; // number of positive
+    double p_hat = 0.; // number of positive
     double *n_v0_ = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p + 2, zero_v, 1, n_v0_, 1);
     double n_a_p0_ = 0.;
@@ -1278,7 +1278,7 @@ bool __solam(const double *x_tr,
     // initial vector
     double *n_v0 = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p, one_v, 1, n_v0, 1);
-    cblas_dscal(p, sqrt(sr * sr / (p * 1.0)), n_v0, 1);
+    cblas_dscal(p, sqrt(sr * sr / (double) p), n_v0, 1);
     n_v0[p] = sr;
     n_v0[p + 1] = sr;
     double n_a_p0 = 2. * sr;
@@ -1292,7 +1292,6 @@ bool __solam(const double *x_tr,
     double v_p_da;
     double n_a_p1;
     double n_a_p1_;
-    double n_p1_;
 
     cblas_dcopy(p, n_v0_, 1, results->wt, 1);
     cblas_dcopy(p, n_v0_, 1, results->wt_bar, 1);
@@ -1302,39 +1301,40 @@ bool __solam(const double *x_tr,
             break;
         }
         for (int j = 0; j < num_tr; j++) {
-            const double *xt = x_tr + j * p;
-
+            // current learning rate
             double n_ga = sc / sqrt(n_t);
-            if (y_tr[j] > 0) { // if it is positive case
-                n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
-                cblas_dcopy(p, n_v0, 1, v_wt, 1);
-                double n_a = n_v0[p];
-                cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = cblas_ddot(p, v_wt, 1, xt, 1);
-                double weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
-                weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
-                cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
-                v_p_dv[p] = -2. * (1. - n_p1_) * (vt_dot - n_a);
-                v_p_dv[p + 1] = 0.;
-                cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
-                cblas_daxpy(p + 2, 1.0, n_v0, 1, v_p_dv, 1);
-                v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                v_p_da = n_a_p0 + n_ga * v_p_da;
-            } else {
-                n_p1_ = ((n_t - 1.) * n_p0_) / n_t;
-                cblas_dcopy(p, n_v0, 1, v_wt, 1);
-                double n_b = n_v0[p + 1];
-                cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = cblas_ddot(p, v_wt, 1, xt, 1);
-                double weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
-                cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
-                v_p_dv[p] = 0.;
-                v_p_dv[p + 1] = -2. * n_p1_ * (vt_dot - n_b);
-                cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
-                cblas_daxpy(p + 2, 1.0, n_v0, 1, v_p_dv, 1);
-                v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                v_p_da = n_a_p0 + n_ga * v_p_da;
-            }
+            // current sample
+            const double *xt = x_tr + j * p;
+            double yt = y_tr[j];
+            double is_p_yt = is_posi(yt);
+            double is_n_yt = is_nega(yt);
+            // update p_hat
+            p_hat = ((n_t - 1.) * p_hat + is_p_yt) / n_t;
+            // update w, a, b, alpha
+            cblas_dcopy(p, n_v0, 1, v_wt, 1);
+            double n_a = n_v0[p];
+            double n_b = n_v0[p + 1];
+            // calculate the gradient w
+            cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
+            double vt_dot = cblas_ddot(p, v_wt, 1, xt, 1);
+            double wei_posi = 2. * (1. - p_hat) * (vt_dot - n_a - (1. + n_a_p0));
+            double wei_nega = 2. * p_hat * ((vt_dot - n_b) + (1. + n_a_p0));
+            double weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
+            cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
+            //gradient of a
+            v_p_dv[p] = -2. * (1. - p_hat) * (vt_dot - n_a) * is_p_yt;
+            //gradient of b
+            v_p_dv[p + 1] = -2. * p_hat * (vt_dot - n_b) * is_n_yt;
+            // gradient descent step of w
+            cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
+            cblas_daxpy(p + 2, 1.0, n_v0, 1, v_p_dv, 1);
+            // calculate the gradient of dual alpha
+            wei_posi = -2. * (1. - p_hat) * vt_dot;
+            wei_nega = 2. * p_hat * vt_dot;
+            v_p_da = wei_posi * is_p_yt + wei_nega * is_n_yt -2. * p_hat * (1. - p_hat) * n_a_p0;
+            // gradient descent step of alpha
+            v_p_da = n_a_p0 + n_ga * v_p_da;
+
             // normalization -- the projection step.
             double n_rv = sqrt(cblas_ddot(p, v_p_dv, 1, v_p_dv, 1));
             if (n_rv > sr) {
@@ -1362,7 +1362,6 @@ bool __solam(const double *x_tr,
             // update alpha_
             n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
             // update the information
-            n_p0_ = n_p1_;
             cblas_dcopy(p + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
             n_a_p0_ = n_a_p1_;
             n_g_a0_ = n_g_a1_;
@@ -1419,7 +1418,7 @@ bool __solam_sparse(const double *x_tr_vals,
     // start of the algorithm
     double sr = para_r;
     double sc = para_xi;
-    double n_p0_ = 0.; // number of positive
+    double p_hat = 0.; // number of positive
     double *n_v0_ = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p + 2, zero_v, 1, n_v0_, 1);
     double n_a_p0_ = 0.;
@@ -1427,7 +1426,7 @@ bool __solam_sparse(const double *x_tr_vals,
     // initial vector
     double *n_v0 = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p, one_v, 1, n_v0, 1);
-    cblas_dscal(p, sqrt(sr * sr / (p * 1.0)), n_v0, 1);
+    cblas_dscal(p, sqrt(sr * sr / (double) p), n_v0, 1);
     n_v0[p] = sr;
     n_v0[p + 1] = sr;
     double n_a_p0 = 2. * sr;
@@ -1441,7 +1440,6 @@ bool __solam_sparse(const double *x_tr_vals,
     double v_p_da;
     double n_a_p1;
     double n_a_p1_;
-    double n_p1_;
 
     cblas_dcopy(p, n_v0_, 1, results->wt, 1);
     cblas_dcopy(p, n_v0_, 1, results->wt_bar, 1);
@@ -1460,37 +1458,39 @@ bool __solam_sparse(const double *x_tr_vals,
             for (int kk = 0; kk < x_tr_lens[j]; kk++) {
                 xt[xt_indices[kk]] = xt_vals[kk];
             }
+            // current learning rate
             double n_ga = sc / sqrt(n_t);
-            if (y_tr[j] > 0) { // if it is positive case
-                n_p1_ = ((n_t - 1.) * n_p0_ + 1.) / n_t;
-                cblas_dcopy(p, n_v0, 1, v_wt, 1);
-                double n_a = n_v0[p];
-                cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = cblas_ddot(p, xt, 1, v_wt, 1);
-                double weight = 2. * (1. - n_p1_) * (vt_dot - n_a);
-                weight -= 2. * (1. + n_a_p0) * (1. - n_p1_);
-                cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
-                v_p_dv[p] = -2. * (1. - n_p1_) * (vt_dot - n_a);
-                v_p_dv[p + 1] = 0.;
-                cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
-                cblas_daxpy(p + 2, 1.0, n_v0, 1, v_p_dv, 1);
-                v_p_da = -2. * (1. - n_p1_) * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                v_p_da = n_a_p0 + n_ga * v_p_da;
-            } else {
-                n_p1_ = ((n_t - 1.) * n_p0_) / n_t;
-                cblas_dcopy(p, n_v0, 1, v_wt, 1);
-                double n_b = n_v0[p + 1];
-                cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
-                double vt_dot = cblas_ddot(p, xt, 1, v_wt, 1);
-                double weight = 2. * n_p1_ * (vt_dot - n_b) + 2. * (1. + n_a_p0) * n_p1_;
-                cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
-                v_p_dv[p] = 0.;
-                v_p_dv[p + 1] = -2. * n_p1_ * (vt_dot - n_b);
-                cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
-                cblas_daxpy(p + 2, 1.0, n_v0, 1, v_p_dv, 1);
-                v_p_da = 2. * n_p1_ * vt_dot - 2. * n_p1_ * (1. - n_p1_) * n_a_p0;
-                v_p_da = n_a_p0 + n_ga * v_p_da;
-            }
+            // current sample
+            double yt = y_tr[j];
+            double is_p_yt = is_posi(yt);
+            double is_n_yt = is_nega(yt);
+            // update p_hat
+            p_hat = ((n_t - 1.) * p_hat + is_p_yt) / n_t;
+            // update w, a, b, alpha
+            cblas_dcopy(p, n_v0, 1, v_wt, 1);
+            double n_a = n_v0[p];
+            double n_b = n_v0[p + 1];
+            // calculate the gradient w
+            cblas_dcopy(p + 2, zero_v, 1, v_p_dv, 1);
+            double vt_dot = cblas_ddot(p, v_wt, 1, xt, 1);
+            double wei_posi = 2. * (1. - p_hat) * (vt_dot - n_a - (1. + n_a_p0));
+            double wei_nega = 2. * p_hat * ((vt_dot - n_b) + (1. + n_a_p0));
+            double weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
+            cblas_daxpy(p, weight, xt, 1, v_p_dv, 1);
+            //gradient of a
+            v_p_dv[p] = -2. * (1. - p_hat) * (vt_dot - n_a) * is_p_yt;
+            //gradient of b
+            v_p_dv[p + 1] = -2. * p_hat * (vt_dot - n_b) * is_n_yt;
+            // gradient descent step of w
+            cblas_dscal(p + 2, -n_ga, v_p_dv, 1);
+            cblas_daxpy(p + 2, 1.0, n_v0, 1, v_p_dv, 1);
+            // calculate the gradient of dual alpha
+            wei_posi = -2. * (1. - p_hat) * vt_dot;
+            wei_nega = 2. * p_hat * vt_dot;
+            v_p_da = wei_posi * is_p_yt + wei_nega * is_n_yt -2. * p_hat * (1. - p_hat) * n_a_p0;
+            // gradient descent step of alpha
+            v_p_da = n_a_p0 + n_ga * v_p_da;
+
             // normalization -- the projection step.
             double n_rv = sqrt(cblas_ddot(p, v_p_dv, 1, v_p_dv, 1));
             if (n_rv > sr) {
@@ -1518,7 +1518,6 @@ bool __solam_sparse(const double *x_tr_vals,
             // update alpha_
             n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
             // update the information
-            n_p0_ = n_p1_;
             cblas_dcopy(p + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
             n_a_p0_ = n_a_p1_;
             n_g_a0_ = n_g_a1_;

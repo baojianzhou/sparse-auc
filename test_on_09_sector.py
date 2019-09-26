@@ -941,7 +941,7 @@ def run_ms(method_name):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_passes = 5
+    num_passes = 1
     run_id, fold_id = task_id / 5, task_id / 5
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)

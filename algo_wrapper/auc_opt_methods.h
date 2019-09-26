@@ -20,6 +20,8 @@
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define swap(a, b) { register double temp=(a);(a)=(b);(b)=temp; }
+#define is_posi(x) ( x > 0.0 ? 1.0 : 0.0)
+#define is_nega(x) ( x < 0.0 ? 1.0 : 0.0)
 
 typedef struct {
     Array *nodes;
