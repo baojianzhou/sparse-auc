@@ -68,7 +68,6 @@ def cv_spam_l1(run_id, fold_id, num_passes, data):
     k_fold = data['num_k_fold']
     auc_wt, auc_wt_bar = dict(), dict()
     for para_c, para_l1 in product(list_c, list_l1):
-        print(fold_id, para_c, para_l1)
         algo_para = (run_id, fold_id, num_passes, para_c, para_l1, k_fold)
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         # cross validate based on tr_index
@@ -83,7 +82,6 @@ def cv_spam_l1(run_id, fold_id, num_passes, data):
         kf = KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             reg_opt, step_len, is_sparse, verbose, para_beta = 0, 1000000, 0, 0, 0.0
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
             sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
@@ -92,14 +90,19 @@ def cv_spam_l1(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_indices, dtype=np.int32),
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
-                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float), len(sub_tr_ind),
-                data['p'], para_c, para_l1, para_beta, reg_opt, num_passes, step_len, verbose)
+                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                data['p'], len(sub_tr_ind), para_c, para_l1, para_beta, reg_opt,
+                num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
+            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        print('para_c: %.4f para-l1: %.4f AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.2f' %
+              (para_c, para_l1, float(np.mean(list_auc_wt)),
+               float(np.mean(list_auc_wt_bar)), time.time() - s_time))
         if auc_wt[(run_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(run_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(run_id, fold_id)]['para'] = algo_para
@@ -988,7 +991,7 @@ def run_ms(method_name):
 
 
 def main():
-    run_ms(method_name='sht_am')
+    run_ms(method_name='spam_l1')
 
 
 if __name__ == '__main__':
