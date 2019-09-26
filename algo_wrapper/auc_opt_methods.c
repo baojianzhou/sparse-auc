@@ -2742,14 +2742,14 @@ bool __graph_am_sparse(const double *x_values,// the values of these nonzeros.
 }
 
 
-void algo_opauc(const double *x_tr,
-                const double *y_tr,
-                int p,
-                int n,
-                double eta,
-                double lambda,
-                double *wt,
-                double *wt_bar) {
+void _algo_opauc(const double *x_tr,
+                 const double *y_tr,
+                 int p,
+                 int n,
+                 double eta,
+                 double lambda,
+                 double *wt,
+                 double *wt_bar) {
     double num_p = 0.0, num_n = 0.0;
     double *center_p = malloc(sizeof(double) * p);
     double *center_n = malloc(sizeof(double) * p);
@@ -2846,6 +2846,125 @@ void algo_opauc(const double *x_tr,
                    cblas_ddot(p, wt_bar, 1, wt_bar, 1),
                    cblas_ddot(p, grad_wt, 1, grad_wt, 1), eta, lambda, num_p, num_n);
         }
+    }
+    free(tmp_vec);
+    free(tmp_mat);
+    free(grad_wt);
+    free(cov_n);
+    free(cov_p);
+    free(center_n);
+    free(center_p);
+}
+
+
+void _algo_opauc_sparse(const double *x_tr_vals,
+                        const int *x_tr_indices,
+                        const int *x_tr_posis,
+                        const int *x_tr_lens,
+                        const double *y_tr,
+                        int p,
+                        int n,
+                        double eta,
+                        double lambda,
+                        double *wt,
+                        double *wt_bar) {
+    double num_p = 0.0, num_n = 0.0;
+    double *center_p = malloc(sizeof(double) * p);
+    double *center_n = malloc(sizeof(double) * p);
+    double *cov_p = malloc(sizeof(double) * p * p);
+    double *cov_n = malloc(sizeof(double) * p * p);
+    double *grad_wt = malloc(sizeof(double) * p);
+    memset(center_p, 0, sizeof(double) * p);
+    memset(center_n, 0, sizeof(double) * p);
+    memset(cov_p, 0, sizeof(double) * p * p);
+    memset(cov_n, 0, sizeof(double) * p * p);
+    memset(wt, 0, sizeof(double) * p);
+    memset(wt_bar, 0, sizeof(double) * p);
+
+    double *tmp_mat = malloc(sizeof(double) * p * p);
+    double *tmp_vec = malloc(sizeof(double) * p);
+    memset(tmp_mat, 0, sizeof(double) * p);
+    memset(tmp_vec, 0, sizeof(double) * p);
+
+    double *xt = malloc(sizeof(double) * p);
+    double *zero_vec = malloc(sizeof(double) * p);
+
+    for (int t = 0; t < n; t++) {
+
+        const int *xt_indices = x_tr_indices + x_tr_posis[t];
+        const double *xt_vals = x_tr_vals + x_tr_posis[t];
+        cblas_dcopy(p, zero_vec, 1, xt, 1);
+        for (int tt = 0; tt < x_tr_lens[t]; tt++) {
+            xt[xt_indices[tt]] = xt_vals[tt];
+        }
+        double cur_y = y_tr[t];
+        if (cur_y > 0) {
+            num_p++;
+            // copy previous center
+            cblas_dcopy(p, center_p, 1, tmp_vec, 1);
+            // update center_p
+            cblas_dscal(p, (num_p - 1.) / num_p, center_p, 1);
+            cblas_daxpy(p, 1. / num_p, xt, 1, center_p, 1);
+            // update covariance matrix
+            cblas_dscal(p * p, (num_p - 1.) / num_p, cov_p, 1);
+            cblas_dger(CblasRowMajor, p, p, 1. / num_p, xt, 1, xt, 1, cov_p, p);
+            cblas_dger(CblasRowMajor, p, p, (num_p - 1.) / num_p,
+                       tmp_vec, 1, tmp_vec, 1, cov_p, p);
+            cblas_dger(CblasRowMajor, p, p, -1., center_p, 1, center_p, 1, cov_p, p);
+            if (num_n > 0.0) {
+                // calculate the gradient part 1: \lambda w + x_t - c_t^+
+                cblas_dcopy(p, center_n, 1, grad_wt, 1);
+                cblas_daxpy(p, -1., xt, 1, grad_wt, 1);
+                cblas_daxpy(p, lambda, wt, 1, grad_wt, 1);
+                // xt - c_t^-
+                cblas_dcopy(p, xt, 1, tmp_vec, 1);
+                cblas_daxpy(p, -1., center_n, 1, tmp_vec, 1);
+                // (xt - c_t^+)(xt - c_t^+)^T
+                cblas_dscal(p * p, 0.0, tmp_mat, 1);
+                cblas_dger(CblasRowMajor, p, p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat, p);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans, p, p, 1., tmp_mat, p, wt, 1, 1.0, grad_wt,
+                            1);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans, p, p, 1., cov_n, p, wt, 1, 1.0, grad_wt,
+                            1);
+            } else {
+                cblas_dscal(p, 0.0, grad_wt, 1);
+            }
+        } else {
+            num_n++;
+            // copy previous center
+            cblas_dcopy(p, center_n, 1, tmp_vec, 1);
+            // update center_n
+            cblas_dscal(p, (num_n - 1.) / num_n, center_n, 1);
+            cblas_daxpy(p, 1. / num_n, xt, 1, center_n, 1);
+            // update covariance matrix
+            cblas_dscal(p * p, (num_n - 1.) / num_n, cov_n, 1);
+            cblas_dger(CblasRowMajor, p, p, 1. / num_n, xt, 1, xt, 1, cov_n, p);
+            cblas_dger(CblasRowMajor, p, p, (num_n - 1.) / num_n,
+                       tmp_vec, 1, tmp_vec, 1, cov_n, p);
+            cblas_dger(CblasRowMajor, p, p, -1., center_n, 1, center_n, 1, cov_n, p);
+            if (num_p > 0.0) {
+                // calculate the gradient part 1: \lambda w + x_t - c_t^+
+                cblas_dcopy(p, xt, 1, grad_wt, 1);
+                cblas_daxpy(p, -1., center_p, 1, grad_wt, 1);
+                cblas_daxpy(p, lambda, wt, 1, grad_wt, 1);
+                // xt - c_t^+
+                cblas_dcopy(p, xt, 1, tmp_vec, 1);
+                cblas_daxpy(p, -1., center_p, 1, tmp_vec, 1);
+                // (xt - c_t^+)(xt - c_t^+)^T
+                cblas_dscal(p * p, 0.0, tmp_mat, 1);
+                cblas_dger(CblasRowMajor, p, p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat, p);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans, p, p, 1., tmp_mat, p, wt, 1, 1.0, grad_wt,
+                            1);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans, p, p, 1., cov_p, p, wt, 1, 1.0, grad_wt,
+                            1);
+            } else {
+                cblas_dscal(p, 0.0, grad_wt, 1);
+            }
+        }
+        // update the solution
+        cblas_daxpy(p, -eta, grad_wt, 1, wt, 1);
+        cblas_dscal(p, (t * 1.) / (t * 1. + 1.), wt_bar, 1);
+        cblas_daxpy(p, 1. / (t + 1.), wt, 1, wt_bar, 1);
     }
     free(tmp_vec);
     free(tmp_mat);

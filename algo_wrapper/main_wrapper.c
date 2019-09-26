@@ -664,8 +664,9 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
                           &p, &n, &eta, &lambda)) { return NULL; }
     double *wt = malloc(sizeof(double) * p);
     double *wt_bar = malloc(sizeof(double) * p);
-    algo_opauc((double *) PyArray_DATA(x_tr),
-               (double *) PyArray_DATA(y_tr), p, n, eta, lambda, wt, wt_bar);
+    _algo_opauc((double *) PyArray_DATA(x_tr),
+                (double *) PyArray_DATA(y_tr),
+                p, n, eta, lambda, wt, wt_bar);
     PyObject *results = PyTuple_New(2);
     PyObject *p_wt = PyList_New(p);
     PyObject *p_wt_bar = PyList_New(p);
@@ -689,18 +690,26 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    PyArrayObject *x_tr, *y_tr;
-    int p, n;
-    double eta, lambda;
+    PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
+    int p, num_tr, para_num_passes, verbose;
+    double para_eta, para_lambda;
 
-    if (!PyArg_ParseTuple(args, "O!O!iidd",
-                          &PyArray_Type, &x_tr,
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiddii",
+                          &PyArray_Type, &x_values,
+                          &PyArray_Type, &x_indices,
+                          &PyArray_Type, &x_positions,
+                          &PyArray_Type, &x_len_list,
                           &PyArray_Type, &y_tr,
-                          &p, &n, &eta, &lambda)) { return NULL; }
+                          &num_tr,
+                          &p,
+                          &para_eta,
+                          &para_lambda,
+                          &para_num_passes,
+                          &verbose)) { return NULL; }
     double *wt = malloc(sizeof(double) * p);
     double *wt_bar = malloc(sizeof(double) * p);
-    algo_opauc((double *) PyArray_DATA(x_tr),
-               (double *) PyArray_DATA(y_tr), p, n, eta, lambda, wt, wt_bar);
+    _algo_opauc_sparse((double *) PyArray_DATA(x_tr),
+                       (double *) PyArray_DATA(y_tr), p, n, para_eta, para_lambda, wt, wt_bar);
     PyObject *results = PyTuple_New(2);
     PyObject *p_wt = PyList_New(p);
     PyObject *p_wt_bar = PyList_New(p);

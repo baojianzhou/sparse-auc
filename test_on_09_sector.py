@@ -310,33 +310,37 @@ def cv_opauc(run_id, fold_id, num_passes, data):
     list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
-    for fold_id, para_eta, para_lambda in product(range(k_fold), list_eta, list_lambda):
+    for para_eta, para_lambda in product(list_eta, list_lambda):
         if fold_id == 1:
             break
         # only run sub-tasks for parallel
-        algo_para = (run_id, fold_id, num_passes, para_eta, para_lambda, k_fold)
+        algo_para = (run_id, fold_id, num_passes, para_eta, para_lambda)
         tr_index = data['task_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-        list_auc_wt = np.zeros(k_fold)
-        list_auc_wt_bar = np.zeros(k_fold)
-        list_num_nonzeros_wt = np.zeros(k_fold)
-        list_num_nonzeros_wt_bar = np.zeros(k_fold)
-        kf = KFold(n_splits=k_fold, shuffle=False)
+        list_auc_wt = np.zeros(data['num_k_fold'])
+        list_auc_wt_bar = np.zeros(data['num_k_fold'])
+        list_num_nonzeros_wt = np.zeros(data['num_k_fold'])
+        list_num_nonzeros_wt_bar = np.zeros(data['num_k_fold'])
+        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
-            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
-            re = c_algo_opauc_sparse(sub_x_tr, sub_y_tr, data['p'], len(sub_tr_ind),
-                                     para_eta, para_lambda)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
-            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
+            sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+            re = c_algo_opauc_sparse(
+                np.asarray(sub_x_values, dtype=float),
+                np.asarray(sub_x_indices, dtype=np.int32),
+                np.asarray(sub_x_positions, dtype=np.int32),
+                np.asarray(sub_x_len_list, dtype=np.int32),
+                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                data['p'], para_eta, para_lambda, num_passes, 0)
+            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+            y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
+            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         print('fold-id:%d AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.4f' %
@@ -352,7 +356,7 @@ def cv_opauc(run_id, fold_id, num_passes, data):
             auc_wt_bar[(run_id, fold_id)]['num_nonzeros'] = float(
                 np.mean(list_num_nonzeros_wt_bar))
     # to save some model selection time.
-    for fold_id in range(k_fold):
+    for fold_id in range(data['num_k_fold']):
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {
                 'auc': auc_wt[(run_id, 0)]['auc'],
@@ -959,7 +963,7 @@ def run_ms(method_name):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_passes = 5
+    num_passes = 1
     run_id, fold_id = task_id / 5, task_id / 5
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)
