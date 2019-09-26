@@ -1246,15 +1246,15 @@ int _hard_thresholding(double *arr, int n, int k) {
 }
 
 
-bool __solam(const double *x_tr,
-             const double *y_tr,
-             int num_tr,
-             int p,
-             double para_r,
-             double para_xi,
-             int para_num_pass,
-             int verbose,
-             solam_results *results) {
+bool _solam(const double *x_tr,
+            const double *y_tr,
+            int num_tr,
+            int p,
+            double para_xi,
+            double para_r,
+            int para_num_pass,
+            int verbose,
+            solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -1268,8 +1268,6 @@ bool __solam(const double *x_tr,
         printf("num_tr: %d p: %d", num_tr, p);
     }
     // start of the algorithm
-    double sr = para_r;
-    double sc = para_xi;
     double p_hat = 0.; // number of positive
     double *n_v0_ = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p + 2, zero_v, 1, n_v0_, 1);
@@ -1278,10 +1276,10 @@ bool __solam(const double *x_tr,
     // initial vector
     double *n_v0 = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p, one_v, 1, n_v0, 1);
-    cblas_dscal(p, sqrt(sr * sr / (double) p), n_v0, 1);
-    n_v0[p] = sr;
-    n_v0[p + 1] = sr;
-    double n_a_p0 = 2. * sr;
+    cblas_dscal(p, sqrt(para_r * para_r / (double) p), n_v0, 1);
+    n_v0[p] = para_r;
+    n_v0[p + 1] = para_r;
+    double n_a_p0 = 2. * para_r;
     // iteration time.
     double n_t = 1.;
     int n_cnt = 1;
@@ -1302,7 +1300,7 @@ bool __solam(const double *x_tr,
         }
         for (int j = 0; j < num_tr; j++) {
             // current learning rate
-            double n_ga = sc / sqrt(n_t);
+            double n_ga = para_xi / sqrt(n_t);
             // current sample
             const double *xt = x_tr + j * p;
             double yt = y_tr[j];
@@ -1337,19 +1335,19 @@ bool __solam(const double *x_tr,
 
             // normalization -- the projection step.
             double n_rv = sqrt(cblas_ddot(p, v_p_dv, 1, v_p_dv, 1));
-            if (n_rv > sr) {
-                cblas_dscal(p, 1. / n_rv * sr, v_p_dv, 1);
+            if (n_rv > para_r) {
+                cblas_dscal(p, 1. / n_rv * para_r, v_p_dv, 1);
             }
-            if (v_p_dv[p] > sr) {
-                v_p_dv[p] = sr;
+            if (v_p_dv[p] > para_r) {
+                v_p_dv[p] = para_r;
             }
-            if (v_p_dv[p + 1] > sr) {
-                v_p_dv[p + 1] = sr;
+            if (v_p_dv[p + 1] > para_r) {
+                v_p_dv[p + 1] = para_r;
             }
             cblas_dcopy(p + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
             double n_ra = fabs(v_p_da);
-            if (n_ra > 2. * sr) {
-                n_a_p1 = v_p_da / n_ra * (2. * sr);
+            if (n_ra > 2. * para_r) {
+                n_a_p1 = v_p_da / n_ra * (2. * para_r);
             } else {
                 n_a_p1 = v_p_da;
             }
@@ -1397,8 +1395,8 @@ bool __solam_sparse(const double *x_tr_vals,
                     const double *y_tr,
                     int num_tr,
                     int p,
-                    double para_r,
                     double para_xi,
+                    double para_r,
                     int para_num_pass,
                     int verbose,
                     solam_results *results) {
@@ -1416,8 +1414,6 @@ bool __solam_sparse(const double *x_tr_vals,
         printf("num_tr: %d p: %d", num_tr, p);
     }
     // start of the algorithm
-    double sr = para_r;
-    double sc = para_xi;
     double p_hat = 0.; // number of positive
     double *n_v0_ = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p + 2, zero_v, 1, n_v0_, 1);
@@ -1426,10 +1422,10 @@ bool __solam_sparse(const double *x_tr_vals,
     // initial vector
     double *n_v0 = malloc(sizeof(double) * (p + 2));
     cblas_dcopy(p, one_v, 1, n_v0, 1);
-    cblas_dscal(p, sqrt(sr * sr / (double) p), n_v0, 1);
-    n_v0[p] = sr;
-    n_v0[p + 1] = sr;
-    double n_a_p0 = 2. * sr;
+    cblas_dscal(p, sqrt(para_r * para_r / (double) p), n_v0, 1);
+    n_v0[p] = para_r;
+    n_v0[p + 1] = para_r;
+    double n_a_p0 = 2. * para_r;
     // iteration time.
     double n_t = 1.;
     int n_cnt = 1;
@@ -1459,7 +1455,7 @@ bool __solam_sparse(const double *x_tr_vals,
                 xt[xt_indices[kk]] = xt_vals[kk];
             }
             // current learning rate
-            double n_ga = sc / sqrt(n_t);
+            double n_ga = para_xi / sqrt(n_t);
             // current sample
             double yt = y_tr[j];
             double is_p_yt = is_posi(yt);
@@ -1493,19 +1489,19 @@ bool __solam_sparse(const double *x_tr_vals,
 
             // normalization -- the projection step.
             double n_rv = sqrt(cblas_ddot(p, v_p_dv, 1, v_p_dv, 1));
-            if (n_rv > sr) {
-                cblas_dscal(p, 1. / n_rv * sr, v_p_dv, 1);
+            if (n_rv > para_r) {
+                cblas_dscal(p, 1. / n_rv * para_r, v_p_dv, 1);
             }
-            if (v_p_dv[p] > sr) {
-                v_p_dv[p] = sr;
+            if (v_p_dv[p] > para_r) {
+                v_p_dv[p] = para_r;
             }
-            if (v_p_dv[p + 1] > sr) {
-                v_p_dv[p + 1] = sr;
+            if (v_p_dv[p + 1] > para_r) {
+                v_p_dv[p + 1] = para_r;
             }
             cblas_dcopy(p + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
             double n_ra = fabs(v_p_da);
-            if (n_ra > 2. * sr) {
-                n_a_p1 = v_p_da / n_ra * (2. * sr);
+            if (n_ra > 2. * para_r) {
+                n_a_p1 = v_p_da / n_ra * (2. * para_r);
             } else {
                 n_a_p1 = v_p_da;
             }

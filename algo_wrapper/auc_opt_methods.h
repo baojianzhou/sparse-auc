@@ -123,11 +123,15 @@ typedef struct {
  * year={2016}
  * }
  */
-bool __solam(const double *x_tr,
-             const double *y_tr,
-             int num_tr, int p,
-             double para_r, double para_xi, int para_num_pass, int verbose,
-             solam_results *results);
+bool _solam(const double *x_tr,
+            const double *y_tr,
+            int num_tr,
+            int p,
+            double para_xi,
+            double para_r,
+            int para_num_pass,
+            int verbose,
+            solam_results *results);
 
 /**
  * SOLAM: Stochastic Online AUC Maximization for sparse data
@@ -144,10 +148,17 @@ bool __solam(const double *x_tr,
  * year={2016}
  * }
  */
-bool __solam_sparse(const double *x_tr_vals, const int *x_tr_indices,
-                    const int *x_tr_lens, const int *x_tr_posis,
-                    const double *y_tr, int num_tr, int p,
-                    double para_r, double para_xi, int para_num_pass, int verbose,
+bool __solam_sparse(const double *x_tr_vals,
+                    const int *x_tr_indices,
+                    const int *x_tr_lens,
+                    const int *x_tr_posis,
+                    const double *y_tr,
+                    int num_tr,
+                    int p,
+                    double para_xi,
+                    double para_r,
+                    int para_num_pass,
+                    int verbose,
                     solam_results *results);
 
 
@@ -348,7 +359,10 @@ void _algo_opauc(const double *x_tr,
                  const double *y_tr,
                  int p,
                  int n,
-                 double eta, double lambda, double *wt, double *wt_bar);
+                 double eta,
+                 double lambda,
+                 double *wt,
+                 double *wt_bar);
 
 
 void _algo_opauc_sparse(const double *x_tr_vals,
