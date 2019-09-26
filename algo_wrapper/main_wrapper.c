@@ -399,7 +399,7 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
     PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
     double para_xi, para_l2_reg;
     int num_tr, p, para_b, para_sparsity, para_num_passes, para_step_len, verbose;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiddiiii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiddiiii",
                           &PyArray_Type, &x_values,
                           &PyArray_Type, &x_indices,
                           &PyArray_Type, &x_positions,
@@ -426,12 +426,14 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
     result->t_indices = malloc(sizeof(int) * total_num_eval);
 
     // summary of the data
-    printf("--------------------------------------------------------------\n");
-    printf("num_tr: %d p: %d\n", num_tr, p);
-    printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
-    printf("num_passes: %d step_len: %d\n", para_num_passes, para_step_len);
-    printf("num_eval: %d\n", total_num_eval);
-    printf("--------------------------------------------------------------\n");
+    if (verbose > 0) {
+        printf("--------------------------------------------------------------\n");
+        printf("num_tr: %d p: %d\n", num_tr, p);
+        printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
+        printf("num_passes: %d step_len: %d\n", para_num_passes, para_step_len);
+        printf("num_eval: %d\n", total_num_eval);
+        printf("--------------------------------------------------------------\n");
+    }
     __sht_am_sparse((double *) PyArray_DATA(x_values),
                     (int *) PyArray_DATA(x_indices),
                     (int *) PyArray_DATA(x_positions),

@@ -417,14 +417,15 @@ def cv_fsauc(task_id, k_fold, num_passes, data):
 
 
 def cv_sht_am(run_id, fold_id, num_passes, data):
-    sparsity = 20000
+    sparsity = 10000
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
+    list_c = [20., 50., 100., 150., 200., 300.]
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
-    for para_c in product(list_c):
+    for para_c in list_c:
         # only run sub-tasks for parallel
         algo_para = (run_id, fold_id, num_passes, para_c, sparsity)
-        tr_index = data['task_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+        tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -437,7 +438,7 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
         kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            b, para_beta = len(sub_tr_ind), 0.0
+            b, para_beta = 108, 0.0
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
             sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
             re = c_algo_sht_am_sparse(np.asarray(sub_x_values, dtype=float),
@@ -447,14 +448,16 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
                                       np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
                                       data['p'], len(sub_tr_ind), b, para_c, para_beta, sparsity,
                                       num_passes, step_len, verbose)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
-            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+            y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
+            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        print('para_c: %.4f AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.2f' %
+              (para_c, float(np.mean(list_auc_wt)),
+               float(np.mean(list_auc_wt_bar)), time.time() - s_time))
         if auc_wt[(run_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(run_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(run_id, fold_id)]['para'] = algo_para
@@ -990,7 +993,7 @@ def run_ms(method_name):
 
 
 def main():
-    run_ms(method_name='sht_am')
+    run_ms(method_name='solam')
 
 
 if __name__ == '__main__':

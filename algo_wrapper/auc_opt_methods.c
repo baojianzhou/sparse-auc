@@ -1975,6 +1975,9 @@ bool __sht_am(const double *x_tr,
               int para_verbose,
               sht_am_results *results) {
 
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+
     // start time clock
     double start_time = clock();
 
@@ -2165,6 +2168,10 @@ bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
                      int para_step_len,
                      int para_verbose,
                      sht_am_results *results) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+
     // start time clock
     double start_time = clock();
 
@@ -2256,10 +2263,12 @@ bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
             // receive a block of training samples to calculate the gradient
             cblas_dcopy(p, zero_vector, 1, grad_wt, 1);
             for (int kk = 0; kk < b; kk++) {
-                const int *xt_indices = x_tr_indices + x_tr_posis[i];
-                const double *xt_vals = x_tr_vals + x_tr_posis[i];
+                // current index:
+                int index = j * b + kk;
+                const int *xt_indices = x_tr_indices + x_tr_posis[index];
+                const double *xt_vals = x_tr_vals + x_tr_posis[index];
                 cblas_dcopy(p, zero_vector, 1, xt, 1);
-                for (int tt = 0; tt < x_tr_lens[i]; tt++) {
+                for (int tt = 0; tt < x_tr_lens[index]; tt++) {
                     xt[xt_indices[tt]] = xt_vals[tt];
                 }
                 double cur_yt = y_tr[j * b + kk];
@@ -2305,12 +2314,6 @@ bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
             _hard_thresholding(u, p, para_sparsity); // k-sparse step.
             // _hard_thresholding_2(aver_grad, p, para_sparsity, u);
             cblas_dcopy(p, u, 1, wt, 1);
-            // cblas_dcopy(p, zero_vector, 1, wt, 1);
-            // for (int k = 0; k < para_nodes_len; k++) {
-            //     wt[para_nodes[k]] = u[para_nodes[k]];
-            // }
-
-
             // take average of wt --> wt_bar
             cblas_dscal(p, (t - 1.) / t, wt_bar, 1);
             cblas_daxpy(p, 1. / t, wt, 1, wt_bar, 1);
@@ -2329,6 +2332,7 @@ bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
     }
     cblas_dcopy(p, wt_bar, 1, results->wt_bar, 1);
     cblas_dcopy(p, wt, 1, results->wt, 1);
+    results->t_eval_time = (clock() - start_time) / CLOCKS_PER_SEC;
     free(xt);
     free(aver_grad);
     free(nega_x_mean);
@@ -2340,8 +2344,6 @@ bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
     free(zero_vector);
     return true;
 }
-
-
 
 
 bool __graph_am(const double *x_tr,
