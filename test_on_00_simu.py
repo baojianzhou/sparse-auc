@@ -571,7 +571,7 @@ def run_sht_am(task_id, fold_id, para_c, sparsity, num_passes, data):
 def run_graph_am(task_id, fold_id, para_c, sparsity, num_passes, data):
     tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
-    step_len, is_sparse, verbose, b = len(tr_index), 0, 0, len(tr_index)
+    step_len, verbose, b = len(tr_index), 0, len(tr_index)
     re = c_algo_graph_am(np.asarray(data['x_tr'][tr_index], dtype=float),
                          np.asarray(data['y_tr'][tr_index], dtype=float),
                          sparsity, b, para_c, 0.0, num_passes, step_len, verbose,
@@ -599,6 +599,24 @@ def run_opauc(task_id, fold_id, para_eta, para_lambda, data):
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     return {'algo_para': [task_id, fold_id, para_eta, para_lambda],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_fsauc(task_id, fold_id, num_passes, para_r, para_g, data):
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    re = c_algo_fsauc(np.asarray(data['x_tr'][tr_index], dtype=float),
+                      np.asarray(data['y_tr'][tr_index], dtype=float),
+                      num_passes, para_r, para_g)
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    return {'algo_para': [task_id, fold_id, para_r, para_g],
             'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                     y_score=np.dot(data['x_tr'][te_index], wt)),
             'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -721,14 +739,14 @@ def run_testing():
             _, _, _, para_c, para_l1, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_spam_l1(task_id, fold_id, para_c, para_l1, passes, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'spam_l2'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_c, para_beta, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_spam_l2(task_id, fold_id, para_c, para_beta, passes, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'spam_l1l2'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
@@ -736,42 +754,42 @@ def run_testing():
             _, _, _, para_c, para_beta, para_l1, _ = temp
             re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, passes, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'solam'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_r, para_xi, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_solam(task_id, fold_id, para_xi, para_r, passes, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'sht_am'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_sht_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'graph_am'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_graph_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'opauc'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'fsauc'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(task_id, fold_id)]['para']
-            re = run_opauc(task_id, fold_id, para_eta, para_lambda, data[fig_i])
+            re = run_fsauc(task_id, fold_id, passes, para_eta, para_lambda, data[fig_i])
             results[key][method] = re
-            print(method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
     f_name = 'results_task_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 

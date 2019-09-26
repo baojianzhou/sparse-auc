@@ -498,7 +498,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
                           &PyArray_Type, &edges_,
                           &PyArray_Type, &weights_)) { return NULL; }
 
-    int num_tr = (int) x_tr->dimensions[0];
+    int n = (int) x_tr->dimensions[0];
     int p = (int) x_tr->dimensions[1];
     int m = (int) edges_->dimensions[0];
     EdgePair *edges = malloc(sizeof(EdgePair) * m);
@@ -507,7 +507,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
         edges[i].second = *(int *) PyArray_GETPTR2(edges_, i, 1);
     }
     graph_am_results *result = malloc(sizeof(graph_am_results));
-    int total_num_eval = (num_tr * para_num_passes) / para_step_len + 1;
+    int total_num_eval = (n * para_num_passes) / para_step_len + 1;
     result->t_eval_time = 0.0;
     result->wt = malloc(sizeof(double) * p);
     result->wt_bar = malloc(sizeof(double) * p);
@@ -518,7 +518,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     if (verbose > 0) {
         // summary of the data
         printf("--------------------------------------------------------------\n");
-        printf("num_tr: %d p: %d block_size: %d\n", num_tr, p, para_b);
+        printf("n: %d p: %d block_size: %d\n", n, p, para_b);
         printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
         printf("num_passes: %d step_len: %d\n", para_num_passes, para_step_len);
         printf("num_eval: %d\n", total_num_eval);
@@ -528,7 +528,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     //call SOLAM algorithm
     __graph_am((double *) PyArray_DATA(x_tr),
                (double *) PyArray_DATA(y_tr),
-               p, num_tr, para_b, para_xi, para_l2_reg, para_sparsity, para_num_passes,
+               p, n, para_b, para_xi, para_l2_reg, para_sparsity, para_num_passes,
                para_step_len, verbose, edges, (double *) PyArray_DATA(weights_), m, result);
     PyObject *results = PyTuple_New(5);
 
@@ -728,46 +728,42 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
 }
 
 static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
-    if (self != NULL) {
-        printf("error: unknown error !!\n");
-        return NULL;
-    }
+    if (self != NULL) { return NULL; } // error: unknown error !!
+
     PyArrayObject *x_tr, *y_tr;
-    int p, n, num_passes, verbose = 0;
+    int para_num_passes, para_verbose = 0;
     double para_r, para_g;
 
-    if (!PyArg_ParseTuple(args, "O!O!iiidd",
+    if (!PyArg_ParseTuple(args, "O!O!idd",
                           &PyArray_Type, &x_tr,
                           &PyArray_Type, &y_tr,
-                          &p,
-                          &n,
-                          &num_passes,
-                          &para_r,
-                          &para_g)) { return NULL; }
-    if (verbose > 0) {
+                          &para_num_passes, &para_r, &para_g)) { return NULL; }
+    int n = (int) x_tr->dimensions[0];
+    int p = (int) x_tr->dimensions[1];
+    if (para_verbose > 0) {
         // summary of the data
         printf("--------------------------------------------------------------\n");
         printf("num_tr: %d p: %d \n", n, p);
-        printf("para_r: %04e para_g: %04e num_passes: %d \n", para_r, para_g, num_passes);
+        printf("para_r: %04e para_g: %04e para_num_passes: %d \n", para_r, para_g,
+               para_num_passes);
         printf("--------------------------------------------------------------\n");
-
     }
-    double *wt = malloc(sizeof(double) * p);
-    double *wt_bar = malloc(sizeof(double) * p);
+    double *re_wt = malloc(sizeof(double) * p);
+    double *re_wt_bar = malloc(sizeof(double) * p);
     _algo_fsauc((double *) PyArray_DATA(x_tr),
                 (double *) PyArray_DATA(y_tr),
-                p, n, para_r, para_g, num_passes, wt, wt_bar);
+                p, n, para_r, para_g, para_num_passes, re_wt, re_wt_bar);
     PyObject *results = PyTuple_New(2);
     PyObject *p_wt = PyList_New(p);
     PyObject *p_wt_bar = PyList_New(p);
     for (int i = 0; i < p; i++) {
-        PyList_SetItem(p_wt, i, PyFloat_FromDouble(wt[i]));
-        PyList_SetItem(p_wt_bar, i, PyFloat_FromDouble(wt_bar[i]));
+        PyList_SetItem(p_wt, i, PyFloat_FromDouble(re_wt[i]));
+        PyList_SetItem(p_wt_bar, i, PyFloat_FromDouble(re_wt_bar[i]));
     }
     PyTuple_SetItem(results, 0, p_wt);
     PyTuple_SetItem(results, 1, p_wt_bar);
-    free(wt);
-    free(wt_bar);
+    free(re_wt);
+    free(re_wt_bar);
     return results;
 }
 
