@@ -49,14 +49,6 @@ typedef struct {
     int len;
 } sparse_arr;
 
-typedef struct {
-    double *wt;
-    double *wt_bar;
-    double a;
-    double b;
-    double alpha;
-} solam_results;
-
 
 GraphStat *make_graph_stat(int p, int m);
 
@@ -105,6 +97,14 @@ bool head_tail_binsearch(
         int sparsity_high, int max_num_iter, PruningMethod pruning,
         int verbose, GraphStat *stat);
 
+
+typedef struct {
+    double *wt;
+    double *wt_bar;
+    double a;
+    double b;
+    double alpha;
+} solam_results;
 
 /**
  * SOLAM: Stochastic Online AUC Maximization
@@ -212,42 +212,6 @@ bool __spam_sparse(const double *x_values,
                    spam_results *results);
 
 typedef struct {
-    double *x_tr;
-    double *y_tr;
-
-    ////////////////////////////////////
-    /**
-     * In some cases, the dataset is sparse.
-     * We will use sparse representation to save memory.
-     * sparse_x_values:
-     *      matrix of nonzeros. Notice: first element of each row is the len
-     * sparse_x_indices:
-     *      matrix of nonzeros indices. Notice: first element of each row is the len
-     * the number of columns in this sparse matrix.
-     */
-    double *sparse_x_values;
-    int *sparse_x_indices;
-    int *sparse_x_positions;
-    int *sparse_x_len_list;
-    bool is_sparse; // to check the data is sparse or not.
-    ////////////////////////////////////
-
-    int p;
-    int para_b; // mini-batch size
-    int num_tr;
-    int num_classes;
-    double para_xi;     // the constant factor of the step size.
-    double para_l2_reg; // regularization parameter for l2-norm
-    int para_sparsity; // the para_sparsity parameter
-    int para_num_passes; // number of epochs of the processing. default is one.
-    int para_step_len;
-    int verbose;
-
-    int *sub_nodes;
-    int nodes_len;
-} sht_am_para;
-
-typedef struct {
     double *wt;
     double *wt_bar;
     double *t_run_time;
@@ -257,47 +221,84 @@ typedef struct {
     int t_index;
 } sht_am_results;
 
-typedef struct {
-    double *x_tr;
-    double *y_tr;
 
-    EdgePair *edges;
-    double *weights;
-    int m;
+bool __sht_am(const double *x_tr,
+              const double *y_tr,
+              int p,
+              int n,
+              int b,
+              double para_xi,
+              double para_l2_reg,
+              int para_sparsity,
+              int para_num_passes,
+              int para_step_len,
+              int para_verbose,
+              sht_am_results *results);
 
-    ////////////////////////////////////
-    /**
-     * In some cases, the dataset is sparse.
-     * We will use sparse representation to save memory.
-     * sparse_x_values:
-     *      matrix of nonzeros. Notice: first element of each row is the len
-     * sparse_x_indices:
-     *      matrix of nonzeros indices. Notice: first element of each row is the len
-     * the number of columns in this sparse matrix.
-     */
-    double *sparse_x_values;
-    int *sparse_x_indices;
-    int *sparse_x_positions;
-    int *sparse_x_len_list;
-    bool is_sparse; // to check the data is sparse or not.
-    ////////////////////////////////////
+/**
+ *
+ * This function implements the algorithm proposed in the following paper.
+ * Stochastic Proximal Algorithms for AUC Maximization.
+ * ---
+ * @inproceedings{natole2018stochastic,
+ * title={Stochastic proximal algorithms for AUC maximization},
+ * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
+ * booktitle={International Conference on Machine Learning},
+ * pages={3707--3716},
+ * year={2018}}
+ * ---
+ *
+ *
+ * Info
+ * ---
+ * Do not use the function directly. Instead, call it by Python Wrapper.
+ *
+ * @param para: related input parameters.
+ * @param results
+ * @author Baojian Zhou(Email: bzhou6@albany.edu)
+ * @return
+ */
+bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
+                     const int *x_tr_indices,  // the inidices of these nonzeros.
+                     const int *x_tr_posis,// the start indices of these nonzeros.
+                     const int *x_tr_lens, // the list of sizes of nonzeros.
+                     const double *y_tr,    // the vector of training samples.
+                     int p,                 // the dimension of the features of the dataset
+                     int n,                 // the total number of training samples.
+                     int b,
+                     double para_xi,
+                     double para_l2_reg,
+                     int para_sparsity,
+                     int para_num_passes,
+                     int para_step_len,
+                     int para_verbose,
+                     sht_am_results *results);
 
 
+/**
+ *
+ * This function implements the algorithm proposed in the following paper.
+ * Stochastic Proximal Algorithms for AUC Maximization.
+ * ---
+ * @inproceedings{natole2018stochastic,
+ * title={Stochastic proximal algorithms for AUC maximization},
+ * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
+ * booktitle={International Conference on Machine Learning},
+ * pages={3707--3716},
+ * year={2018}}
+ * ---
+ *
+ *
+ * Info
+ * ---
+ * Do not use the function directly. Instead, call it by Python Wrapper.
+ *
+ * @param para: related input parameters.
+ * @param results
+ * @author Baojian Zhou(Email: bzhou6@albany.edu)
+ * @return
+ */
 
-    int p;
-    int para_b; // mini-batch size
-    int num_tr;
-    int num_classes;
-    double para_xi;     // the constant factor of the step size.
-    double para_l2_reg; // regularization parameter for l2-norm
-    int para_sparsity; // the para_sparsity parameter
-    int para_num_passes; // number of epochs of the processing. default is one.
-    int para_step_len;
-    int verbose;
-
-    int *sub_nodes;
-    int nodes_len;
-} graph_am_para;
 
 typedef struct {
     double *wt;
@@ -309,56 +310,37 @@ typedef struct {
     int t_index;
 } graph_am_results;
 
-/**
- *
- * This function implements the algorithm proposed in the following paper.
- * Stochastic Proximal Algorithms for AUC Maximization.
- * ---
- * @inproceedings{natole2018stochastic,
- * title={Stochastic proximal algorithms for AUC maximization},
- * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
- * booktitle={International Conference on Machine Learning},
- * pages={3707--3716},
- * year={2018}}
- * ---
- *
- *
- * Info
- * ---
- * Do not use the function directly. Instead, call it by Python Wrapper.
- *
- * @param para: related input parameters.
- * @param results
- * @author Baojian Zhou(Email: bzhou6@albany.edu)
- * @return
- */
-bool algo_sht_am(sht_am_para *para, sht_am_results *results);
+bool __graph_am(const double *x_tr,
+                const double *y_tr,
+                int p,
+                int n,
+                int b,
+                double para_xi,
+                double para_l2_reg,
+                int para_sparsity,
+                int para_num_passes,
+                int para_step_len,
+                int para_verbose,
+                const EdgePair *edges,
+                const double *weights,
+                int m,
+                graph_am_results *results);
 
-
-/**
- *
- * This function implements the algorithm proposed in the following paper.
- * Stochastic Proximal Algorithms for AUC Maximization.
- * ---
- * @inproceedings{natole2018stochastic,
- * title={Stochastic proximal algorithms for AUC maximization},
- * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
- * booktitle={International Conference on Machine Learning},
- * pages={3707--3716},
- * year={2018}}
- * ---
- *
- *
- * Info
- * ---
- * Do not use the function directly. Instead, call it by Python Wrapper.
- *
- * @param para: related input parameters.
- * @param results
- * @author Baojian Zhou(Email: bzhou6@albany.edu)
- * @return
- */
-bool algo_graph_am(graph_am_para *para, graph_am_results *results);
+bool __graph_am_sparse(const double *x_values,// the values of these nonzeros.
+                       const int *x_indices,  // the inidices of these nonzeros.
+                       const int *x_positions,// the start indices of these nonzeros.
+                       const int *x_len_list, // the list of sizes of nonzeros.
+                       const double *y_tr,    // the vector of training samples.
+                       int p,                 // the dimension of the features of the dataset
+                       int n,                 // the total number of training samples.
+                       int b,
+                       int para_sparsity,
+                       double para_xi,
+                       double para_l2_reg,
+                       int num_passes,
+                       int step_len,
+                       int verbose,
+                       graph_am_results *results);
 
 void algo_opauc(const double *x_tr,
                 const double *y_tr,

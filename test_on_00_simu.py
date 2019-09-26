@@ -228,6 +228,9 @@ def cv_solam(task_id, k_fold, num_passes, data):
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        print('para_xi: %.4f para_r: %.4f AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.2f' %
+              (para_xi, para_r, float(np.mean(list_auc_wt)),
+               float(np.mean(list_auc_wt_bar)), time.time() - s_time))
         if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(task_id, fold_id)]['para'] = algo_para
@@ -771,7 +774,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='opauc')
+    run_ms(method_name='solam')
 
 
 if __name__ == '__main__':

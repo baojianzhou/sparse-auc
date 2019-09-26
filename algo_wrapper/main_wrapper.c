@@ -136,6 +136,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     return results;
 }
 
+
 static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
     /**
      * Wrapper of the SPAM algorithm
@@ -316,59 +317,54 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    sht_am_para *para = malloc(sizeof(sht_am_para));
-    PyArrayObject *x_tr_, *y_tr_, *sub_nodes_;
-    if (!PyArg_ParseTuple(args, "O!O!iiddiiiiO!",
-                          &PyArray_Type, &x_tr_,
-                          &PyArray_Type, &y_tr_,
-                          &para->para_sparsity,
-                          &para->para_b,
-                          &para->para_xi,
-                          &para->para_l2_reg,
-                          &para->para_num_passes,
-                          &para->para_step_len,
-                          &para->is_sparse,
-                          &para->verbose,
-                          &PyArray_Type, &sub_nodes_)) { return NULL; }
+    PyArrayObject *x_tr, *y_tr;
+    double para_xi, para_l2_reg;
+    int para_sparsity, para_b, para_num_passes, para_step_len, verbose;
+    if (!PyArg_ParseTuple(args, "O!O!iiddiii",
+                          &PyArray_Type, &x_tr,
+                          &PyArray_Type, &y_tr,
+                          &para_sparsity,
+                          &para_b,
+                          &para_xi,
+                          &para_l2_reg,
+                          &para_num_passes,
+                          &para_step_len,
+                          &verbose)) { return NULL; }
 
-    para->num_tr = (int) x_tr_->dimensions[0];
-    para->p = (int) x_tr_->dimensions[1];
-    para->x_tr = (double *) PyArray_DATA(x_tr_);
-    para->y_tr = (double *) PyArray_DATA(y_tr_);
-    para->sub_nodes = (int *) PyArray_DATA(sub_nodes_);
-    para->nodes_len = (int) sub_nodes_->dimensions[0];
+    int num_tr = (int) x_tr->dimensions[0];
+    int p = (int) x_tr->dimensions[1];
     sht_am_results *result = malloc(sizeof(sht_am_results));
 
-    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
+    int total_num_eval = (num_tr * para_num_passes) / para_step_len + 1;
     result->t_eval_time = 0.0;
-    result->wt = malloc(sizeof(double) * para->p);
-    result->wt_bar = malloc(sizeof(double) * para->p);
+    result->wt = malloc(sizeof(double) * p);
+    result->wt_bar = malloc(sizeof(double) * p);
     result->t_run_time = malloc(sizeof(double) * total_num_eval);
     result->t_auc = malloc(sizeof(double) * total_num_eval);
     result->t_indices = malloc(sizeof(int) * total_num_eval);
     result->t_index = 0;
-    if (para->verbose > 0) {
+    if (verbose > 0) {
         // summary of the data
         printf("--------------------------------------------------------------\n");
-        printf("num_tr: %d p: %d block_size: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
-               para->num_tr, para->p, para->para_b, para->x_tr[0], para->y_tr[0]);
-        printf("para_xi: %04e para_l2_reg: %04e\n", para->para_xi, para->para_l2_reg);
-        printf("num_passes: %d step_len: %d is_sparse: %d \n",
-               para->para_num_passes, para->para_step_len, para->is_sparse);
+        printf("num_tr: %d p: %d block_size: %d\n",
+               num_tr, p, para_b);
+        printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
+        printf("num_passes: %d step_len: %d\n",
+               para_num_passes, para_step_len);
         printf("num_eval: %d\n", total_num_eval);
         printf("--------------------------------------------------------------\n");
     }
-
-    //call SOLAM algorithm
-    algo_sht_am(para, result);
+    __sht_am((double *) PyArray_DATA(x_tr),
+             (double *) PyArray_DATA(y_tr), p, num_tr, para_b, para_xi, para_l2_reg,
+             para_sparsity, para_num_passes, para_step_len, verbose, result);
     PyObject *results = PyTuple_New(5);
 
-    PyObject *wt = PyList_New(para->p);
-    PyObject *wt_bar = PyList_New(para->p);
+    PyObject *wt = PyList_New(p);
+    PyObject *wt_bar = PyList_New(p);
     PyObject *t_run_time = PyList_New(result->t_index);
     PyObject *t_auc = PyList_New(result->t_index);
 
-    for (int i = 0; i < para->p; i++) {
+    for (int i = 0; i < p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
         PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
     }
@@ -382,104 +378,6 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
     PyTuple_SetItem(results, 2, t_run_time);
     PyTuple_SetItem(results, 3, t_auc);
     PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
-    free(para);
-    free(result->wt);
-    free(result->wt_bar);
-    free(result->t_indices);
-    free(result->t_run_time);
-    free(result->t_auc);
-    free(result);
-    return results;
-}
-
-
-static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
-    /*
-     * Wrapper of the Graph for AUC algorithm
-     */
-    if (self != NULL) {
-        printf("error: unknown error !!\n");
-        return NULL;
-    }
-    graph_am_para *para = malloc(sizeof(graph_am_para));
-    PyArrayObject *x_tr_, *y_tr_, *sub_nodes_, *edges_, *weights_;
-    if (!PyArg_ParseTuple(args, "O!O!iiddiiiiO!O!O!",
-                          &PyArray_Type, &x_tr_,
-                          &PyArray_Type, &y_tr_,
-                          &para->para_sparsity,
-                          &para->para_b,
-                          &para->para_xi,
-                          &para->para_l2_reg,
-                          &para->para_num_passes,
-                          &para->para_step_len,
-                          &para->is_sparse,
-                          &para->verbose,
-                          &PyArray_Type, &edges_,
-                          &PyArray_Type, &weights_,
-                          &PyArray_Type, &sub_nodes_)) { return NULL; }
-
-    para->num_tr = (int) x_tr_->dimensions[0];
-    para->p = (int) x_tr_->dimensions[1];
-    para->x_tr = (double *) PyArray_DATA(x_tr_);
-    para->y_tr = (double *) PyArray_DATA(y_tr_);
-    para->sub_nodes = (int *) PyArray_DATA(sub_nodes_);
-    para->m = (int) edges_->dimensions[0];
-    para->edges = malloc(sizeof(EdgePair) * para->m);
-    para->weights = (double *) PyArray_DATA(weights_);
-    para->nodes_len = (int) sub_nodes_->dimensions[0];
-    for (int i = 0; i < para->m; i++) {
-        para->edges[i].first = *(int *) PyArray_GETPTR2(edges_, i, 0);
-        para->edges[i].second = *(int *) PyArray_GETPTR2(edges_, i, 1);
-    }
-
-    graph_am_results *result = malloc(sizeof(graph_am_results));
-
-    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
-    result->t_eval_time = 0.0;
-    result->wt = malloc(sizeof(double) * para->p);
-    result->wt_bar = malloc(sizeof(double) * para->p);
-    result->t_run_time = malloc(sizeof(double) * total_num_eval);
-    result->t_auc = malloc(sizeof(double) * total_num_eval);
-    result->t_indices = malloc(sizeof(int) * total_num_eval);
-    result->t_index = 0;
-    if (para->verbose > 0) {
-        // summary of the data
-        printf("--------------------------------------------------------------\n");
-        printf("num_tr: %d p: %d block_size: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
-               para->num_tr, para->p, para->para_b, para->x_tr[0], para->y_tr[0]);
-        printf("para_xi: %04e para_l2_reg: %04e\n", para->para_xi, para->para_l2_reg);
-        printf("num_passes: %d step_len: %d is_sparse: %d \n",
-               para->para_num_passes, para->para_step_len, para->is_sparse);
-        printf("num_eval: %d\n", total_num_eval);
-        printf("--------------------------------------------------------------\n");
-    }
-
-    //call SOLAM algorithm
-    algo_graph_am(para, result);
-    PyObject *results = PyTuple_New(5);
-
-    PyObject *wt = PyList_New(para->p);
-    PyObject *wt_bar = PyList_New(para->p);
-    PyObject *t_run_time = PyList_New(result->t_index);
-    PyObject *t_auc = PyList_New(result->t_index);
-
-    for (int i = 0; i < para->p; i++) {
-        PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
-        PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
-    }
-
-    for (int i = 0; i < result->t_index; i++) {
-        PyList_SetItem(t_run_time, i, PyFloat_FromDouble(result->t_run_time[i]));
-        PyList_SetItem(t_auc, i, PyFloat_FromDouble(result->t_auc[i]));
-    }
-    PyTuple_SetItem(results, 0, wt);
-    PyTuple_SetItem(results, 1, wt_bar);
-    PyTuple_SetItem(results, 2, t_run_time);
-    PyTuple_SetItem(results, 3, t_auc);
-    PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
-
-    free(para->edges);
-    free(para);
     free(result->wt);
     free(result->wt_bar);
     free(result->t_indices);
@@ -498,61 +396,57 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    sht_am_para *para = malloc(sizeof(sht_am_para));
     PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiddiiii",
+    double para_xi, para_l2_reg;
+    int num_tr, p, para_b, para_sparsity, para_num_passes, para_step_len, verbose;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiddiiii",
                           &PyArray_Type, &x_values,
                           &PyArray_Type, &x_indices,
                           &PyArray_Type, &x_positions,
                           &PyArray_Type, &x_len_list,
                           &PyArray_Type, &y_tr,
-                          &para->num_tr,
-                          &para->p,
-                          &para->para_sparsity,
-                          &para->para_xi,
-                          &para->para_l2_reg,
-                          &para->para_num_passes,
-                          &para->para_step_len,
-                          &para->is_sparse,
-                          &para->verbose)) { return NULL; }
-
-    para->sparse_x_values = (double *) PyArray_DATA(x_values);
-    para->sparse_x_indices = (int *) PyArray_DATA(x_indices);
-    para->sparse_x_positions = (int *) PyArray_DATA(x_positions);
-    para->sparse_x_len_list = (int *) PyArray_DATA(x_len_list);
-    para->y_tr = (double *) PyArray_DATA(y_tr);
+                          &p,
+                          &num_tr,
+                          &para_b,
+                          &para_xi,
+                          &para_l2_reg,
+                          &para_sparsity,
+                          &para_num_passes,
+                          &para_step_len,
+                          &verbose)) { return NULL; }
     sht_am_results *result = malloc(sizeof(sht_am_results));
 
-    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
+    int total_num_eval = (num_tr * para_num_passes) / para_step_len + 1;
     result->t_index = 0;
     result->t_eval_time = 0.0;
-    result->wt = malloc(sizeof(double) * para->p);
-    result->wt_bar = malloc(sizeof(double) * para->p);
+    result->wt = malloc(sizeof(double) * p);
+    result->wt_bar = malloc(sizeof(double) * p);
     result->t_run_time = malloc(sizeof(double) * total_num_eval);
     result->t_auc = malloc(sizeof(double) * total_num_eval);
     result->t_indices = malloc(sizeof(int) * total_num_eval);
 
-
     // summary of the data
     printf("--------------------------------------------------------------\n");
-    printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
-           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
-    printf("para_xi: %04e para_l2_reg: %04e\n", para->para_xi, para->para_l2_reg);
-    printf("num_passes: %d step_len: %d is_sparse: %d \n",
-           para->para_num_passes, para->para_step_len, para->is_sparse);
+    printf("num_tr: %d p: %d\n", num_tr, p);
+    printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
+    printf("num_passes: %d step_len: %d\n", para_num_passes, para_step_len);
     printf("num_eval: %d\n", total_num_eval);
     printf("--------------------------------------------------------------\n");
-
-    //call SOLAM algorithm
-    algo_sht_am(para, result);
+    __sht_am_sparse((double *) PyArray_DATA(x_values),
+                    (int *) PyArray_DATA(x_indices),
+                    (int *) PyArray_DATA(x_positions),
+                    (int *) PyArray_DATA(x_len_list),
+                    (double *) PyArray_DATA(y_tr),
+                    p, num_tr, para_b, para_xi, para_l2_reg, para_sparsity,
+                    para_num_passes, para_step_len, verbose, result);
     PyObject *results = PyTuple_New(5);
 
-    PyObject *wt = PyList_New(para->p);
-    PyObject *wt_bar = PyList_New(para->p);
+    PyObject *wt = PyList_New(p);
+    PyObject *wt_bar = PyList_New(p);
     PyObject *t_run_time = PyList_New(result->t_index);
     PyObject *t_auc = PyList_New(result->t_index);
 
-    for (int i = 0; i < para->p; i++) {
+    for (int i = 0; i < p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
         PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
     }
@@ -566,7 +460,95 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
     PyTuple_SetItem(results, 2, t_run_time);
     PyTuple_SetItem(results, 3, t_auc);
     PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
-    free(para);
+    free(result->wt);
+    free(result->wt_bar);
+    free(result->t_indices);
+    free(result->t_run_time);
+    free(result->t_auc);
+    free(result);
+    return results;
+}
+
+
+static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
+    /*
+     * Wrapper of the Graph for AUC algorithm
+     */
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    int para_step_len, para_sparsity, para_b, para_num_passes, verbose;
+    double para_xi, para_l2_reg;
+    PyArrayObject *x_tr, *y_tr, *edges_, *weights_;
+    if (!PyArg_ParseTuple(args, "O!O!iiddiiiiO!O!",
+                          &PyArray_Type, &x_tr,
+                          &PyArray_Type, &y_tr,
+                          &para_sparsity,
+                          &para_b,
+                          &para_xi,
+                          &para_l2_reg,
+                          &para_num_passes,
+                          &para_step_len,
+                          &verbose,
+                          &PyArray_Type, &edges_,
+                          &PyArray_Type, &weights_)) { return NULL; }
+
+    int num_tr = (int) x_tr->dimensions[0];
+    int p = (int) x_tr->dimensions[1];
+    int m = (int) edges_->dimensions[0];
+    EdgePair *edges = malloc(sizeof(EdgePair) * m);
+    for (int i = 0; i < m; i++) {
+        edges[i].first = *(int *) PyArray_GETPTR2(edges_, i, 0);
+        edges[i].second = *(int *) PyArray_GETPTR2(edges_, i, 1);
+    }
+    graph_am_results *result = malloc(sizeof(graph_am_results));
+    int total_num_eval = (num_tr * para_num_passes) / para_step_len + 1;
+    result->t_eval_time = 0.0;
+    result->wt = malloc(sizeof(double) * p);
+    result->wt_bar = malloc(sizeof(double) * p);
+    result->t_run_time = malloc(sizeof(double) * total_num_eval);
+    result->t_auc = malloc(sizeof(double) * total_num_eval);
+    result->t_indices = malloc(sizeof(int) * total_num_eval);
+    result->t_index = 0;
+    if (verbose > 0) {
+        // summary of the data
+        printf("--------------------------------------------------------------\n");
+        printf("num_tr: %d p: %d block_size: %d\n", num_tr, p, para_b);
+        printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
+        printf("num_passes: %d step_len: %d\n", para_num_passes, para_step_len);
+        printf("num_eval: %d\n", total_num_eval);
+        printf("--------------------------------------------------------------\n");
+    }
+
+    //call SOLAM algorithm
+    __graph_am((double *) PyArray_DATA(x_tr),
+               (double *) PyArray_DATA(y_tr),
+               p, num_tr, para_b, para_xi, para_l2_reg, para_sparsity, para_num_passes,
+               para_step_len, verbose, edges, (double *) PyArray_DATA(weights_), m, result);
+    PyObject *results = PyTuple_New(5);
+
+    PyObject *wt = PyList_New(p);
+    PyObject *wt_bar = PyList_New(p);
+    PyObject *t_run_time = PyList_New(result->t_index);
+    PyObject *t_auc = PyList_New(result->t_index);
+
+    for (int i = 0; i < p; i++) {
+        PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
+        PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
+    }
+
+    for (int i = 0; i < result->t_index; i++) {
+        PyList_SetItem(t_run_time, i, PyFloat_FromDouble(result->t_run_time[i]));
+        PyList_SetItem(t_auc, i, PyFloat_FromDouble(result->t_auc[i]));
+    }
+    PyTuple_SetItem(results, 0, wt);
+    PyTuple_SetItem(results, 1, wt_bar);
+    PyTuple_SetItem(results, 2, t_run_time);
+    PyTuple_SetItem(results, 3, t_auc);
+    PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
+
+    free(edges);
     free(result->wt);
     free(result->wt_bar);
     free(result->t_indices);
@@ -585,61 +567,58 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    sht_am_para *para = malloc(sizeof(sht_am_para));
+
+    int p, para_b, num_tr, para_sparsity, para_num_passes, para_step_len, verbose;
+    double para_xi, para_l2_reg;
     PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiddiiii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiddiii",
                           &PyArray_Type, &x_values,
                           &PyArray_Type, &x_indices,
                           &PyArray_Type, &x_positions,
                           &PyArray_Type, &x_len_list,
                           &PyArray_Type, &y_tr,
-                          &para->num_tr,
-                          &para->p,
-                          &para->para_sparsity,
-                          &para->para_xi,
-                          &para->para_l2_reg,
-                          &para->para_num_passes,
-                          &para->para_step_len,
-                          &para->is_sparse,
-                          &para->verbose)) { return NULL; }
+                          &num_tr,
+                          &p,
+                          &para_b,
+                          &para_sparsity,
+                          &para_xi,
+                          &para_l2_reg,
+                          &para_num_passes,
+                          &para_step_len,
+                          &verbose)) { return NULL; }
 
-    para->sparse_x_values = (double *) PyArray_DATA(x_values);
-    para->sparse_x_indices = (int *) PyArray_DATA(x_indices);
-    para->sparse_x_positions = (int *) PyArray_DATA(x_positions);
-    para->sparse_x_len_list = (int *) PyArray_DATA(x_len_list);
-    para->y_tr = (double *) PyArray_DATA(y_tr);
-    sht_am_results *result = malloc(sizeof(sht_am_results));
+    graph_am_results *result = malloc(sizeof(graph_am_results));
 
-    int total_num_eval = (para->num_tr * para->para_num_passes) / para->para_step_len + 1;
+    int total_num_eval = (num_tr * para_num_passes) / para_step_len + 1;
     result->t_index = 0;
     result->t_eval_time = 0.0;
-    result->wt = malloc(sizeof(double) * para->p);
-    result->wt_bar = malloc(sizeof(double) * para->p);
+    result->wt = malloc(sizeof(double) * p);
+    result->wt_bar = malloc(sizeof(double) * p);
     result->t_run_time = malloc(sizeof(double) * total_num_eval);
     result->t_auc = malloc(sizeof(double) * total_num_eval);
     result->t_indices = malloc(sizeof(int) * total_num_eval);
 
+    __graph_am_sparse((double *) PyArray_DATA(x_values), (int *) PyArray_DATA(x_indices),
+                      (int *) PyArray_DATA(x_positions), (int *) PyArray_DATA(x_len_list),
+                      (double *) PyArray_DATA(y_tr), p, num_tr, para_b, para_sparsity, para_xi,
+                      para_l2_reg, para_num_passes, para_step_len, verbose, result);
 
     // summary of the data
     printf("--------------------------------------------------------------\n");
-    printf("num_tr: %d p: %d x_tr[0]: %.4f y_tr[0]:%.4f\n",
-           para->num_tr, para->p, para->x_tr[0], para->y_tr[0]);
-    printf("para_xi: %04e para_l2_reg: %04e\n", para->para_xi, para->para_l2_reg);
-    printf("num_passes: %d step_len: %d is_sparse: %d \n",
-           para->para_num_passes, para->para_step_len, para->is_sparse);
+    printf("num_tr: %d p: %d\n", num_tr, p);
+    printf("para_xi: %04e para_l2_reg: %04e\n", para_xi, para_l2_reg);
+    printf("num_passes: %d step_len: %d\n", para_num_passes, para_step_len);
     printf("num_eval: %d\n", total_num_eval);
     printf("--------------------------------------------------------------\n");
 
-    //call SOLAM algorithm
-    algo_sht_am(para, result);
     PyObject *results = PyTuple_New(5);
 
-    PyObject *wt = PyList_New(para->p);
-    PyObject *wt_bar = PyList_New(para->p);
+    PyObject *wt = PyList_New(p);
+    PyObject *wt_bar = PyList_New(p);
     PyObject *t_run_time = PyList_New(result->t_index);
     PyObject *t_auc = PyList_New(result->t_index);
 
-    for (int i = 0; i < para->p; i++) {
+    for (int i = 0; i < p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(result->wt[i]));
         PyList_SetItem(wt_bar, i, PyFloat_FromDouble(result->wt_bar[i]));
     }
@@ -653,7 +632,6 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
     PyTuple_SetItem(results, 2, t_run_time);
     PyTuple_SetItem(results, 3, t_auc);
     PyTuple_SetItem(results, 4, PyInt_FromLong(result->t_index));
-    free(para);
     free(result->wt);
     free(result->wt_bar);
     free(result->t_indices);
