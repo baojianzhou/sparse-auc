@@ -255,7 +255,7 @@ def cv_solam(task_id, k_fold, num_passes, data):
 
 def cv_opauc(task_id, k_fold, num_passes, data):
     list_eta = 2. ** np.arange(-6, -4, 1, dtype=float)
-    list_lambda = 2. ** np.arange(-5, 0, 1, dtype=float)
+    list_lambda = 2. ** np.arange(-2, 0, 1, dtype=float)
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
     for fold_id, para_eta, para_lambda in product(range(k_fold), list_eta, list_lambda):
