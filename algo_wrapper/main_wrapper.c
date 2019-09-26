@@ -485,7 +485,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     int para_step_len, para_sparsity, para_b, para_num_passes, verbose;
     double para_xi, para_l2_reg;
     PyArrayObject *x_tr, *y_tr, *edges_, *weights_;
-    if (!PyArg_ParseTuple(args, "O!O!iiddiiiiO!O!",
+    if (!PyArg_ParseTuple(args, "O!O!iiddiiiO!O!",
                           &PyArray_Type, &x_tr,
                           &PyArray_Type, &y_tr,
                           &para_sparsity,
