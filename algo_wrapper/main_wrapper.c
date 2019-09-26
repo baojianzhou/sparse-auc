@@ -232,14 +232,14 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
     PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
     double para_xi, para_l1_reg, para_l2_reg;
     int para_reg_opt, para_num_passes, para_step_len, verbose, num_tr, p;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iidddiiiii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iidddiiii",
                           &PyArray_Type, &x_values,
                           &PyArray_Type, &x_indices,
                           &PyArray_Type, &x_positions,
                           &PyArray_Type, &x_len_list,
                           &PyArray_Type, &y_tr,
-                          &num_tr,
                           &p,
+                          &num_tr,
                           &para_xi,
                           &para_l1_reg,
                           &para_l2_reg,
@@ -259,14 +259,16 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
     result->t_index = 0;
 
     // summary of the data
-    printf("--------------------------------------------------------------\n");
-    printf("num_tr: %d p: %d\n", num_tr, p);
-    printf("para_xi: %04e para_l1_reg: %04e para_l2_reg: %04e\n",
-           para_xi, para_l1_reg, para_l2_reg);
-    printf("reg_option: %d num_passes: %d step_len: %d\n",
-           para_reg_opt, para_num_passes, para_step_len);
-    printf("num_eval: %d\n", total_num_eval);
-    printf("--------------------------------------------------------------\n");
+    if (verbose > 0) {
+        printf("--------------------------------------------------------------\n");
+        printf("num_tr: %d p: %d\n", num_tr, p);
+        printf("para_xi: %04e para_l1_reg: %04e para_l2_reg: %04e\n",
+               para_xi, para_l1_reg, para_l2_reg);
+        printf("reg_option: %d num_passes: %d step_len: %d\n",
+               para_reg_opt, para_num_passes, para_step_len);
+        printf("num_eval: %d\n", total_num_eval);
+        printf("--------------------------------------------------------------\n");
+    }
 
     //call SOLAM algorithm
     __spam_sparse((double *) PyArray_DATA(x_values),
@@ -732,8 +734,8 @@ static PyMethodDef sparse_methods[] = {
         {"c_algo_fsauc",           (PyCFunction) wrap_algo_fsauc,           METH_VARARGS, "docs"},
 
         {"c_algo_solam_sparse",    (PyCFunction) wrap_algo_solam_sparse,    METH_VARARGS, "docs"},
-        {"c_algo_spam_sparse",     (PyCFunction) wrap_algo_spam_sparse,     METH_VARARGS, "docs"},
         {"c_algo_sht_am_sparse",   (PyCFunction) wrap_algo_sht_am_sparse,   METH_VARARGS, "docs"},
+        {"c_algo_spam_sparse",     (PyCFunction) wrap_algo_spam_sparse,     METH_VARARGS, "docs"},
         {"c_algo_graph_am_sparse", (PyCFunction) wrap_algo_graph_am_sparse, METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
