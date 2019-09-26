@@ -416,9 +416,9 @@ def cv_fsauc(task_id, k_fold, num_passes, data):
 
 
 def cv_sht_am(run_id, fold_id, num_passes, data):
-    sparsity = 10000
-    list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-    list_c = [20., 50., 100., 150., 200., 300.]
+    sparsity = 20000
+    list_c = list(10. ** np.arange(-5, 3, 1, dtype=float))
+    list_c.extend([150., 200., 300.])
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for para_c in list_c:
@@ -988,7 +988,7 @@ def run_ms(method_name):
 
 
 def main():
-    run_ms(method_name='spam_l2')
+    run_ms(method_name='sht_am')
 
 
 if __name__ == '__main__':
