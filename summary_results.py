@@ -197,24 +197,25 @@ def show_test():
     for ind, simu in enumerate(['Simu1', 'Simu2', 'Simu3', 'Simu4']):
         ax[ind].set_title(simu)
     results = dict()
+    method_list = ['opauc', 'solam', 'fsauc', 'spam_l2', 'spam_l1', 'spam_l1l2', 'sht_am',
+                   'graph_am']
     for fig_i in ['fig_1', 'fig_2', 'fig_3', 'fig_4']:
         results[fig_i] = dict()
-        for method in ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']:
+        for method in method_list:
             results[fig_i][method] = np.zeros(5)
             for ind, p_ratio in enumerate([0.1, 0.2, 0.3, 0.4, 0.5]):
                 for num_tr, mu, num_passes in product([1000], [0.3], [10]):
                     for model in ['auc_wt']:
                         re1 = np.mean(
-                            [models[(i, j, num_tr, mu, p_ratio, fig_i, num_passes)][method][model]
+                            [models[(i, j, num_passes, num_tr, mu, p_ratio, fig_i)][method][model]
                              for i, j in product(range(25), range(5))])
                         results[fig_i][method][ind] = re1
         for item in results[fig_i]:
             print(item, results[fig_i][item])
         print('-' * 50)
 
-    method_list = ['spam_l2', 'spam_l1l2', 'sht_am', 'graph_am', 'solam', 'opauc']
-    title_list = ['SPAM-L2', 'spam-L1L2', 'sht-am', 'graph-am',
-                  'solam', 'opauc']
+    title_list = ['OPAUC', 'SOLAM', 'FSAUC', 'SPAM-L2', 'SPAM-L1',
+                  'spam-L1L2', 'SHT-AM', 'GRAPH-AM']
     for fig_ind, fig_i in enumerate(['fig_1', 'fig_2', 'fig_3', 'fig_4']):
         for method_ind, method in enumerate(method_list):
             ax[fig_ind].plot([0.1, 0.2, 0.3, 0.4, 0.5],
