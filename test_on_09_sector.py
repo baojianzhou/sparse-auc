@@ -271,7 +271,7 @@ def cv_solam(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], para_xi, para_r, num_passes, 0)
+                data['p'], para_r, para_xi, num_passes, 0)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -1171,6 +1171,7 @@ def run_testing():
 
 def main():
     run_testing()
+    # run_ms(method_name='solam')
 
 
 if __name__ == '__main__':
