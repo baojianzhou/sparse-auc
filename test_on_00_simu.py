@@ -838,7 +838,7 @@ def run_para_blocksize():
     k_fold, passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.3]
+    posi_ratio_list = [0.1, 0.5]
     fig_list = ['fig_2']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
@@ -868,7 +868,7 @@ def run_para_blocksize():
                 re.append(_['auc_wt'])
             results[key][method] = re
             print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
-    f_name = 'results_task_%02d_sparsity.pkl'
+    f_name = 'results_task_%02d_blocksize.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
 
