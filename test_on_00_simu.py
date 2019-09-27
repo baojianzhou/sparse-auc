@@ -838,7 +838,7 @@ def run_para_blocksize():
     k_fold, passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.3]
+    posi_ratio_list = [0.1, 0.5]
     fig_list = ['fig_2']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
