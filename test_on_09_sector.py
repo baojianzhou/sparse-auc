@@ -1146,27 +1146,27 @@ def run_testing():
         print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
     # -----------------------
     method = 'spam_l1'
-    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-    _, _, _, para_c, para_l1, _ = ms[key][method][0][(task_id, fold_id)]['para']
-    re = run_spam_l1(task_id, fold_id, para_c, para_l1, num_passes, data)
+    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (run_id, method), 'rb'))
+    _, _, _, para_c, para_l1, _ = ms[key][method][0][(run_id, fold_id)]['para']
+    re = run_spam_l1(run_id, fold_id, para_c, para_l1, num_passes, data)
     results[key][method] = re
     print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
     # -----------------------
     method = 'spam_l2'
-    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-    _, _, _, para_c, para_beta = ms[key][method][0][(task_id, fold_id)]['para']
-    re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data)
+    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (run_id, method), 'rb'))
+    _, _, _, para_c, para_beta = ms[key][method][0][(run_id, fold_id)]['para']
+    re = run_spam_l2(run_id, fold_id, para_c, para_beta, num_passes, data)
     results[key][method] = re
     print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
     # -----------------------
     method = 'sht_am'
-    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-    _, _, _, para_c, sparsity = ms[key][method][0][(task_id, fold_id)]['para']
-    re = run_sht_am(task_id, fold_id, para_c, sparsity, num_passes, data)
+    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (run_id, method), 'rb'))
+    _, _, _, para_c, sparsity = ms[key][method][0][(run_id, fold_id)]['para']
+    re = run_sht_am(run_id, fold_id, para_c, sparsity, num_passes, data)
     results[key][method] = re
     print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
     f_name = 'results_task_%02d_passes_%02d.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, num_passes)), 'wb'))
+    pkl.dump(results, open(os.path.join(data_path, f_name % (run_id, num_passes)), 'wb'))
 
 
 def main():
