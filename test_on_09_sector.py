@@ -1165,8 +1165,8 @@ def run_testing():
     re = run_sht_am(task_id, fold_id, para_c, sparsity, num_passes, data)
     results[key][method] = re
     print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
-    f_name = 'results_task_%02d.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
+    f_name = 'results_task_%02d_passes_%02d.pkl'
+    pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, num_passes)), 'wb'))
 
 
 def main():
