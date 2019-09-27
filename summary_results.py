@@ -285,8 +285,129 @@ def combine_results():
         print(' & '.join(['%.4f' % re[method] for method in method_list]))
 
 
+def show_blocksize():
+    import matplotlib.pyplot as plt
+    from pylab import rcParams
+    color_list = ['b', 'g', 'm', 'r', 'y', 'k', 'orange', 'Aqua']
+    marker_list = ['X', 'o', 'P', 's', '*', '<', '>', 'v']
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    models = dict()
+    for task_id in product(range(25)):
+        f_name = os.path.join(data_path, 'results_task_%02d_blocksize.pkl' % task_id)
+        re = pkl.load(open(f_name, 'rb'))
+        for key in re:
+            models[key] = re[key]
+    rcParams['figure.figsize'] = 8, 4
+
+    fig, ax = plt.subplots(1, 2)
+    for ii in range(2):
+        ax[ii].grid(b=True, which='both', color='lightgray',
+                    linestyle='dotted', axis='both')
+    for ind, simu in enumerate(['p-ratio=0.1', 'p-ratio=0.5']):
+        ax[ind].set_title(simu)
+    results = dict()
+    method_list = ['sht_am', 'graph_am']
+    for fig_i in ['fig_2']:
+        results[fig_i] = dict()
+        for method in method_list:
+            results[fig_i][method] = dict()
+            for p_ratio in [0.1, 0.5]:
+                for num_tr, mu, num_passes in product([1000], [0.3], [10]):
+                    print(models[(0, 0, num_passes, num_tr, mu, p_ratio, fig_i)][method])
+                    re1 = np.mean([models[(i, j, num_passes, num_tr, mu, p_ratio, fig_i)][method]
+                                   for i, j in product(range(25), range(5))], axis=0)
+                    results[fig_i][method][p_ratio] = re1
+        for item in results[fig_i]:
+            print(item, results[fig_i][item])
+        print('-' * 50)
+
+    title_list = ['SHT-AM', 'GRAPH-AM']
+    for p_ratio_index, p_ratio in enumerate([0.1, 0.5]):
+        for method_ind, method in enumerate(method_list):
+            ax[p_ratio_index].plot([16, 32, 40, 100, 200, 400, 800],
+                                   results['fig_2'][method][p_ratio],
+                                   c=color_list[method_ind], linestyle='-',
+                                   markerfacecolor='none',
+                                   marker=marker_list[method_ind], markersize=8.,
+                                   markeredgewidth=1.2, linewidth=1.2,
+                                   label=title_list[method_ind])
+
+    ax[0].set_ylabel(r'AUC score')
+    for i in range(2):
+        ax[i].set_xlabel(r'Block size')
+    ax[1].legend(loc='lower right', fontsize=15., borderpad=0.1,
+                 labelspacing=0.2, handletextpad=0.1)
+    plt.setp(ax[1].get_yticklabels(), visible=False)
+    plt.subplots_adjust(wspace=0.0, hspace=0.0)
+    f_name = '/results_exp_simu_blocksize.png'
+    print('save fig to: %s' % f_name)
+    plt.savefig('/home/baojian/Dropbox/Apps/ShareLaTeX/online-sparse-auc/09-27-2019' +
+                f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='png')
+    plt.close()
+
+
+def show_sparsity():
+    import matplotlib.pyplot as plt
+    from pylab import rcParams
+    color_list = ['b', 'g', 'm', 'r', 'y', 'k', 'orange', 'Aqua']
+    marker_list = ['X', 'o', 'P', 's', '*', '<', '>', 'v']
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
+    models = dict()
+    for task_id in product(range(25)):
+        f_name = os.path.join(data_path, 'results_task_%02d_sparsity.pkl' % task_id)
+        re = pkl.load(open(f_name, 'rb'))
+        for key in re:
+            models[key] = re[key]
+    rcParams['figure.figsize'] = 10, 4
+
+    fig, ax = plt.subplots(1, 2)
+    for ii in range(2):
+        ax[ii].grid(b=True, which='both', color='lightgray',
+                    linestyle='dotted', axis='both')
+    for ind, simu in enumerate(['p-ratio=0.1', 'p-ratio=0.5']):
+        ax[ind].set_title(simu)
+    results = dict()
+    method_list = ['sht_am', 'graph_am']
+    for fig_i in ['fig_2']:
+        results[fig_i] = dict()
+        for method in method_list:
+            results[fig_i][method] = dict()
+            for p_ratio in [0.1, 0.5]:
+                for num_tr, mu, num_passes in product([1000], [0.3], [10]):
+                    print(models[(0, 0, num_passes, num_tr, mu, p_ratio, fig_i)][method])
+                    re1 = np.mean([models[(i, j, num_passes, num_tr, mu, p_ratio, fig_i)][method]
+                                   for i, j in product(range(25), range(5))], axis=0)
+                    results[fig_i][method][p_ratio] = re1
+        for item in results[fig_i]:
+            print(item, results[fig_i][item])
+        print('-' * 50)
+
+    title_list = ['SHT-AM', 'GRAPH-AM']
+    for p_ratio_index, p_ratio in enumerate([0.1, 0.5]):
+        for method_ind, method in enumerate(method_list):
+            ax[p_ratio_index].plot([22, 28, 34, 40, 46, 52, 58, 66, 72],
+                                   results['fig_2'][method][p_ratio],
+                                   c=color_list[method_ind], linestyle='-',
+                                   markerfacecolor='none',
+                                   marker=marker_list[method_ind], markersize=8.,
+                                   markeredgewidth=1.2, linewidth=1.2,
+                                   label=title_list[method_ind])
+
+    ax[0].set_ylabel(r'AUC score')
+    for i in range(2):
+        ax[i].set_xlabel(r'Sparsity')
+    ax[1].legend(loc='lower right', fontsize=15., borderpad=0.1,
+                 labelspacing=0.2, handletextpad=0.1)
+    plt.subplots_adjust(wspace=0.2, hspace=0.0)
+    f_name = '/results_exp_simu_sparsity.png'
+    print('save fig to: %s' % f_name)
+    plt.savefig('/home/baojian/Dropbox/Apps/ShareLaTeX/online-sparse-auc/09-27-2019' +
+                f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='png')
+    plt.close()
+
+
 if __name__ == '__main__':
-    show_test()
+    show_sparsity()
     exit()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
