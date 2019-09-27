@@ -1166,7 +1166,7 @@ def run_testing():
     results[key][method] = re
     print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
     f_name = 'results_task_%02d_passes_%02d.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % (run_id, num_passes)), 'wb'))
+    pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, num_passes)), 'wb'))
 
 
 def main():
