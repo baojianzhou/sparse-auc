@@ -1246,6 +1246,48 @@ int _hard_thresholding(double *arr, int n, int k) {
 }
 
 
+void _project_onto_l1(const double *w, int p, double r, double *proj_v) {
+
+    // if the ||w||_1 <= r, return w directly.
+    double w_l1 = 0.0;
+    double *abs_w = malloc(sizeof(double) * p);
+    for (int i = 0; i < p; i++) {
+        abs_w[i] = fabs(w[i]);
+        w_l1 += fabs(w[i]);
+    }
+    if (w_l1 <= r) {
+        cblas_dcopy(p, w, 1, proj_v, 1);
+        free(abs_w);
+        return;
+    }
+    // sort vector abs_w
+    int *sorted_indices = malloc(sizeof(int) * p);
+    double *u = malloc(sizeof(double) * p);
+    double *sv = malloc(sizeof(double) * p);
+    _arg_sort_descend(abs_w, sorted_indices, p);
+    double prev_sum = 0.0;
+    for (int i = 0; i < p; i++) {
+        u[i] = abs_w[sorted_indices[i]];
+        sv[i] = prev_sum + u[i];
+        prev_sum = sv[i];
+    }
+    int last_rho = 0;
+    for (int i = 0; i < p; i++) {
+        if (u[i] > (sv[i] - r) / (i + 1.)) {
+            last_rho = i;
+        }
+    }
+    double theta = fmax(0.0, (sv[last_rho] - r) / (last_rho + 1.));
+    for (int i = 0; i < p; i++) {
+        proj_v[i] = sign(w[i]) * fmax(fabs(w[i]) - theta, 0.0);
+    }
+    free(sorted_indices);
+    free(u);
+    free(sv);
+    free(abs_w);
+}
+
+
 bool _solam(const double *x_tr,
             const double *y_tr,
             int num_tr,
@@ -1388,18 +1430,18 @@ bool _solam(const double *x_tr,
     return true;
 }
 
-bool __solam_sparse(const double *x_tr_vals,
-                    const int *x_tr_indices,
-                    const int *x_tr_lens,
-                    const int *x_tr_posis,
-                    const double *y_tr,
-                    int num_tr,
-                    int p,
-                    double para_xi,
-                    double para_r,
-                    int para_num_pass,
-                    int verbose,
-                    solam_results *results) {
+bool _solam_sparse(const double *x_tr_vals,
+                   const int *x_tr_indices,
+                   const int *x_tr_lens,
+                   const int *x_tr_posis,
+                   const double *y_tr,
+                   int num_tr,
+                   int p,
+                   double para_xi,
+                   double para_r,
+                   int para_num_pass,
+                   int verbose,
+                   solam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -1559,18 +1601,18 @@ bool __solam_sparse(const double *x_tr_vals,
  * @param results: wt/wt_bar.
  * @return
  */
-bool __spam(const double *x_tr,
-            const double *y_tr,
-            int p,
-            int n,
-            double para_xi,
-            double para_l1_reg,
-            double para_l2_reg,
-            int para_num_passes,
-            int para_step_len,
-            int para_reg_opt,
-            int para_verbose,
-            spam_results *results) {
+bool _spam(const double *x_tr,
+           const double *y_tr,
+           int p,
+           int n,
+           double para_xi,
+           double para_l1_reg,
+           double para_l2_reg,
+           int para_num_passes,
+           int para_step_len,
+           int para_reg_opt,
+           int para_verbose,
+           spam_results *results) {
     // start time clock
     double start_time = clock();
 
@@ -1743,21 +1785,21 @@ bool __spam(const double *x_tr,
     return true;
 }
 
-bool __spam_sparse(const double *x_tr_vals,
-                   const int *x_tr_indices,
-                   const int *x_tr_posis,
-                   const int *x_tr_lens,
-                   const double *y_tr,
-                   int p,
-                   int n,
-                   double para_xi,
-                   double para_l1_reg,
-                   double para_l2_reg,
-                   int num_passes,
-                   int step_len,
-                   int reg_opt,
-                   int verbose,
-                   spam_results *results) {
+bool _spam_sparse(const double *x_tr_vals,
+                  const int *x_tr_indices,
+                  const int *x_tr_posis,
+                  const int *x_tr_lens,
+                  const double *y_tr,
+                  int p,
+                  int n,
+                  double para_xi,
+                  double para_l1_reg,
+                  double para_l2_reg,
+                  int num_passes,
+                  int step_len,
+                  int reg_opt,
+                  int verbose,
+                  spam_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -1958,18 +2000,18 @@ bool __spam_sparse(const double *x_tr_vals,
 }
 
 
-bool __sht_am(const double *x_tr,
-              const double *y_tr,
-              int p,
-              int n,
-              int b,
-              double para_xi,
-              double para_l2_reg,
-              int para_sparsity,
-              int para_num_passes,
-              int para_step_len,
-              int para_verbose,
-              sht_am_results *results) {
+bool _sht_am(const double *x_tr,
+             const double *y_tr,
+             int p,
+             int n,
+             int b,
+             double para_xi,
+             double para_l2_reg,
+             int para_sparsity,
+             int para_num_passes,
+             int para_step_len,
+             int para_verbose,
+             sht_am_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -2149,21 +2191,21 @@ bool __sht_am(const double *x_tr,
 }
 
 
-bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
-                     const int *x_tr_indices,  // the inidices of these nonzeros.
-                     const int *x_tr_posis,// the start indices of these nonzeros.
-                     const int *x_tr_lens, // the list of sizes of nonzeros.
-                     const double *y_tr,    // the vector of training samples.
-                     int p,                 // the dimension of the features of the dataset
-                     int n,                 // the total number of training samples.
-                     int b,
-                     double para_xi,
-                     double para_l2_reg,
-                     int para_sparsity,
-                     int para_num_passes,
-                     int para_step_len,
-                     int para_verbose,
-                     sht_am_results *results) {
+bool _sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
+                    const int *x_tr_indices,  // the inidices of these nonzeros.
+                    const int *x_tr_posis,// the start indices of these nonzeros.
+                    const int *x_tr_lens, // the list of sizes of nonzeros.
+                    const double *y_tr,    // the vector of training samples.
+                    int p,                 // the dimension of the features of the dataset
+                    int n,                 // the total number of training samples.
+                    int b,
+                    double para_xi,
+                    double para_l2_reg,
+                    int para_sparsity,
+                    int para_num_passes,
+                    int para_step_len,
+                    int para_verbose,
+                    sht_am_results *results) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -2342,21 +2384,24 @@ bool __sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
 }
 
 
-bool __graph_am(const double *x_tr,
-                const double *y_tr,
-                int p,
-                int n,
-                int b,
-                double para_xi,
-                double para_l2_reg,
-                int para_sparsity,
-                int para_num_passes,
-                int para_step_len,
-                int para_verbose,
-                const EdgePair *edges,
-                const double *weights,
-                int m,
-                graph_am_results *results) {
+bool _graph_am(const double *x_tr,
+               const double *y_tr,
+               int p,
+               int n,
+               int b,
+               double para_xi,
+               double para_l2_reg,
+               int para_sparsity,
+               int para_num_passes,
+               int para_step_len,
+               int para_verbose,
+               const EdgePair *edges,
+               const double *weights,
+               int m,
+               graph_am_results *results) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
 
     // start time clock
     double start_time = clock();
@@ -2547,21 +2592,25 @@ bool __graph_am(const double *x_tr,
 }
 
 
-bool __graph_am_sparse(const double *x_values,// the values of these nonzeros.
-                       const int *x_indices,  // the inidices of these nonzeros.
-                       const int *x_positions,// the start indices of these nonzeros.
-                       const int *x_len_list, // the list of sizes of nonzeros.
-                       const double *y_tr,    // the vector of training samples.
-                       int p,                 // the dimension of the features of the dataset
-                       int n,                 // the total number of training samples.
-                       int b,
-                       int para_sparsity,
-                       double para_xi,
-                       double para_l2_reg,
-                       int num_passes,
-                       int step_len,
-                       int verbose,
-                       graph_am_results *results) {
+bool _graph_am_sparse(const double *x_values,// the values of these nonzeros.
+                      const int *x_indices,  // the inidices of these nonzeros.
+                      const int *x_positions,// the start indices of these nonzeros.
+                      const int *x_len_list, // the list of sizes of nonzeros.
+                      const double *y_tr,    // the vector of training samples.
+                      int p,                 // the dimension of the features of the dataset
+                      int n,                 // the total number of training samples.
+                      int b,
+                      int para_sparsity,
+                      double para_xi,
+                      double para_l2_reg,
+                      int num_passes,
+                      int step_len,
+                      int verbose,
+                      graph_am_results *results) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+
     // start time clock
     double start_time = clock();
 
@@ -2746,6 +2795,10 @@ void _algo_opauc(const double *x_tr,
                  double lambda,
                  double *wt,
                  double *wt_bar) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+
     double num_p = 0.0, num_n = 0.0;
     double *center_p = malloc(sizeof(double) * p);
     double *center_n = malloc(sizeof(double) * p);
@@ -2864,6 +2917,10 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         double lambda,
                         double *wt,
                         double *wt_bar) {
+
+    // make sure openblas uses only one cpu at a time.
+    openblas_set_num_threads(1);
+
     double num_p = 0.0, num_n = 0.0;
     double *center_p = malloc(sizeof(double) * p);
     double *center_n = malloc(sizeof(double) * p);
@@ -2971,46 +3028,6 @@ void _algo_opauc_sparse(const double *x_tr_vals,
     free(center_p);
 }
 
-void project_onto_l1(const double *w, int p, double r, double *proj_v) {
-
-    // if the ||w||_1 <= r, return w directly.
-    double w_l1 = 0.0;
-    double *abs_w = malloc(sizeof(double) * p);
-    for (int i = 0; i < p; i++) {
-        abs_w[i] = fabs(w[i]);
-        w_l1 += fabs(w[i]);
-    }
-    if (w_l1 <= r) {
-        cblas_dcopy(p, w, 1, proj_v, 1);
-        free(abs_w);
-        return;
-    }
-    // sort vector abs_w
-    int *sorted_indices = malloc(sizeof(int) * p);
-    double *u = malloc(sizeof(double) * p);
-    double *sv = malloc(sizeof(double) * p);
-    _arg_sort_descend(abs_w, sorted_indices, p);
-    double prev_sum = 0.0;
-    for (int i = 0; i < p; i++) {
-        u[i] = abs_w[sorted_indices[i]];
-        sv[i] = prev_sum + u[i];
-        prev_sum = sv[i];
-    }
-    int last_rho = 0;
-    for (int i = 0; i < p; i++) {
-        if (u[i] > (sv[i] - r) / (i + 1.)) {
-            last_rho = i;
-        }
-    }
-    double theta = fmax(0.0, (sv[last_rho] - r) / (last_rho + 1.));
-    for (int i = 0; i < p; i++) {
-        proj_v[i] = sign(w[i]) * fmax(fabs(w[i]) - theta, 0.0);
-    }
-    free(sorted_indices);
-    free(u);
-    free(sv);
-    free(abs_w);
-}
 
 void _algo_fsauc(const double *x_tr,
                  const double *y_tr,
@@ -3139,7 +3156,7 @@ void _algo_fsauc(const double *x_tr,
 
             // project: w,a,b
             for (int j = 0; j < K; j++) {
-                project_onto_l1(vec_w, p, R, vec_temp); //project w on L1 ball.
+                _project_onto_l1(vec_w, p, R, vec_temp); //project w on L1 ball.
                 cblas_dcopy(p, vec_temp, 1, vec_w, 1);
                 a = sign(a) * fmin(fabs(a), R * kappa); //project a
                 b = sign(b) * fmin(fabs(b), R * kappa); //project b
@@ -3357,7 +3374,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
 
             // project: w,a,b
             for (int j = 0; j < K; j++) {
-                project_onto_l1(vec_w, p, R, vec_temp); //project w on L1 ball.
+                _project_onto_l1(vec_w, p, R, vec_temp); //project w on L1 ball.
                 cblas_dcopy(p, vec_temp, 1, vec_w, 1);
                 a = sign(a) * fmin(fabs(a), R * kappa); //project a
                 b = sign(b) * fmin(fabs(b), R * kappa); //project b

@@ -107,12 +107,12 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     result->wt_bar = malloc(sizeof(double) * p);
     result->a = 0.0;
     result->b = 0.0;
-    __solam_sparse((double *) PyArray_DATA(x_tr_values),
-                   (int *) PyArray_DATA(x_tr_indices),
-                   (int *) PyArray_DATA(x_tr_lens),
-                   (int *) PyArray_DATA(x_tr_posis),
-                   (double *) PyArray_DATA(y_tr),
-                   num_tr, p, para_xi, para_r, para_num_pass, verbose, result);
+    _solam_sparse((double *) PyArray_DATA(x_tr_values),
+                  (int *) PyArray_DATA(x_tr_indices),
+                  (int *) PyArray_DATA(x_tr_lens),
+                  (int *) PyArray_DATA(x_tr_posis),
+                  (double *) PyArray_DATA(y_tr),
+                  num_tr, p, para_xi, para_r, para_num_pass, verbose, result);
     if (verbose > 0) {
         printf("norm(wt): %.4f\n", cblas_ddot(p, result->wt, 1, result->wt, 1));
         printf("norm(wt-bar): %.4f\n", cblas_ddot(p, result->wt_bar, 1, result->wt_bar, 1));
@@ -186,9 +186,9 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
 
 
     //call SOLAM algorithm
-    __spam((double *) PyArray_DATA(x_tr),
-           (double *) PyArray_DATA(y_tr), p, num_tr, para_xi, para_l1_reg, para_l2_reg,
-           para_num_passes, para_step_len, para_reg_opt, verbose, result);
+    _spam((double *) PyArray_DATA(x_tr),
+          (double *) PyArray_DATA(y_tr), p, num_tr, para_xi, para_l1_reg, para_l2_reg,
+          para_num_passes, para_step_len, para_reg_opt, verbose, result);
 
     PyObject *results = PyTuple_New(5);
 
@@ -271,13 +271,13 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
     }
 
     //call SOLAM algorithm
-    __spam_sparse((double *) PyArray_DATA(x_values),
-                  (int *) PyArray_DATA(x_indices),
-                  (int *) PyArray_DATA(x_positions),
-                  (int *) PyArray_DATA(x_len_list),
-                  (double *) PyArray_DATA(y_tr),
-                  p, num_tr, para_xi, para_l1_reg, para_l2_reg, para_num_passes,
-                  para_step_len, para_reg_opt, verbose, result);
+    _spam_sparse((double *) PyArray_DATA(x_values),
+                 (int *) PyArray_DATA(x_indices),
+                 (int *) PyArray_DATA(x_positions),
+                 (int *) PyArray_DATA(x_len_list),
+                 (double *) PyArray_DATA(y_tr),
+                 p, num_tr, para_xi, para_l1_reg, para_l2_reg, para_num_passes,
+                 para_step_len, para_reg_opt, verbose, result);
 
     PyObject *results = PyTuple_New(5);
 
@@ -356,9 +356,9 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
         printf("num_eval: %d\n", total_num_eval);
         printf("--------------------------------------------------------------\n");
     }
-    __sht_am((double *) PyArray_DATA(x_tr),
-             (double *) PyArray_DATA(y_tr), p, num_tr, para_b, para_xi, para_l2_reg,
-             para_sparsity, para_num_passes, para_step_len, verbose, result);
+    _sht_am((double *) PyArray_DATA(x_tr),
+            (double *) PyArray_DATA(y_tr), p, num_tr, para_b, para_xi, para_l2_reg,
+            para_sparsity, para_num_passes, para_step_len, verbose, result);
     PyObject *results = PyTuple_New(5);
 
     PyObject *wt = PyList_New(p);
@@ -436,13 +436,13 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
         printf("num_eval: %d\n", total_num_eval);
         printf("--------------------------------------------------------------\n");
     }
-    __sht_am_sparse((double *) PyArray_DATA(x_values),
-                    (int *) PyArray_DATA(x_indices),
-                    (int *) PyArray_DATA(x_positions),
-                    (int *) PyArray_DATA(x_len_list),
-                    (double *) PyArray_DATA(y_tr),
-                    p, num_tr, para_b, para_xi, para_l2_reg, para_sparsity,
-                    para_num_passes, para_step_len, verbose, result);
+    _sht_am_sparse((double *) PyArray_DATA(x_values),
+                   (int *) PyArray_DATA(x_indices),
+                   (int *) PyArray_DATA(x_positions),
+                   (int *) PyArray_DATA(x_len_list),
+                   (double *) PyArray_DATA(y_tr),
+                   p, num_tr, para_b, para_xi, para_l2_reg, para_sparsity,
+                   para_num_passes, para_step_len, verbose, result);
     PyObject *results = PyTuple_New(5);
 
     PyObject *wt = PyList_New(p);
@@ -526,10 +526,10 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     }
 
     //call SOLAM algorithm
-    __graph_am((double *) PyArray_DATA(x_tr),
-               (double *) PyArray_DATA(y_tr),
-               p, n, para_b, para_xi, para_l2_reg, para_sparsity, para_num_passes,
-               para_step_len, verbose, edges, (double *) PyArray_DATA(weights_), m, result);
+    _graph_am((double *) PyArray_DATA(x_tr),
+              (double *) PyArray_DATA(y_tr),
+              p, n, para_b, para_xi, para_l2_reg, para_sparsity, para_num_passes,
+              para_step_len, verbose, edges, (double *) PyArray_DATA(weights_), m, result);
     PyObject *results = PyTuple_New(5);
 
     PyObject *wt = PyList_New(p);
@@ -602,10 +602,10 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
     result->t_auc = malloc(sizeof(double) * total_num_eval);
     result->t_indices = malloc(sizeof(int) * total_num_eval);
 
-    __graph_am_sparse((double *) PyArray_DATA(x_values), (int *) PyArray_DATA(x_indices),
-                      (int *) PyArray_DATA(x_positions), (int *) PyArray_DATA(x_len_list),
-                      (double *) PyArray_DATA(y_tr), p, num_tr, para_b, para_sparsity, para_xi,
-                      para_l2_reg, para_num_passes, para_step_len, verbose, result);
+    _graph_am_sparse((double *) PyArray_DATA(x_values), (int *) PyArray_DATA(x_indices),
+                     (int *) PyArray_DATA(x_positions), (int *) PyArray_DATA(x_len_list),
+                     (double *) PyArray_DATA(y_tr), p, num_tr, para_b, para_sparsity, para_xi,
+                     para_l2_reg, para_num_passes, para_step_len, verbose, result);
 
     // summary of the data
     printf("--------------------------------------------------------------\n");

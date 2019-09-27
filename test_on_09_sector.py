@@ -139,7 +139,7 @@ def cv_spam_l2(run_id, fold_id, num_passes, data):
         list_auc_wt_bar = np.zeros(data['num_k_fold'])
         list_num_nonzeros_wt = np.zeros(data['num_k_fold'])
         list_num_nonzeros_wt_bar = np.zeros(data['num_k_fold'])
-        l1_reg, reg_opt, step_len, is_sparse, verbose = 0.0, 1, 10000000, 0, 0
+        reg_opt, step_len, is_sparse, verbose = 1, 10000000, 0, 0
         kf = KFold(n_splits=data['num_k_fold'], shuffle=False)  # Folding is fixed.
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
@@ -253,7 +253,6 @@ def cv_solam(run_id, fold_id, num_passes, data):
     for para_xi, para_r in product(list_xi, list_r):
         algo_para = (run_id, fold_id, num_passes, para_xi, para_r)
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-        # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -272,7 +271,7 @@ def cv_solam(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], para_r, para_xi, num_passes, 0)
+                data['p'], para_xi, para_r, num_passes, 0)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -445,10 +444,8 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for para_c in list_c:
-        # only run sub-tasks for parallel
         algo_para = (run_id, fold_id, num_passes, para_c, sparsity)
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-        # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -557,6 +554,121 @@ def cv_graph_am(task_id, k_fold, num_passes, data):
     print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
                                           for _ in auc_wt_bar]))
     return auc_wt, auc_wt_bar
+
+
+def run_spam_l1(task_id, fold_id, para_c, para_l1, num_passes, data):
+    tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    reg_opt, step_len, verbose = 0, 1000000, 0
+    _ = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+    re = c_algo_spam_sparse(
+        np.asarray(sub_x_values, dtype=float),
+        np.asarray(sub_x_indices, dtype=np.int32),
+        np.asarray(sub_x_positions, dtype=np.int32),
+        np.asarray(sub_x_len_list, dtype=np.int32),
+        np.asarray(data['y_tr'][tr_index], dtype=float),
+        data['p'], len(tr_index), para_c, para_l1, 0.0, reg_opt, num_passes, step_len, verbose)
+    wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+    y_pred_wt, y_pred_wt_bar = pred(data, te_index, range(len(te_index)), wt, wt_bar)
+    return {'algo_para': [task_id, fold_id, para_c, para_l1],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data):
+    tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    reg_opt, step_len, verbose = 1, 1000000, 0
+    _ = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+    re = c_algo_spam_sparse(
+        np.asarray(sub_x_values, dtype=float),
+        np.asarray(sub_x_indices, dtype=np.int32),
+        np.asarray(sub_x_positions, dtype=np.int32),
+        np.asarray(sub_x_len_list, dtype=np.int32),
+        np.asarray(data['y_tr'][tr_index], dtype=float),
+        data['p'], len(tr_index), para_c, 0.0, para_beta, reg_opt, num_passes, step_len, verbose)
+    wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+    y_pred_wt, y_pred_wt_bar = pred(data, te_index, range(len(te_index)), wt, wt_bar)
+    return {'algo_para': [task_id, fold_id, para_c, para_beta],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes, data):
+    tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    reg_opt, step_len, verbose = 1, 1000000, 0
+    _ = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+    re = c_algo_spam_sparse(
+        np.asarray(sub_x_values, dtype=float),
+        np.asarray(sub_x_indices, dtype=np.int32),
+        np.asarray(sub_x_positions, dtype=np.int32),
+        np.asarray(sub_x_len_list, dtype=np.int32),
+        np.asarray(data['y_tr'][tr_index], dtype=float), data['p'],
+        len(tr_index), para_c, para_l1, para_beta, reg_opt, num_passes, step_len, verbose)
+    wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+    y_pred_wt, y_pred_wt_bar = pred(data, te_index, range(len(te_index)), wt, wt_bar)
+    return {'algo_para': [task_id, fold_id, para_c, para_beta],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_solam(task_id, fold_id, para_xi, para_r, num_passes, data):
+    tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+    reg_opt, step_len, verbose = 1, 1000000, 0
+    _ = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+    re = c_algo_solam_sparse(
+        np.asarray(sub_x_values, dtype=float),
+        np.asarray(sub_x_indices, dtype=np.int32),
+        np.asarray(sub_x_positions, dtype=np.int32),
+        np.asarray(sub_x_len_list, dtype=np.int32),
+        np.asarray(data['y_tr'][tr_index], dtype=float), data['p'],
+        para_xi, para_r, num_passes, verbose)
+    wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+    y_pred_wt, y_pred_wt_bar = pred(data, te_index, range(len(te_index)), wt, wt_bar)
+    return {'algo_para': [task_id, fold_id, para_xi, para_r],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
+def run_sht_am(run_id, fold_id, para_c, sparsity, num_passes, data):
+    tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+    te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+    b, para_beta, step_len, verbose = 108, 0.0, 1000000, 0
+    _ = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
+    sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+    re = c_algo_sht_am_sparse(
+        np.asarray(sub_x_values, dtype=float),
+        np.asarray(sub_x_indices, dtype=np.int32),
+        np.asarray(sub_x_positions, dtype=np.int32),
+        np.asarray(sub_x_len_list, dtype=np.int32),
+        np.asarray(data['y_tr'][tr_index], dtype=float), data['p'], len(tr_index), b,
+        para_c, para_beta, sparsity, num_passes, step_len, verbose)
+    wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+    y_pred_wt, y_pred_wt_bar = pred(data, te_index, range(len(te_index)), wt, wt_bar)
+    return {'algo_para': [run_id, fold_id, para_c, sparsity],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
 
 def get_run_fold_index_by_task_id(method, task_start, task_end):
@@ -991,8 +1103,74 @@ def run_ms(method_name):
     pkl.dump(results, open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
+def run_testing():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    num_passes = 5
+    run_id, fold_id = task_id / 5, task_id / 5
+    data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
+    results, key = dict(), (run_id, fold_id)
+    results[key] = dict()
+
+    if False:
+        # -----------------------
+        method = 'opauc'
+        ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+        _, _, _, para_eta, para_lambda, _ = ms[key][method][0][(task_id, fold_id)]['para']
+        re = run_opauc(task_id, fold_id, para_eta, para_lambda, data)
+        results[key][method] = re
+        print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+        # -----------------------
+        method = 'fsauc'
+        ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+        _, _, _, para_eta, para_lambda, _ = ms[key][method][0][(task_id, fold_id)]['para']
+        re = run_fsauc(task_id, fold_id, num_passes, para_eta, para_lambda, data)
+        results[key][method] = re
+        print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+
+        # -----------------------
+        method = 'spam_l1l2'
+        ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+        _, _, _, para_c, para_beta, para_l1 = ms[key][method][0][(task_id, fold_id)]['para']
+        re = run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes, data)
+        results[key][method] = re
+        print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+        # -----------------------
+        method = 'solam'
+        ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+        _, _, _, para_xi, para_r = ms[item][method][0][(task_id, fold_id)]['para']
+        re = run_solam(task_id, fold_id, para_xi, para_r, num_passes, data)
+        results[key][method] = re
+        print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+    # -----------------------
+    method = 'spam_l1'
+    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+    _, _, _, para_c, para_l1, _ = ms[key][method][0][(task_id, fold_id)]['para']
+    re = run_spam_l1(task_id, fold_id, para_c, para_l1, num_passes, data)
+    results[key][method] = re
+    print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+    # -----------------------
+    method = 'spam_l2'
+    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+    _, _, _, para_c, para_beta = ms[key][method][0][(task_id, fold_id)]['para']
+    re = run_spam_l2(task_id, fold_id, para_c, para_beta, num_passes, data)
+    results[key][method] = re
+    print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+    # -----------------------
+    method = 'sht_am'
+    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
+    _, _, _, para_c, sparsity = ms[key][method][0][(task_id, fold_id)]['para']
+    re = run_sht_am(task_id, fold_id, para_c, sparsity, num_passes, data)
+    results[key][method] = re
+    print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+    f_name = 'results_task_%02d.pkl'
+    pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
+
+
 def main():
-    run_ms(method_name='fsauc')
+    run_testing()
 
 
 if __name__ == '__main__':
