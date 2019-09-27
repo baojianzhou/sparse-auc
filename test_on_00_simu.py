@@ -868,7 +868,7 @@ def run_para_blocksize():
                 re.append(_['auc_wt'])
             results[key][method] = re
             print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
-    f_name = 'results_task_%02d_sparsity.pkl'
+    f_name = 'results_task_%02d_blocksize.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
 
