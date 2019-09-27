@@ -93,14 +93,10 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
                           &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &x_tr_posis,
                           &PyArray_Type, &y_tr,
-                          &p,
-                          &para_xi,
-                          &para_r,
-                          &para_num_pass,
-                          &verbose)) { return NULL; }
+                          &p, &para_xi, &para_r, &para_num_pass, &verbose)) { return NULL; }
     int num_tr = (int) y_tr->dimensions[0];
-    if (verbose > 0) {
-        printf("num_tr: %d p: %d\n", num_tr, p);
+    if (verbose == 0) {
+        printf("num_tr: %d p: %d para_xi: %.4f para_r: %.4f\n", num_tr, p, para_xi, para_r);
     }
     solam_results *result = malloc(sizeof(solam_results));
     result->wt = malloc(sizeof(double) * p);
