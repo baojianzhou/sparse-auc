@@ -802,8 +802,8 @@ def run_para_sparsity():
     k_fold, passes = 5, 10
     tr_list = [1000]
     mu_list = [0.3]
-    posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
-    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
+    posi_ratio_list = [0.1, 0.5]
+    fig_list = ['fig_2']
     results = dict()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
@@ -815,17 +815,23 @@ def run_para_sparsity():
             # -----------------------
             method = 'sht_am'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
-            re = run_sht_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
+            _, _, _, para_c, _, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            re = []
+            for sparsity in [22, 28, 34, 40, 46, 52, 58, 66, 72]:
+                _ = run_sht_am(task_id, fold_id, para_c, sparsity, 800, passes, data[fig_i])
+                re.append(_['auc_wt'])
             results[key][method] = re
-            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
             # -----------------------
             method = 'graph_am'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
-            re = run_graph_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
+            _, _, _, para_c, _, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            re = []
+            for sparsity in [22, 28, 34, 40, 46, 52, 58, 66, 72]:
+                _ = run_graph_am(task_id, fold_id, para_c, sparsity, 800, passes, data[fig_i])
+                re.append(_['auc_wt'])
             results[key][method] = re
-            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
+            print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
     f_name = 'results_task_%02d_sparsity.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
@@ -873,7 +879,7 @@ def run_para_blocksize():
 
 
 def main():
-    run_para_blocksize()
+    run_para_sparsity()
 
 
 if __name__ == '__main__':
