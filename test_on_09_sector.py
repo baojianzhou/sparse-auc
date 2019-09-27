@@ -651,7 +651,7 @@ def run_solam(task_id, fold_id, para_xi, para_r, num_passes, data):
 def run_sht_am(run_id, fold_id, para_c, sparsity, num_passes, data):
     tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
-    b, para_beta, step_len, verbose = 108, 0.0, 1000000, 0
+    b, para_beta, step_len, verbose = 135, 0.0, 1000000, 0
     _ = get_sub_data_by_indices(data, tr_index, range(len(tr_index)))
     sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
     re = c_algo_sht_am_sparse(
@@ -1108,7 +1108,7 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_passes = 5
+    num_passes = 20
     run_id, fold_id = task_id / 5, task_id / 5
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)
