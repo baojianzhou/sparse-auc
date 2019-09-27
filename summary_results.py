@@ -179,8 +179,8 @@ def result_summary_00_simu_re():
 def show_test():
     import matplotlib.pyplot as plt
     from pylab import rcParams
-    color_list = ['b', 'g', 'm', 'r', 'y', 'k']
-    marker_list = ['X', 'o', 'P', 's', '*', '<']
+    color_list = ['b', 'g', 'm', 'r', 'y', 'k', 'orange', 'Aqua']
+    marker_list = ['X', 'o', 'P', 's', '*', '<', '>', 'v']
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     models = dict()
     for task_id in product(range(25)):
@@ -234,9 +234,9 @@ def show_test():
     plt.setp(ax[2].get_yticklabels(), visible=False)
     plt.setp(ax[3].get_yticklabels(), visible=False)
     plt.subplots_adjust(wspace=0.0, hspace=0.0)
-    f_name = 'results_exp_simu.png'
+    f_name = '/results_exp_simu.png'
     print('save fig to: %s' % f_name)
-    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='png')
+    plt.savefig(data_path + f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='png')
     plt.close()
 
 
@@ -251,6 +251,7 @@ def combine_results():
         re = pkl.load(open(os.path.join(data_path, 'results_task_%02d.pkl' % task_id), 'rb'))
         for key in re:
             results[key] = re[key]
+    print('          opauc   solam    fsauc  spam_l2 spam_l1 spam_l1l2 sht_am graph_am')
     for p_ratio, fig_i in product(p_ratio_list, fig_list):
         re = {_: [] for _ in method_list}
         for key in results:
@@ -259,12 +260,32 @@ def combine_results():
                     re[method].append(results[key][method]['auc_wt'])
         for method in method_list:
             re[method] = float(np.mean(re[method]))
-        print('%.1f %s ' % (p_ratio, fig_i) + ' '.join(
+        print('%.1f %s ' % (p_ratio, fig_i) + '  '.join(
             ['%.4f' % re[method] for method in method_list]))
+
+    for p_ratio, fig_i in product(p_ratio_list, fig_list):
+        re = {_: [] for _ in method_list}
+        for key in results:
+            if key[5] == p_ratio and key[6] == fig_i:
+                for method in results[key]:
+                    re[method].append(results[key][method]['auc_wt'])
+        for method in method_list:
+            re[method] = float(np.mean(re[method]))
+        print(' & '.join(['%.4f' % re[method] for method in method_list]))
+
+    for p_ratio, fig_i in product(p_ratio_list, fig_list):
+        re = {_: [] for _ in method_list}
+        for key in results:
+            if key[5] == p_ratio and key[6] == fig_i:
+                for method in results[key]:
+                    re[method].append(results[key][method]['nonzero_wt'])
+        for method in method_list:
+            re[method] = float(np.mean(re[method]))
+        print(' & '.join(['%.4f' % re[method] for method in method_list]))
 
 
 if __name__ == '__main__':
-    combine_results()
+    show_test()
     exit()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
