@@ -99,15 +99,6 @@ bool head_tail_binsearch(
         int sparsity_high, int max_num_iter, PruningMethod pruning,
         int verbose, GraphStat *stat);
 
-
-typedef struct {
-    double *wt;
-    double *wt_bar;
-    double a;
-    double b;
-    double alpha;
-} solam_results;
-
 /**
  * SOLAM: Stochastic Online AUC Maximization
  * @para para: number of parameters of SOLAM
@@ -123,15 +114,16 @@ typedef struct {
  * year={2016}
  * }
  */
-bool _solam(const double *x_tr,
-            const double *y_tr,
-            int num_tr,
-            int p,
-            double para_xi,
-            double para_r,
-            int para_num_pass,
-            int verbose,
-            solam_results *results);
+bool _algo_solam(const double *data_x_tr,
+                 const double *data_y_tr,
+                 int data_n,
+                 int data_p,
+                 double para_xi,
+                 double para_r,
+                 int para_num_pass,
+                 int para_verbose,
+                 double *re_wt,
+                 double *re_wt_bar);
 
 /**
  * SOLAM: Stochastic Online AUC Maximization for sparse data
@@ -148,18 +140,19 @@ bool _solam(const double *x_tr,
  * year={2016}
  * }
  */
-bool _solam_sparse(const double *x_tr_vals,
-                   const int *x_tr_indices,
-                   const int *x_tr_lens,
-                   const int *x_tr_posis,
-                   const double *y_tr,
-                   int num_tr,
-                   int p,
-                   double para_xi,
-                   double para_r,
-                   int para_num_pass,
-                   int verbose,
-                   solam_results *results);
+bool _algo_solam_sparse(const double *x_tr_vals,
+                        const int *x_tr_indices,
+                        const int *x_tr_lens,
+                        const int *x_tr_posis,
+                        const double *y_tr,
+                        int num_tr,
+                        int p,
+                        double para_xi,
+                        double para_r,
+                        int para_num_pass,
+                        int verbose,
+                        double *re_wt,
+                        double *re_wt_bar);
 
 
 typedef struct {
@@ -195,34 +188,34 @@ typedef struct {
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-bool _spam(const double *x_tr,
-           const double *y_tr,
-           int p,
-           int n,
-           double para_xi,
-           double para_l1_reg,
-           double para_l2_reg,
-           int para_num_passes,
-           int para_step_len,
-           int para_reg_opt,
-           int para_verbose,
-           spam_results *results);
+bool _algo_spam(const double *x_tr,
+                const double *y_tr,
+                int p,
+                int n,
+                double para_xi,
+                double para_l1_reg,
+                double para_l2_reg,
+                int para_num_passes,
+                int para_step_len,
+                int para_reg_opt,
+                int para_verbose,
+                spam_results *results);
 
-bool _spam_sparse(const double *x_values,
-                  const int *x_indices,
-                  const int *x_positions,
-                  const int *x_len_list,
-                  const double *y_tr,
-                  int p,
-                  int n,
-                  double para_xi,
-                  double para_l1_reg,
-                  double para_l2_reg,
-                  int num_passes,
-                  int step_len,
-                  int reg_opt,
-                  int verbose,
-                  spam_results *results);
+bool _algo_spam_sparse(const double *x_values,
+                       const int *x_indices,
+                       const int *x_positions,
+                       const int *x_len_list,
+                       const double *y_tr,
+                       int p,
+                       int n,
+                       double para_xi,
+                       double para_l1_reg,
+                       double para_l2_reg,
+                       int num_passes,
+                       int step_len,
+                       int reg_opt,
+                       int verbose,
+                       spam_results *results);
 
 typedef struct {
     double *wt;
@@ -235,18 +228,18 @@ typedef struct {
 } sht_am_results;
 
 
-bool _sht_am(const double *x_tr,
-             const double *y_tr,
-             int p,
-             int n,
-             int b,
-             double para_xi,
-             double para_l2_reg,
-             int para_sparsity,
-             int para_num_passes,
-             int para_step_len,
-             int para_verbose,
-             sht_am_results *results);
+bool _algo_sht_am(const double *x_tr,
+                  const double *y_tr,
+                  int p,
+                  int n,
+                  int b,
+                  double para_xi,
+                  double para_l2_reg,
+                  int para_sparsity,
+                  int para_num_passes,
+                  int para_step_len,
+                  int para_verbose,
+                  sht_am_results *results);
 
 /**
  *
@@ -271,21 +264,21 @@ bool _sht_am(const double *x_tr,
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-bool _sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
-                    const int *x_tr_indices,  // the inidices of these nonzeros.
-                    const int *x_tr_posis,// the start indices of these nonzeros.
-                    const int *x_tr_lens, // the list of sizes of nonzeros.
-                    const double *y_tr,    // the vector of training samples.
-                    int p,                 // the dimension of the features of the dataset
-                    int n,                 // the total number of training samples.
-                    int b,
-                    double para_xi,
-                    double para_l2_reg,
-                    int para_sparsity,
-                    int para_num_passes,
-                    int para_step_len,
-                    int para_verbose,
-                    sht_am_results *results);
+bool _algo_sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
+                         const int *x_tr_indices,  // the inidices of these nonzeros.
+                         const int *x_tr_posis,// the start indices of these nonzeros.
+                         const int *x_tr_lens, // the list of sizes of nonzeros.
+                         const double *y_tr,    // the vector of training samples.
+                         int p,                 // the dimension of the features of the dataset
+                         int n,                 // the total number of training samples.
+                         int b,
+                         double para_xi,
+                         double para_l2_reg,
+                         int para_sparsity,
+                         int para_num_passes,
+                         int para_step_len,
+                         int para_verbose,
+                         sht_am_results *results);
 
 
 /**
@@ -323,37 +316,37 @@ typedef struct {
     int t_index;
 } graph_am_results;
 
-bool _graph_am(const double *x_tr,
-               const double *y_tr,
-               int p,
-               int n,
-               int b,
-               double para_xi,
-               double para_l2_reg,
-               int para_sparsity,
-               int para_num_passes,
-               int para_step_len,
-               int para_verbose,
-               const EdgePair *edges,
-               const double *weights,
-               int m,
-               graph_am_results *results);
+bool _algo_graph_am(const double *x_tr,
+                    const double *y_tr,
+                    int p,
+                    int n,
+                    int b,
+                    double para_xi,
+                    double para_l2_reg,
+                    int para_sparsity,
+                    int para_num_passes,
+                    int para_step_len,
+                    int para_verbose,
+                    const EdgePair *edges,
+                    const double *weights,
+                    int m,
+                    graph_am_results *results);
 
-bool _graph_am_sparse(const double *x_values,// the values of these nonzeros.
-                      const int *x_indices,  // the inidices of these nonzeros.
-                      const int *x_positions,// the start indices of these nonzeros.
-                      const int *x_len_list, // the list of sizes of nonzeros.
-                      const double *y_tr,    // the vector of training samples.
-                      int p,                 // the dimension of the features of the dataset
-                      int n,                 // the total number of training samples.
-                      int b,
-                      int para_sparsity,
-                      double para_xi,
-                      double para_l2_reg,
-                      int num_passes,
-                      int step_len,
-                      int verbose,
-                      graph_am_results *results);
+bool _algo_graph_am_sparse(const double *x_values,// the values of these nonzeros.
+                           const int *x_indices,  // the inidices of these nonzeros.
+                           const int *x_positions,// the start indices of these nonzeros.
+                           const int *x_len_list, // the list of sizes of nonzeros.
+                           const double *y_tr,    // the vector of training samples.
+                           int p,                 // the dimension of the features of the dataset
+                           int n,                 // the total number of training samples.
+                           int b,
+                           int para_sparsity,
+                           double para_xi,
+                           double para_l2_reg,
+                           int num_passes,
+                           int step_len,
+                           int verbose,
+                           graph_am_results *results);
 
 void _algo_opauc(const double *x_tr,
                  const double *y_tr,
