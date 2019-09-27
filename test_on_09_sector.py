@@ -264,14 +264,14 @@ def cv_solam(run_id, fold_id, num_passes, data):
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
-            sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
+            sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens = _
             re = c_algo_solam_sparse(
-                np.asarray(sub_x_values, dtype=float),
-                np.asarray(sub_x_indices, dtype=np.int32),
-                np.asarray(sub_x_positions, dtype=np.int32),
-                np.asarray(sub_x_len_list, dtype=np.int32),
+                np.asarray(sub_x_vals, dtype=float),
+                np.asarray(sub_x_inds, dtype=np.int32),
+                np.asarray(sub_x_posis, dtype=np.int32),
+                np.asarray(sub_x_lens, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], para_r, para_xi, num_passes, 0)
+                data['p'], para_xi, para_r, num_passes, 0)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -1170,8 +1170,7 @@ def run_testing():
 
 
 def main():
-    run_testing()
-    # run_ms(method_name='solam')
+    run_ms(method_name='solam')
 
 
 if __name__ == '__main__':
