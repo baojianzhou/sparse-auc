@@ -758,7 +758,7 @@ def run_testing():
             # -----------------------
             method = 'solam'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-            _, _, _, para_r, para_xi, _ = ms[item][method][0][(task_id, fold_id)]['para']
+            _, _, _, para_xi, para_r, _ = ms[item][method][0][(task_id, fold_id)]['para']
             re = run_solam(task_id, fold_id, para_xi, para_r, passes, data[fig_i])
             results[key][method] = re
             print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])

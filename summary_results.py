@@ -242,31 +242,29 @@ def show_test():
 
 def combine_results():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
+    p_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
-    for task_id, num_tr, mu, posi_ratio, fig_i in product(
-            range(25), tr_list, mu_list, posi_ratio_list, fig_list):
-        print(task_id, num_tr, mu, posi_ratio, fig_i)
-        f_name1 = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s.pkl' %
-                               (task_id, num_tr, mu, posi_ratio, fig_i))
-        re1 = pkl.load(open(f_name1, 'rb'))
-        f_name = os.path.join(data_path, 'ms_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f_%s_opauc.pkl' %
-                              (task_id, num_tr, mu, posi_ratio, fig_i))
-        re2 = pkl.load(open(f_name, 'rb'))[task_id]
-        re1[re1.keys()[0]].update(re2[re2.keys()[0]])
-        pkl.dump(re1, open(f_name1, 'wb'))
-
-
-def test():
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-    models = pkl.load(open(data_path + 'models.pkl', 'rb'))
-    print(len(models))
+    method_list = ['opauc', 'solam', 'fsauc', 'spam_l2', 'spam_l1', 'spam_l1l2', 'sht_am',
+                   'graph_am']
+    results = dict()
+    for task_id in product(range(25)):
+        re = pkl.load(open(os.path.join(data_path, 'results_task_%02d.pkl' % task_id), 'rb'))
+        for key in re:
+            results[key] = re[key]
+    for p_ratio, fig_i in product(p_ratio_list, fig_list):
+        re = {_: [] for _ in method_list}
+        for key in results:
+            if key[5] == p_ratio and key[6] == fig_i:
+                for method in results[key]:
+                    re[method].append(results[key][method]['auc_wt'])
+        for method in method_list:
+            re[method] = float(np.mean(re[method]))
+        print('%.1f %s ' % (p_ratio, fig_i) + ' '.join(
+            ['%.4f' % re[method] for method in method_list]))
 
 
 if __name__ == '__main__':
-    show_test()
+    combine_results()
     exit()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
     dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
