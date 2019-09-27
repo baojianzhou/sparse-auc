@@ -634,13 +634,11 @@ def run_solam(task_id, fold_id, para_xi, para_r, num_passes, data):
                       para_xi, para_r, num_passes, 0)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
-    run_time = re[3]
     return {'algo_para': [task_id, fold_id, para_xi, para_r],
             'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                     y_score=np.dot(data['x_tr'][te_index], wt)),
             'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
                                         y_score=np.dot(data['x_tr'][te_index], wt_bar)),
-            'run_time': run_time,
             'nonzero_wt': np.count_nonzero(wt),
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
@@ -878,8 +876,37 @@ def run_para_blocksize():
     pkl.dump(results, open(os.path.join(data_path, f_name % task_id), 'wb'))
 
 
+def test_solam():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    k_fold, passes = 5, 10
+    tr_list = [1000]
+    mu_list = [0.3]
+    posi_ratio_list = [0.5]
+    fig_list = ['fig_4']
+    results = dict()
+    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+        for fold_id in range(k_fold):
+            key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
+            results[key] = dict()
+            method = 'solam'
+            list_xi = np.arange(1, 101, 9, dtype=float)
+            list_r = 10 ** np.arange(-1, 6, 1, dtype=float)
+            best_auc = None
+            for para_xi, para_r in product(list_xi, list_r):
+                re = run_solam(task_id, fold_id, para_xi, para_r, passes, data[fig_i])
+                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
+                    best_auc = re
+            results[key][method] = best_auc
+            print(fold_id, method, best_auc['auc_wt'], best_auc['auc_wt_bar'])
+
+
 def main():
-    run_para_sparsity()
+    test_solam()
 
 
 if __name__ == '__main__':
