@@ -499,7 +499,6 @@ def run_spam_l1(task_id, fold_id, para_c, para_l1, num_passes, data):
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     t_auc = np.asarray(re[2])
-    print(' '.join(['%.4f' % _ for _ in t_auc]))
     return {'algo_para': [task_id, fold_id, para_c, para_l1],
             'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                     y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -909,7 +908,7 @@ def test_solam_simu():
                   best_auc['auc_wt_bar'], time.time() - s_time)
 
 
-def test_spam_simu():
+def test_spaml1_simu():
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
@@ -933,6 +932,37 @@ def test_spam_simu():
             best_auc = None
             for para_c, para_l1 in product(list_c, list_l1):
                 re = run_spam_l1(task_id, fold_id, para_c, para_l1, passes, data[fig_i])
+                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
+                    best_auc = re
+            results[key][method] = best_auc
+            print(fold_id, method, best_auc['auc_wt'],
+                  best_auc['auc_wt_bar'], time.time() - s_time)
+
+
+def test_spaml2_simu():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    k_fold, passes = 5, 10
+    tr_list = [1000]
+    mu_list = [0.3]
+    posi_ratio_list = [0.5]
+    fig_list = ['fig_2']
+    results = dict()
+    s_time = time.time()
+    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+        for fold_id in range(k_fold):
+            key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
+            results[key] = dict()
+            method = 'spam'
+            list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
+            list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
+            best_auc = None
+            for para_c, para_beta in product(list_c, list_beta):
+                re = run_spam_l2(task_id, fold_id, para_c, para_beta, passes, data[fig_i])
                 if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
                     best_auc = re
             results[key][method] = best_auc
@@ -971,8 +1001,41 @@ def test_sht_am_simu():
                   best_auc['auc_wt_bar'], time.time() - s_time)
 
 
+def test_fsauc_simu():
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    k_fold, passes = 5, 10
+    tr_list = [1000]
+    mu_list = [0.3]
+    posi_ratio_list = [0.5]
+    fig_list = ['fig_2']
+    results = dict()
+    s_time = time.time()
+    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
+        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
+        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
+        for fold_id in range(k_fold):
+            key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
+            results[key] = dict()
+            method = 'fsauc'
+            list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+            list_g = 2. ** np.arange(-10, 5, 1, dtype=float)
+            best_auc = None
+            for para_r, para_g in product(list_r, list_g):
+                re = run_fsauc(task_id, fold_id, passes, para_r, para_g, data[fig_i])
+                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
+                    best_auc = re
+            results[key][method] = best_auc
+            print(fold_id, method, best_auc['auc_wt'],
+                  best_auc['auc_wt_bar'], time.time() - s_time)
+
+
 def main():
-    test_sht_am_simu()
+    test_spaml2_simu()
+    print('-' * 80)
+    test_fsauc_simu()
 
 
 if __name__ == '__main__':

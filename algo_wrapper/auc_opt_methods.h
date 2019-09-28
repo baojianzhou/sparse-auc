@@ -184,7 +184,23 @@ void _algo_spam_sparse(const double *x_values,
                        double *re_wt_bar,
                        double *re_auc);
 
-
+/**
+ * Stochastic Hard Thresholding for AUC maximization.
+ * @param data_x_tr
+ * @param data_y_tr
+ * @param data_n
+ * @param data_p
+ * @param para_sparsity
+ * @param para_b
+ * @param para_xi
+ * @param para_l2_reg
+ * @param para_num_passes
+ * @param para_step_len
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ */
 void _algo_sht_am(const double *data_x_tr,
                   const double *data_y_tr,
                   int data_n,
@@ -200,6 +216,26 @@ void _algo_sht_am(const double *data_x_tr,
                   double *re_wt_bar,
                   double *re_auc);
 
+/**
+ *
+ * @param x_tr_vals
+ * @param x_tr_indices
+ * @param x_tr_posis
+ * @param x_tr_lens
+ * @param data_y_tr
+ * @param data_n
+ * @param data_p
+ * @param para_sparsity
+ * @param para_b
+ * @param para_xi
+ * @param para_l2_reg
+ * @param para_num_passes
+ * @param para_step_len
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ */
 void _algo_sht_am_sparse(const double *x_tr_vals,
                          const int *x_tr_indices,
                          const int *x_tr_posis,
@@ -291,39 +327,37 @@ void _algo_opauc_sparse(const double *x_tr_vals,
  * pages={3195--3203},
  * year={2018}}
  * ---
- *
- *
- * ---
  * Do not use the function directly. Instead, call it by Python Wrapper.
  * There are two main model parameters: para_g, para_r.
- * @param x_tr
- * @param y_tr
- * @param p : number of features.
- * @param n : number of samples, i.e. len(x_tr) == n.
+ * @param data_x_tr
+ * @param data_y_tr
+ * @param data_p : number of features.
+ * @param data_n : number of samples, i.e. len(x_tr) == n.
  * @param para_g
  * @param para_r
  */
-void _algo_fsauc(const double *x_tr,
-                 const double *y_tr,
-                 int p,
-                 int n,
+void _algo_fsauc(const double *data_x_tr,
+                 const double *data_y_tr,
+                 int data_n,
+                 int data_p,
                  double para_r,
                  double para_g,
-                 int num_passes,
-                 double *wt,
-                 double *wt_bar);
+                 int para_num_passes,
+                 double *re_wt,
+                 double *re_wt_bar);
 
 void _algo_fsauc_sparse(const double *x_tr_vals,
                         const int *x_tr_indices,
                         const int *x_tr_posis,
                         const int *x_tr_lens,
-                        const double *y_tr,
-                        int p,
-                        int n,
+                        const double *data_y_tr,
+                        int data_n,
+                        int data_p,
                         double para_r,
                         double para_g,
-                        int num_passes,
-                        double *wt,
-                        double *wt_bar);
+                        int para_num_passes,
+                        double *re_wt,
+                        double *re_wt_bar,
+                        double *re_auc);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H
