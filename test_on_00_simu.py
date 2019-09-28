@@ -907,7 +907,7 @@ def test_solam_simu():
 
 
 def main():
-    run_testing()
+    test_solam_simu()
 
 
 if __name__ == '__main__':
