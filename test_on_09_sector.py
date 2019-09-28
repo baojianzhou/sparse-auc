@@ -410,6 +410,7 @@ def cv_fsauc(run_id, fold_id, num_passes, data):
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
+            print(list_auc_wt[ind], list_auc_wt_bar[ind])
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         print('para_r: %.4f para_g: %.4f AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.2f' %

@@ -2661,30 +2661,25 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
         }
         double n_posi_nega = n_p + n_n;
         for (int kk = 0; kk < n0; kk++) {
-            int ind = k * n0 + kk;
-            const int *xt_indices = x_tr_indices + x_tr_posis[ind % data_n];
-            const double *xt_vals = x_tr_vals + x_tr_posis[ind % data_n];
+            int ind = (k * n0 + kk) % data_n;
+            const int *xt_indices = x_tr_indices + x_tr_posis[ind];
+            const double *xt_vals = x_tr_vals + x_tr_posis[ind];
             memset(xt, 0, sizeof(double) * data_p);
-            for (int tt = 0;
-                 tt < x_tr_lens[ind % data_n]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
-            double yt = data_y_tr[ind % data_n];
-            double is_posi_yt = is_posi(yt);
-            double is_nega_yt = is_nega(yt);
+            for (int tt = 0; tt < x_tr_lens[ind]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
+            double is_posi_yt = is_posi(data_y_tr[ind]);
+            double is_nega_yt = is_nega(data_y_tr[ind]);
             p_hat = ((n_posi_nega + kk) * p_hat + is_posi_yt) / (kk + 1. + n_posi_nega);
-            // update a_p, a_n, n_p, n_n
-            cblas_daxpy(data_p, is_posi_yt, xt, 1, vec_a_p, 1); // 89: A_p = A_p + (X*(y==1))';
-            cblas_daxpy(data_p, is_nega_yt, xt, 1, vec_a_n, 1); // 90: A_n = A_n + (X*(y==-1))';
+            cblas_daxpy(data_p, is_posi_yt, xt, 1, vec_a_p, 1); // update a_p, a_n, n_p, n_n
+            cblas_daxpy(data_p, is_nega_yt, xt, 1, vec_a_n, 1);
             n_p += is_posi_yt; // 91: n_p = n_p + sum(y==1);
             n_n += is_nega_yt; // 92: n_n = n_n + sum(y==-1);
-            // compute gradient
-            double pred = cblas_ddot(data_p, vec_w, 1, xt, 1);
+            double pred = cblas_ddot(data_p, vec_w, 1, xt, 1); // compute gradient
             double temp = 2. * (is_nega_yt * p_hat - is_posi_yt * (1. - p_hat));
             double ga = 2. * is_posi_yt * (1. - p_hat) * (a - pred);
             double gb = 2. * is_nega_yt * p_hat * (b - pred);
             memset(gw, 0, sizeof(double) * data_p);
             cblas_daxpy(data_p, (1. + alpha) * temp - ga - gb, xt, 1, gw, 1);
             double galpha = temp * pred - 2.0 * p_hat * (1. - p_hat) * alpha;
-
             // updates w,a,b,alpha
             cblas_daxpy(data_p, -gamma, gw, 1, vec_w, 1); // w = w-gamma*gw;
             a += -gamma * ga; // a = a-gamma*ga;
