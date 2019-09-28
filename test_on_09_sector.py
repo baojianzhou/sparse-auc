@@ -211,8 +211,7 @@ def cv_spam_l1l2(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], len(sub_tr_ind), para_c, para_l1, para_beta,
-                reg_opt, num_passes, step_len, verbose)
+                data['p'], para_c, para_l1, para_beta, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -1165,7 +1164,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='sht_am')
+    run_ms(method_name='spam_l1l2')
 
 
 if __name__ == '__main__':

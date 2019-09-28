@@ -64,7 +64,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
 static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; }
     PyArrayObject *x_tr_values, *x_tr_indices, *x_tr_posis, *x_tr_lens, *y_tr;
-    int data_p, para_num_pass, para_verbose;
+    int data_p, para_num_passes, para_verbose;
     double para_r, para_xi;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!iddii",
                           &PyArray_Type, &x_tr_values,
@@ -72,13 +72,9 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
                           &PyArray_Type, &x_tr_posis,
                           &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &y_tr,
-                          &data_p, &para_xi, &para_r, &para_num_pass,
+                          &data_p, &para_xi, &para_r, &para_num_passes,
                           &para_verbose)) { return NULL; }
     int data_n = (int) y_tr->dimensions[0];
-    if (para_verbose > 0) {
-        printf("data_n: %d data_p: %d para_xi: %.4f para_r: %.4f\n",
-               data_n, data_p, para_xi, para_r);
-    }
     double *re_wt = malloc(sizeof(double) * data_p);
     double *re_wt_bar = malloc(sizeof(double) * data_p);
     _algo_solam_sparse((double *) PyArray_DATA(x_tr_values),
@@ -86,7 +82,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
                        (int *) PyArray_DATA(x_tr_posis),
                        (int *) PyArray_DATA(x_tr_lens),
                        (double *) PyArray_DATA(y_tr),
-                       data_n, data_p, para_xi, para_r, para_num_pass, para_verbose, re_wt,
+                       data_n, data_p, para_xi, para_r, para_num_passes, para_verbose, re_wt,
                        re_wt_bar);
     PyObject *results = PyTuple_New(2);
     PyObject *wt = PyList_New(data_p);
