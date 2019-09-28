@@ -125,21 +125,6 @@ bool _algo_solam(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar);
 
-/**
- * SOLAM: Stochastic Online AUC Maximization for sparse data
- * @para para: number of parameters of SOLAM
- * @para results: the results, wt, a, b of SOLAM
- *
- * ---
- * BibTEX:
- * @inproceedings{ying2016stochastic,
- * title={Stochastic online AUC maximization},
- * author={Ying, Yiming and Wen, Longyin and Lyu, Siwei},
- * booktitle={Advances in neural information processing systems},
- * pages={451--459},
- * year={2016}
- * }
- */
 bool _algo_solam_sparse(const double *x_tr_vals,
                         const int *x_tr_indices,
                         const int *x_tr_posis,
@@ -150,7 +135,7 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                         double para_xi,
                         double para_r,
                         int para_num_pass,
-                        int verbose,
+                        int para_verbose,
                         double *re_wt,
                         double *re_wt_bar);
 
@@ -188,10 +173,10 @@ typedef struct {
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-bool _algo_spam(const double *x_tr,
-                const double *y_tr,
-                int p,
-                int n,
+bool _algo_spam(const double *data_x_tr,
+                const double *data_y_tr,
+                int data_n,
+                int data_p,
                 double para_xi,
                 double para_l1_reg,
                 double para_l2_reg,
@@ -206,15 +191,15 @@ bool _algo_spam_sparse(const double *x_values,
                        const int *x_positions,
                        const int *x_len_list,
                        const double *y_tr,
-                       int p,
-                       int n,
+                       int data_n,
+                       int data_p,
                        double para_xi,
                        double para_l1_reg,
                        double para_l2_reg,
-                       int num_passes,
-                       int step_len,
-                       int reg_opt,
-                       int verbose,
+                       int para_num_passes,
+                       int para_step_len,
+                       int para_reg_opt,
+                       int para_verbose,
                        spam_results *results);
 
 typedef struct {
