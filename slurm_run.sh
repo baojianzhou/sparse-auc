@@ -7,8 +7,8 @@
 #SBATCH --job-name=sparse-run
 #SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%a.out
 #SBATCH --array=00-24
-#SBATCH --nodelist=ceashpc-03
-#SBATCH --time=12:00:00
+#SBATCH --nodelist=ceashpc-05
+#SBATCH --time=48:00:00
 #SBATCH --partition=ceashpc
 #SBATCH --mem=2G
 #SBATCH --ntasks=1
@@ -16,5 +16,5 @@
 # the environment variable SLURM_ARRAY_TASK_ID contains
 # the index corresponding to the current job step
 # /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_13_realsim.py 
-/network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_00_simu.py 
-# /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_09_sector.py 
+# /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_00_simu.py 
+/network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_09_sector.py 
