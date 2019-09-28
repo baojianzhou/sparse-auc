@@ -888,6 +888,7 @@ def test_solam_simu():
     posi_ratio_list = [0.5]
     fig_list = ['fig_4']
     results = dict()
+    s_time = time.time()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
@@ -903,7 +904,8 @@ def test_solam_simu():
                 if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
                     best_auc = re
             results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'], best_auc['auc_wt_bar'])
+            print(fold_id, method, best_auc['auc_wt'],
+                  best_auc['auc_wt_bar'], time.time() - s_time)
 
 
 def main():

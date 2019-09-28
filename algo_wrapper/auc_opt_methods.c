@@ -1301,15 +1301,9 @@ bool _algo_solam(const double *data_x_tr,
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
-    if (para_verbose > 0) {
-        printf("n: %d p: %d", data_n, data_p);
-    }
-    // start of the algorithm
-    double p_hat = 0.; // number of positive
-    // iteration time.
-    double n_t = 1.;
-    int n_cnt = 1;
-    double gamma, gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0;
+    if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
+    double gamma, t = 1.0, p_hat = 0.; // learning rate, iteration time, positive ratio.
+    double gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0;
     double *v = malloc(sizeof(double) * (data_p + 2));
     // initialize vt
     double *v_prev = malloc(sizeof(double) * (data_p + 2));
@@ -1326,20 +1320,17 @@ bool _algo_solam(const double *data_x_tr,
     memset(v_bar_prev, 0, sizeof(double) * (data_p + 2));
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt, 1);
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt_bar, 1);
-    while (true) {
-        if (n_cnt > para_num_pass) {
-            break;
-        }
+
+    for (int i = 0; i < para_num_pass; i++) {
         for (int j = 0; j < data_n; j++) {
-            // current learning rate
-            gamma = para_xi / sqrt(n_t);
             // current sample
             const double *xt = data_x_tr + j * data_p;
-            double yt = data_y_tr[j];
-            double is_p_yt = is_posi(yt);
-            double is_n_yt = is_nega(yt);
+            double is_p_yt = is_posi(data_y_tr[j]);
+            double is_n_yt = is_nega(data_y_tr[j]);
             // update p_hat
-            p_hat = ((n_t - 1.) * p_hat + is_p_yt) / n_t;
+            p_hat = ((t - 1.) * p_hat + is_p_yt) / t;
+            // current learning rate
+            gamma = para_xi / sqrt(t);
             // calculate the gradient w
             cblas_dcopy(data_p, xt, 1, grad_v, 1);
             double vt_dot = cblas_ddot(data_p, v_prev, 1, xt, 1);
@@ -1364,46 +1355,34 @@ bool _algo_solam(const double *data_x_tr,
             // gradient descent step of alpha
             alpha = alpha_prev + gamma * grad_alpha;
 
-            // projection v
-            double n_rv = sqrt(cblas_ddot(data_p, v, 1, v, 1));
-            if (n_rv > para_r) {
-                cblas_dscal(data_p, para_r / n_rv, v, 1);
-            }
-            if (v[data_p] > para_r) {
-                v[data_p] = para_r;
-            }
-            if (v[data_p + 1] > para_r) {
-                v[data_p + 1] = para_r;
-            }
+            // projection w
+            double norm_v = sqrt(cblas_ddot(data_p, v, 1, v, 1));
+            if (norm_v > para_r) { cblas_dscal(data_p, para_r / norm_v, v, 1); }
+            // projection a
+            v[data_p] = (v[data_p] > para_r) ? para_r : v[data_p];
+            // projection b
+            v[data_p + 1] = (v[data_p + 1] > para_r) ? para_r : v[data_p + 1];
             // projection alpha
-            double n_ra = fabs(alpha);
-            if (n_ra > 2. * para_r) {
-                alpha = (2. * alpha * para_r) / n_ra;
-            }
-
+            alpha = (fabs(alpha) > 2. * para_r) ? (2. * alpha * para_r) / fabs(alpha) : alpha;
             // update gamma_
             gamma_bar = gamma_bar_prev + gamma;
             // update v_bar
-            cblas_dcopy(data_p + 2, v, 1, v_bar, 1);
+            cblas_dcopy(data_p + 2, v_prev, 1, v_bar, 1);
             cblas_dscal(data_p + 2, gamma / gamma_bar, v_bar, 1);
             cblas_daxpy(data_p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
             // update alpha_bar
             alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
-
-            cblas_dscal(data_p, (n_t - 1.) / n_t, re_wt_bar, 1);
-            cblas_daxpy(data_p, 1. / n_t, v_bar, 1, re_wt_bar, 1);
-
+            cblas_dscal(data_p, (t - 1.) / t, re_wt_bar, 1);
+            cblas_daxpy(data_p, 1. / t, v_bar, 1, re_wt_bar, 1);
             // update the parameters.
             alpha_prev = alpha;
             alpha_bar_prev = alpha_bar;
             gamma_bar_prev = gamma_bar;
             cblas_dcopy(data_p + 2, v_bar, 1, v_bar_prev, 1);
             cblas_dcopy(data_p + 2, v, 1, v_prev, 1);
-
             // update the counts
-            n_t = n_t + 1.;
+            t = t + 1.;
         }
-        n_cnt += 1;
     }
     cblas_dcopy(data_p, v_bar, 1, re_wt, 1);
     free(v_bar_prev);
@@ -1411,7 +1390,6 @@ bool _algo_solam(const double *data_x_tr,
     free(grad_v);
     free(v_prev);
     free(v);
-    free(grad_v);
     return true;
 }
 
@@ -1431,137 +1409,102 @@ bool _algo_solam_sparse(const double *x_tr_vals,
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
-    double *zero_v = malloc(sizeof(double) * (data_p + 2));
-    double *one_v = malloc(sizeof(double) * (data_p + 2));
-    for (int i = 0; i < data_p + 2; i++) {
-        zero_v[i] = 0.0;
-        one_v[i] = 1.0;
+    if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
+    double gamma, t = 1.0, p_hat = 0.; // learning rate, iteration time, positive ratio.
+    double gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0;
+    double *v = malloc(sizeof(double) * (data_p + 2));
+    // initialize vt
+    double *v_prev = malloc(sizeof(double) * (data_p + 2));
+    for (int i = 0; i < data_p; i++) {
+        v_prev[i] = sqrt(para_r * para_r / (double) data_p);
     }
-    if (para_verbose > 0) {
-        printf("n: %d p: %d", data_n, data_p);
-    }
-    // start of the algorithm
-    double p_hat = 0.; // number of positive
-    double *n_v0_ = malloc(sizeof(double) * (data_p + 2));
-    cblas_dcopy(data_p + 2, zero_v, 1, n_v0_, 1);
-    double n_a_p0_ = 0.;
-    double n_g_a0_ = 0.;
-    // initial vector
-    double *n_v0 = malloc(sizeof(double) * (data_p + 2));
-    cblas_dcopy(data_p, one_v, 1, n_v0, 1);
-    cblas_dscal(data_p, sqrt(para_r * para_r / (double) data_p), n_v0, 1);
-    n_v0[data_p] = para_r;
-    n_v0[data_p + 1] = para_r;
-    double n_a_p0 = 2. * para_r;
-    // iteration time.
-    double n_t = 1.;
-    int n_cnt = 1;
-    double *v_wt = malloc(sizeof(double) * data_p);
-    double *v_p_dv = malloc(sizeof(double) * (data_p + 2));
-    double *n_v1 = malloc(sizeof(double) * (data_p + 2));
-    double *n_v1_ = malloc(sizeof(double) * (data_p + 2));
-    double v_p_da;
-    double n_a_p1;
-    double n_a_p1_;
+    v_prev[data_p] = para_r;
+    v_prev[data_p + 1] = para_r;
+    // initialize alpha1
+    double alpha, alpha_prev = 2. * para_r;
+    double *grad_v = malloc(sizeof(double) * (data_p + 2));
+    double *v_bar = malloc(sizeof(double) * (data_p + 2));
+    double *v_bar_prev = malloc(sizeof(double) * (data_p + 2));
+    double *xt = malloc(sizeof(double) * (data_p));
+    memset(v_bar_prev, 0, sizeof(double) * (data_p + 2));
+    cblas_dcopy(data_p, v_bar_prev, 1, re_wt, 1);
+    cblas_dcopy(data_p, v_bar_prev, 1, re_wt_bar, 1);
 
-    cblas_dcopy(data_p, n_v0_, 1, re_wt, 1);
-    cblas_dcopy(data_p, n_v0_, 1, re_wt_bar, 1);
-    double *xt = malloc(sizeof(double) * data_p);
-    while (true) {
-        if (n_cnt > para_num_pass) {
-            break;
-        }
+    for (int i = 0; i < para_num_pass; i++) {
         for (int j = 0; j < data_n; j++) {
-            // current learning rate
-            double n_ga = para_xi / sqrt(n_t);
             // current sample
             const int *xt_indices = x_tr_indices + x_tr_posis[j];
             const double *xt_vals = x_tr_vals + x_tr_posis[j];
-            cblas_dcopy(data_p, zero_v, 1, xt, 1);
+            memset(xt, 0, sizeof(double) * data_p);
             for (int kk = 0; kk < x_tr_lens[j]; kk++) {
                 xt[xt_indices[kk]] = xt_vals[kk];
             }
-            double yt = data_y_tr[j];
-            double is_p_yt = is_posi(yt);
-            double is_n_yt = is_nega(yt);
+            double is_p_yt = is_posi(data_y_tr[j]);
+            double is_n_yt = is_nega(data_y_tr[j]);
             // update p_hat
-            p_hat = ((n_t - 1.) * p_hat + is_p_yt) / n_t;
-            // update w, a, b, alpha
-            cblas_dcopy(data_p, n_v0, 1, v_wt, 1);
-            double n_a = n_v0[data_p];
-            double n_b = n_v0[data_p + 1];
+            p_hat = ((t - 1.) * p_hat + is_p_yt) / t;
+            // current learning rate
+            gamma = para_xi / sqrt(t);
             // calculate the gradient w
-            cblas_dcopy(data_p + 2, zero_v, 1, v_p_dv, 1);
-            double vt_dot = cblas_ddot(data_p, v_wt, 1, xt, 1);
-            double wei_posi = 2. * (1. - p_hat) * (vt_dot - n_a - (1. + n_a_p0));
-            double wei_nega = 2. * p_hat * ((vt_dot - n_b) + (1. + n_a_p0));
+            cblas_dcopy(data_p, xt, 1, grad_v, 1);
+            double vt_dot = cblas_ddot(data_p, v_prev, 1, xt, 1);
+            double wei_posi = 2. * (1. - p_hat) * (vt_dot - v_prev[data_p] - (1. + alpha_prev));
+            double wei_nega = 2. * p_hat * ((vt_dot - v_prev[data_p + 1]) + (1. + alpha_prev));
             double weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
-            cblas_daxpy(data_p, weight, xt, 1, v_p_dv, 1);
+            cblas_dscal(data_p, weight, grad_v, 1);
             //gradient of a
-            v_p_dv[data_p] = -2. * (1. - p_hat) * (vt_dot - n_a) * is_p_yt;
+            grad_v[data_p] = -2. * (1. - p_hat) * (vt_dot - v_prev[data_p]) * is_p_yt;
             //gradient of b
-            v_p_dv[data_p + 1] = -2. * p_hat * (vt_dot - n_b) * is_n_yt;
-            // gradient descent step of w
-            cblas_dscal(data_p + 2, -n_ga, v_p_dv, 1);
-            cblas_daxpy(data_p + 2, 1.0, n_v0, 1, v_p_dv, 1);
+            grad_v[data_p + 1] = -2. * p_hat * (vt_dot - v_prev[data_p + 1]) * is_n_yt;
+            // gradient descent step of vt
+            cblas_dscal(data_p + 2, -gamma, grad_v, 1);
+            cblas_daxpy(data_p + 2, 1.0, v_prev, 1, grad_v, 1);
+            cblas_dcopy(data_p + 2, grad_v, 1, v, 1);
+
             // calculate the gradient of dual alpha
             wei_posi = -2. * (1. - p_hat) * vt_dot;
             wei_nega = 2. * p_hat * vt_dot;
-            v_p_da = wei_posi * is_p_yt + wei_nega * is_n_yt - 2. * p_hat * (1. - p_hat) * n_a_p0;
+            double grad_alpha = wei_posi * is_p_yt + wei_nega * is_n_yt;
+            grad_alpha += -2. * p_hat * (1. - p_hat) * alpha_prev;
             // gradient descent step of alpha
-            v_p_da = n_a_p0 + n_ga * v_p_da;
+            alpha = alpha_prev + gamma * grad_alpha;
 
-            // normalization -- the projection step.
-            double n_rv = sqrt(cblas_ddot(data_p, v_p_dv, 1, v_p_dv, 1));
-            if (n_rv > para_r) {
-                cblas_dscal(data_p, 1. / n_rv * para_r, v_p_dv, 1);
-            }
-            if (v_p_dv[data_p] > para_r) {
-                v_p_dv[data_p] = para_r;
-            }
-            if (v_p_dv[data_p + 1] > para_r) {
-                v_p_dv[data_p + 1] = para_r;
-            }
-            cblas_dcopy(data_p + 2, v_p_dv, 1, n_v1, 1); //n_v1 = v_p_dv
-            double n_ra = fabs(v_p_da);
-            if (n_ra > 2. * para_r) {
-                n_a_p1 = v_p_da / n_ra * (2. * para_r);
-            } else {
-                n_a_p1 = v_p_da;
-            }
+            // projection w
+            double norm_v = sqrt(cblas_ddot(data_p, v, 1, v, 1));
+            if (norm_v > para_r) { cblas_dscal(data_p, para_r / norm_v, v, 1); }
+            // projection a
+            v[data_p] = (v[data_p] > para_r) ? para_r : v[data_p];
+            // projection b
+            v[data_p + 1] = (v[data_p + 1] > para_r) ? para_r : v[data_p + 1];
+            // projection alpha
+            alpha = (fabs(alpha) > 2. * para_r) ? (2. * alpha * para_r) / fabs(alpha) : alpha;
             // update gamma_
-            double n_g_a1_ = n_g_a0_ + n_ga;
-            // update v_
-            cblas_dcopy(data_p + 2, n_v0, 1, n_v1_, 1);
-            cblas_dscal(data_p + 2, n_ga / n_g_a1_, n_v1_, 1);
-            cblas_daxpy(data_p + 2, n_g_a0_ / n_g_a1_, n_v0_, 1, n_v1_, 1);
-            // update alpha_
-            n_a_p1_ = (n_g_a0_ * n_a_p0_ + n_ga * n_a_p0) / n_g_a1_;
-            // update the information
-            cblas_dcopy(data_p + 2, n_v1_, 1, n_v0_, 1); // n_v0_ = n_v1_;
-            n_a_p0_ = n_a_p1_;
-            n_g_a0_ = n_g_a1_;
-            cblas_dcopy(data_p + 2, n_v1, 1, n_v0, 1); // n_v0 = n_v1;
-            n_a_p0 = n_a_p1;
-            // updates the results.
-
-            cblas_dscal(data_p, (n_t - 1.) / n_t, re_wt_bar, 1);
-            cblas_daxpy(data_p, 1. / n_t, n_v1_, 1, re_wt_bar, 1);
+            gamma_bar = gamma_bar_prev + gamma;
+            // update v_bar
+            cblas_dcopy(data_p + 2, v_prev, 1, v_bar, 1);
+            cblas_dscal(data_p + 2, gamma / gamma_bar, v_bar, 1);
+            cblas_daxpy(data_p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
+            // update alpha_bar
+            alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
+            cblas_dscal(data_p, (t - 1.) / t, re_wt_bar, 1);
+            cblas_daxpy(data_p, 1. / t, v_bar, 1, re_wt_bar, 1);
+            // update the parameters.
+            alpha_prev = alpha;
+            alpha_bar_prev = alpha_bar;
+            gamma_bar_prev = gamma_bar;
+            cblas_dcopy(data_p + 2, v_bar, 1, v_bar_prev, 1);
+            cblas_dcopy(data_p + 2, v, 1, v_prev, 1);
             // update the counts
-            n_t = n_t + 1.;
+            t = t + 1.;
         }
-        n_cnt += 1;
     }
-    cblas_dcopy(data_p, n_v1_, 1, re_wt, 1);
+    cblas_dcopy(data_p, v_bar, 1, re_wt, 1);
     free(xt);
-    free(n_v1_);
-    free(n_v1);
-    free(n_v0);
-    free(n_v0_);
-    free(v_p_dv);
-    free(v_wt);
-    free(one_v);
-    free(zero_v);
+    free(v_bar_prev);
+    free(v_bar);
+    free(grad_v);
+    free(v_prev);
+    free(v);
     return true;
 }
 
