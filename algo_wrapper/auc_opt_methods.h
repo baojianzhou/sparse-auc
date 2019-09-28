@@ -12,7 +12,7 @@
 #include <math.h>
 #include <string.h>
 
-// This is the only third part library needed.
+// These are the third part library needed.
 #include <cblas.h>
 #include "fast_pcst.h"
 
@@ -44,13 +44,6 @@ typedef struct {
     double val;
     int index;
 } data_pair;
-
-typedef struct {
-    double *vals;
-    int *indices;
-    int len;
-} sparse_arr;
-
 
 GraphStat *make_graph_stat(int p, int m);
 
@@ -139,17 +132,6 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar);
 
-
-typedef struct {
-    double *wt;
-    double *wt_bar;
-    double *t_run_time;
-    double *t_auc;
-    double t_eval_time;
-    int *t_indices;
-    int t_index;
-} spam_results;
-
 /**
  *
  * This function implements the algorithm proposed in the following paper.
@@ -184,7 +166,9 @@ bool _algo_spam(const double *data_x_tr,
                 int para_step_len,
                 int para_reg_opt,
                 int para_verbose,
-                spam_results *results);
+                double *re_wt,
+                double *re_wt_bar,
+                double *re_auc);
 
 bool _algo_spam_sparse(const double *x_values,
                        const int *x_indices,
@@ -200,7 +184,9 @@ bool _algo_spam_sparse(const double *x_values,
                        int para_step_len,
                        int para_reg_opt,
                        int para_verbose,
-                       spam_results *results);
+                       double *re_wt,
+                       double *re_wt_bar,
+                       double *re_auc);
 
 typedef struct {
     double *wt;
