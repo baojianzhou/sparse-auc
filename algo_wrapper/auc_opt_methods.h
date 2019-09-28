@@ -144,10 +144,6 @@ bool _algo_solam_sparse(const double *x_tr_vals,
  * pages={3707--3716},
  * year={2018}}
  * ---
- *
- *
- * Info
- * ---
  * Do not use the function directly. Instead, call it by Python Wrapper.
  *
  * @param para: related input parameters.
@@ -155,7 +151,7 @@ bool _algo_solam_sparse(const double *x_tr_vals,
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-bool _algo_spam(const double *data_x_tr,
+void _algo_spam(const double *data_x_tr,
                 const double *data_y_tr,
                 int data_n,
                 int data_p,
@@ -170,11 +166,11 @@ bool _algo_spam(const double *data_x_tr,
                 double *re_wt_bar,
                 double *re_auc);
 
-bool _algo_spam_sparse(const double *x_values,
+void _algo_spam_sparse(const double *x_values,
                        const int *x_indices,
                        const int *x_positions,
                        const int *x_len_list,
-                       const double *y_tr,
+                       const double *data_y_tr,
                        int data_n,
                        int data_p,
                        double para_xi,
@@ -188,68 +184,39 @@ bool _algo_spam_sparse(const double *x_values,
                        double *re_wt_bar,
                        double *re_auc);
 
-typedef struct {
-    double *wt;
-    double *wt_bar;
-    double *t_run_time;
-    double *t_auc;
-    double t_eval_time;
-    int *t_indices;
-    int t_index;
-} sht_am_results;
 
-
-bool _algo_sht_am(const double *x_tr,
-                  const double *y_tr,
-                  int p,
-                  int n,
-                  int b,
+void _algo_sht_am(const double *data_x_tr,
+                  const double *data_y_tr,
+                  int data_n,
+                  int data_p,
+                  int para_sparsity,
+                  int para_b,
                   double para_xi,
                   double para_l2_reg,
-                  int para_sparsity,
                   int para_num_passes,
                   int para_step_len,
                   int para_verbose,
-                  sht_am_results *results);
+                  double *re_wt,
+                  double *re_wt_bar,
+                  double *re_auc);
 
-/**
- *
- * This function implements the algorithm proposed in the following paper.
- * Stochastic Proximal Algorithms for AUC Maximization.
- * ---
- * @inproceedings{natole2018stochastic,
- * title={Stochastic proximal algorithms for AUC maximization},
- * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
- * booktitle={International Conference on Machine Learning},
- * pages={3707--3716},
- * year={2018}}
- * ---
- *
- *
- * Info
- * ---
- * Do not use the function directly. Instead, call it by Python Wrapper.
- *
- * @param para: related input parameters.
- * @param results
- * @author Baojian Zhou(Email: bzhou6@albany.edu)
- * @return
- */
-bool _algo_sht_am_sparse(const double *x_tr_vals,// the values of these nonzeros.
-                         const int *x_tr_indices,  // the inidices of these nonzeros.
-                         const int *x_tr_posis,// the start indices of these nonzeros.
-                         const int *x_tr_lens, // the list of sizes of nonzeros.
-                         const double *y_tr,    // the vector of training samples.
-                         int p,                 // the dimension of the features of the dataset
-                         int n,                 // the total number of training samples.
-                         int b,
+void _algo_sht_am_sparse(const double *x_tr_vals,
+                         const int *x_tr_indices,
+                         const int *x_tr_posis,
+                         const int *x_tr_lens,
+                         const double *data_y_tr,
+                         int data_n,
+                         int data_p,
+                         int para_sparsity,
+                         int para_b,
                          double para_xi,
                          double para_l2_reg,
-                         int para_sparsity,
                          int para_num_passes,
                          int para_step_len,
                          int para_verbose,
-                         sht_am_results *results);
+                         double *re_wt,
+                         double *re_wt_bar,
+                         double *re_auc);
 
 
 /**

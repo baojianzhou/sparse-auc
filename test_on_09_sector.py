@@ -145,13 +145,13 @@ def cv_spam_l2(run_id, fold_id, num_passes, data):
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
             sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
-            re = c_algo_spam_sparse(np.asarray(sub_x_values, dtype=float),
-                                    np.asarray(sub_x_indices, dtype=np.int32),
-                                    np.asarray(sub_x_positions, dtype=np.int32),
-                                    np.asarray(sub_x_len_list, dtype=np.int32),
-                                    np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                                    data['p'], len(sub_tr_ind), para_c, 0.0, para_beta, reg_opt,
-                                    num_passes, step_len, verbose)
+            re = c_algo_spam_sparse(
+                np.asarray(sub_x_values, dtype=float),
+                np.asarray(sub_x_indices, dtype=np.int32),
+                np.asarray(sub_x_positions, dtype=np.int32),
+                np.asarray(sub_x_len_list, dtype=np.int32),
+                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                data['p'], para_c, 0.0, para_beta, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -449,7 +449,7 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-        step_len, is_sparse, verbose = 1000000, 0, 0
+        step_len, verbose = 10000000, 0
         list_auc_wt = np.zeros(data['num_k_fold'])
         list_auc_wt_bar = np.zeros(data['num_k_fold'])
         list_num_nonzeros_wt = np.zeros(data['num_k_fold'])
@@ -460,13 +460,13 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
             b, para_beta = 108, 0.0
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
             sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
-            re = c_algo_sht_am_sparse(np.asarray(sub_x_values, dtype=float),
-                                      np.asarray(sub_x_indices, dtype=np.int32),
-                                      np.asarray(sub_x_positions, dtype=np.int32),
-                                      np.asarray(sub_x_len_list, dtype=np.int32),
-                                      np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                                      data['p'], len(sub_tr_ind), b, para_c, para_beta, sparsity,
-                                      num_passes, step_len, verbose)
+            re = c_algo_sht_am_sparse(
+                np.asarray(sub_x_values, dtype=float),
+                np.asarray(sub_x_indices, dtype=np.int32),
+                np.asarray(sub_x_positions, dtype=np.int32),
+                np.asarray(sub_x_len_list, dtype=np.int32),
+                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                data['p'], sparsity, b, para_c, para_beta, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -1170,7 +1170,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='solam')
+    run_ms(method_name='sht_am')
 
 
 if __name__ == '__main__':
