@@ -438,13 +438,13 @@ def cv_fsauc(run_id, fold_id, num_passes, data):
 
 
 def cv_sht_am(run_id, fold_id, num_passes, data):
-    sparsity = 20000
+    para_b = 108
     list_c = list(10. ** np.arange(-5, 3, 1, dtype=float))
-    list_c.extend([150., 200., 300.])
+    list_sparsity = [10000, 15000, 20000, 25000, 30000, 35000, 40000]
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
-    for para_c in list_c:
-        algo_para = (run_id, fold_id, num_passes, para_c, sparsity)
+    for para_c, para_sparsity in product(list_c, list_sparsity):
+        algo_para = (run_id, fold_id, num_passes, para_c, para_sparsity)
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -457,7 +457,6 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
         kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            b, para_beta = 108, 0.0
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
             sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
             re = c_algo_sht_am_sparse(
@@ -466,7 +465,7 @@ def cv_sht_am(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], sparsity, b, para_c, para_beta, num_passes, step_len, verbose)
+                data['p'], para_sparsity, para_b, para_c, 0.0, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
@@ -1090,7 +1089,6 @@ def run_ms(method_name):
     elif method_name == 'sht_am':
         results[key] = dict()
         results[key][method_name] = cv_sht_am(run_id, fold_id, num_passes, data)
-
     elif method_name == 'fsauc':
         results[key] = dict()
         results[key][method_name] = cv_fsauc(run_id, fold_id, num_passes, data)
@@ -1167,7 +1165,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='spam_l1l2')
+    run_ms(method_name='sht_am')
 
 
 if __name__ == '__main__':
