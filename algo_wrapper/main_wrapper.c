@@ -453,21 +453,21 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
         return NULL;
     }
     PyArrayObject *x_tr, *y_tr;
-    int p, n;
-    double eta, lambda;
+    int data_p, data_n;
+    double para_eta, para_lambda;
     if (!PyArg_ParseTuple(args, "O!O!iidd",
                           &PyArray_Type, &x_tr,
                           &PyArray_Type, &y_tr,
-                          &p, &n, &eta, &lambda)) { return NULL; }
-    double *wt = malloc(sizeof(double) * p);
-    double *wt_bar = malloc(sizeof(double) * p);
+                          &data_p, &data_n, &para_eta, &para_lambda)) { return NULL; }
+    double *wt = malloc(sizeof(double) * data_p);
+    double *wt_bar = malloc(sizeof(double) * data_p);
     _algo_opauc((double *) PyArray_DATA(x_tr),
                 (double *) PyArray_DATA(y_tr),
-                p, n, eta, lambda, wt, wt_bar);
+                data_n, data_p, para_eta, para_lambda, wt, wt_bar);
     PyObject *results = PyTuple_New(2);
-    PyObject *p_wt = PyList_New(p);
-    PyObject *p_wt_bar = PyList_New(p);
-    for (int i = 0; i < p; i++) {
+    PyObject *p_wt = PyList_New(data_p);
+    PyObject *p_wt_bar = PyList_New(data_p);
+    for (int i = 0; i < data_p; i++) {
         PyList_SetItem(p_wt, i, PyFloat_FromDouble(wt[i]));
         PyList_SetItem(p_wt_bar, i, PyFloat_FromDouble(wt_bar[i]));
     }

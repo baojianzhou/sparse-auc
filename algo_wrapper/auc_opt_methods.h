@@ -294,14 +294,15 @@ void _algo_graph_am_sparse(const double *x_values,
                            double *re_wt_bar,
                            double *re_auc);
 
-void _algo_opauc(const double *x_tr,
-                 const double *y_tr,
-                 int p,
-                 int n,
-                 double eta,
-                 double lambda,
-                 double *wt,
-                 double *wt_bar);
+void _algo_opauc(const double *data_x_tr,
+                 const double *data_y_tr,
+                 int data_n,
+                 int data_p,
+                 double para_eta,
+                 double para_lambda,
+                 double *re_wt,
+                 double *re_wt_bar,
+                 double *re_auc);
 
 
 void _algo_opauc_sparse(const double *x_tr_vals,
