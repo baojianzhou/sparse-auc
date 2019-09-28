@@ -219,72 +219,44 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                          double *re_auc);
 
 
-/**
- *
- * This function implements the algorithm proposed in the following paper.
- * Stochastic Proximal Algorithms for AUC Maximization.
- * ---
- * @inproceedings{natole2018stochastic,
- * title={Stochastic proximal algorithms for AUC maximization},
- * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
- * booktitle={International Conference on Machine Learning},
- * pages={3707--3716},
- * year={2018}}
- * ---
- *
- *
- * Info
- * ---
- * Do not use the function directly. Instead, call it by Python Wrapper.
- *
- * @param para: related input parameters.
- * @param results
- * @author Baojian Zhou(Email: bzhou6@albany.edu)
- * @return
- */
-
-
-typedef struct {
-    double *wt;
-    double *wt_bar;
-    double *t_run_time;
-    double *t_auc;
-    double t_eval_time;
-    int *t_indices;
-    int t_index;
-} graph_am_results;
-
-bool _algo_graph_am(const double *x_tr,
-                    const double *y_tr,
-                    int p,
-                    int n,
-                    int b,
+void _algo_graph_am(const double *data_x_tr,
+                    const double *data_y_tr,
+                    const EdgePair *edges,
+                    const double *weights,
+                    int data_m,
+                    int data_n,
+                    int data_p,
+                    int para_sparsity,
+                    int para_b,
                     double para_xi,
                     double para_l2_reg,
-                    int para_sparsity,
                     int para_num_passes,
                     int para_step_len,
                     int para_verbose,
-                    const EdgePair *edges,
-                    const double *weights,
-                    int m,
-                    graph_am_results *results);
+                    double *re_wt,
+                    double *re_wt_bar,
+                    double *re_auc);
 
-bool _algo_graph_am_sparse(const double *x_values,// the values of these nonzeros.
-                           const int *x_indices,  // the inidices of these nonzeros.
-                           const int *x_positions,// the start indices of these nonzeros.
-                           const int *x_len_list, // the list of sizes of nonzeros.
-                           const double *y_tr,    // the vector of training samples.
-                           int p,                 // the dimension of the features of the dataset
-                           int n,                 // the total number of training samples.
-                           int b,
+void _algo_graph_am_sparse(const double *x_values,
+                           const int *x_indices,
+                           const int *x_positions,
+                           const int *x_len_list,
+                           const double *data_y_tr,
+                           const EdgePair *edges,
+                           const double *weights,
+                           int data_m,
+                           int data_n,
+                           int data_p,
                            int para_sparsity,
+                           int para_b,
                            double para_xi,
                            double para_l2_reg,
-                           int num_passes,
-                           int step_len,
-                           int verbose,
-                           graph_am_results *results);
+                           int para_num_passes,
+                           int para_step_len,
+                           int para_verbose,
+                           double *re_wt,
+                           double *re_wt_bar,
+                           double *re_auc);
 
 void _algo_opauc(const double *x_tr,
                  const double *y_tr,
