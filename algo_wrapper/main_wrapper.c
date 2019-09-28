@@ -66,29 +66,29 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
-    PyArrayObject *x_tr_indices, *x_tr_values, *x_tr_lens, *x_tr_posis, *y_tr;
-    int p, para_num_pass, verbose;
+    PyArrayObject *x_tr_values, *x_tr_indices, *x_tr_posis, *x_tr_lens, *y_tr;
+    int p, para_num_pass, para_verbose;
     double para_r, para_xi;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!iddii",
                           &PyArray_Type, &x_tr_values,
                           &PyArray_Type, &x_tr_indices,
-                          &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &x_tr_posis,
+                          &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &y_tr,
-                          &p, &para_xi, &para_r, &para_num_pass, &verbose)) { return NULL; }
+                          &p, &para_xi, &para_r, &para_num_pass, &para_verbose)) { return NULL; }
     int num_tr = (int) y_tr->dimensions[0];
-    if (verbose == 0) {
+    if (para_verbose > 0) {
         printf("num_tr: %d p: %d para_xi: %.4f para_r: %.4f\n", num_tr, p, para_xi, para_r);
     }
     double *re_wt = malloc(sizeof(double) * p);
     double *re_wt_bar = malloc(sizeof(double) * p);
     _algo_solam_sparse((double *) PyArray_DATA(x_tr_values),
                        (int *) PyArray_DATA(x_tr_indices),
-                       (int *) PyArray_DATA(x_tr_lens),
                        (int *) PyArray_DATA(x_tr_posis),
+                       (int *) PyArray_DATA(x_tr_lens),
                        (double *) PyArray_DATA(y_tr),
-                       num_tr, p, para_xi, para_r, para_num_pass, verbose, re_wt, re_wt_bar);
-    PyObject *results = PyTuple_New(4);
+                       num_tr, p, para_xi, para_r, para_num_pass, para_verbose, re_wt, re_wt_bar);
+    PyObject *results = PyTuple_New(2);
     PyObject *wt = PyList_New(p);
     PyObject *wt_bar = PyList_New(p);
     for (int i = 0; i < p; i++) {
