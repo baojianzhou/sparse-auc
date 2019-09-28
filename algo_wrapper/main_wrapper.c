@@ -159,7 +159,7 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; }
     PyArrayObject *x_values, *x_indices, *x_positions, *x_len_list, *y_tr;
     double para_xi, para_l1_reg, para_l2_reg;
-    int para_reg_opt, para_num_passes, para_step_len, para_verbose, data_n, data_p;
+    int para_reg_opt, para_num_passes, para_step_len, para_verbose, data_p;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!idddiiii",
                           &PyArray_Type, &x_values,
                           &PyArray_Type, &x_indices,
@@ -169,7 +169,7 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
                           &data_p, &para_xi, &para_l1_reg, &para_l2_reg,
                           &para_reg_opt, &para_num_passes, &para_step_len,
                           &para_verbose)) { return NULL; }
-    data_n = (int) y_tr->dimensions[0];
+    int data_n = (int) y_tr->dimensions[0];
     int total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
     double *re_wt = malloc(sizeof(double) * data_p);
     double *re_wt_bar = malloc(sizeof(double) * data_p);
