@@ -1164,7 +1164,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='spam_l1l2')
+    run_ms(method_name='sht_am')
 
 
 if __name__ == '__main__':
