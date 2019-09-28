@@ -123,8 +123,8 @@ def cv_spam_l1(run_id, fold_id, num_passes, data):
 
 
 def cv_spam_l2(run_id, fold_id, num_passes, data):
-    list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-    list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
+    list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_beta = 10. ** np.arange(-5, 6, 1, dtype=float)
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
     for para_c, para_beta in product(list_c, list_beta):
@@ -1077,18 +1077,19 @@ def run_ms(method_name):
     if method_name == 'spam_l1':
         results[key] = dict()
         results[key][method_name] = cv_spam_l1(run_id, fold_id, num_passes, data)
-    elif method_name == 'solam':
-        results[key] = dict()
-        results[key][method_name] = cv_solam(run_id, fold_id, num_passes, data)
-    elif method_name == 'sht_am':
-        results[key] = dict()
-        results[key][method_name] = cv_sht_am(run_id, fold_id, num_passes, data)
     elif method_name == 'spam_l2':
         results[key] = dict()
         results[key][method_name] = cv_spam_l2(run_id, fold_id, num_passes, data)
     elif method_name == 'spam_l1l2':
         results[key] = dict()
         results[key][method_name] = cv_spam_l1l2(run_id, fold_id, num_passes, data)
+    elif method_name == 'solam':
+        results[key] = dict()
+        results[key][method_name] = cv_solam(run_id, fold_id, num_passes, data)
+    elif method_name == 'sht_am':
+        results[key] = dict()
+        results[key][method_name] = cv_sht_am(run_id, fold_id, num_passes, data)
+
     elif method_name == 'fsauc':
         results[key] = dict()
         results[key][method_name] = cv_fsauc(run_id, fold_id, num_passes, data)
@@ -1165,7 +1166,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='solam')
+    run_ms(method_name='spam_l2')
 
 
 if __name__ == '__main__':
