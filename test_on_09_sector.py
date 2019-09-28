@@ -1071,12 +1071,8 @@ def test():
 
 
 def run_ms(method_name):
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 0
-    num_passes = 1
-    run_id, fold_id = task_id / 5, task_id / 5
+    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
+    run_id, fold_id, num_passes = task_id / 5, task_id / 5, 5
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)
     if method_name == 'spam_l1':
