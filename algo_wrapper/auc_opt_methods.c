@@ -2488,7 +2488,9 @@ void _algo_fsauc(const double *data_x_tr,
                  double para_g,
                  int para_num_passes,
                  double *re_wt,
-                 double *re_wt_bar) {
+                 double *re_wt_bar,
+                 double *re_auc,
+                 double *re_rts) {
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double kappa = 1.0; // kappa=1.0 for normalized data samples.
@@ -2671,7 +2673,8 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         int para_num_passes,
                         double *re_wt,
                         double *re_wt_bar,
-                        double *re_auc) {
+                        double *re_auc,
+                        double *re_rts) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);

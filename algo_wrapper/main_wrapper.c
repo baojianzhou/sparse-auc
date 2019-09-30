@@ -344,7 +344,7 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
     _algo_fsauc((double *) PyArray_DATA(x_tr), (double *) PyArray_DATA(y_tr),
-                data_p, data_n, para_r, para_g, para_num_passes, re_wt, re_wt_bar);
+                data_p, data_n, para_r, para_g, para_num_passes, re_wt, re_wt_bar, re_auc, re_rts);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
     free(re_auc), free(re_wt_bar), free(re_wt);
     return results;

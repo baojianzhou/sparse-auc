@@ -352,7 +352,9 @@ void _algo_fsauc(const double *data_x_tr,
                  double para_g,
                  int para_num_passes,
                  double *re_wt,
-                 double *re_wt_bar);
+                 double *re_wt_bar,
+                 double *re_auc,
+                 double *re_rts);
 
 void _algo_fsauc_sparse(const double *x_tr_vals,
                         const int *x_tr_indices,
@@ -366,6 +368,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         int para_num_passes,
                         double *re_wt,
                         double *re_wt_bar,
-                        double *re_auc);
+                        double *re_auc,
+                        double *re_rts);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H
