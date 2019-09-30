@@ -1140,14 +1140,14 @@ def run_testing():
     method = 'sht_am'
     ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
     _, _, _, para_c, sparsity = ms[key][method][0][(run_id, fold_id)]['para']
-    re = run_sht_am(run_id, fold_id, para_c, sparsity, num_passes, data)
-    print(fold_id, method, re['auc_wt'], re['auc_wt_bar'], re['rts'][-3])
+    results[key][method] = run_sht_am(run_id, fold_id, para_c, sparsity, num_passes, data)
+    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
     # -----------------------
     method = 'solam'
     ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
     _, _, _, para_xi, para_r = ms[key][method][0][(task_id, fold_id)]['para']
-    re = run_solam(task_id, fold_id, para_xi, para_r, num_passes, data)
-    print(fold_id, method, re['auc_wt'], re['auc_wt_bar'], re['rts'][-3])
+    results[key][method] = run_solam(task_id, fold_id, para_xi, para_r, num_passes, data)
+    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
     f_name = 'results_task_%02d_passes_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, num_passes)), 'wb'))
 

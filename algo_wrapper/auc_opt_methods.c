@@ -2671,6 +2671,8 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         double para_r,
                         double para_g,
                         int para_num_passes,
+                        int para_step_len,
+                        int para_verbose,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
@@ -2678,13 +2680,14 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
+    double start_time = clock();
     //assume that kappa=1.0 for normalized data samples.
     double kappa = 1.0;
     double global_n = data_n * para_num_passes;
     // all initialize parameters
     int m = (int) floor(0.5 * log2((2.0 * global_n) / log2(global_n))) - 1;
     int n0 = (int) floor(global_n / (double) m);
-    double R0 = 2. * sqrt(1. + 2. * pow(kappa, 2.)) * para_r;
+    double R0 = 2. * sqrt(1. + 2. * pow(kappa, 2.)) * para_r, t = 1.;
     double beta_prev = 1. + 8.0 * pow(kappa, 2.);
     double *v_bar = malloc(sizeof(double) * (data_p + 2));
     memset(v_bar, 0, sizeof(double) * (data_p + 2));
@@ -2710,6 +2713,8 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
     double *zero_vec = malloc(sizeof(double) * data_p);
     memset(zero_vec, 0, sizeof(double) * data_p);
     double *xt = malloc(sizeof(double) * data_p);
+    double *y_pred = malloc(sizeof(double) * data_n);
+    int auc_index = 0;
     for (int k = 0; k < m; k++) {
         cblas_dcopy(data_p + 2, v_bar, 1, vec_v1, 1);
         // some parameters for each stage
@@ -2734,6 +2739,8 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                   sqrt(min(p_hat, 1.0 - p_hat) * (double) n0 - sqrt(2.0 * n0 * log(12.0 / delta)));
             if (D0 <= 0.0) {
                 printf("D0 is negative!");
+                free(y_pred);
+                free(xt);
                 free(vec_a_n);
                 free(vec_a_p);
                 free(vec_a);
@@ -2774,11 +2781,10 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
             alpha += gamma * galpha;
             // project: w,a,b
             for (int j = 0; j < K; j++) {
-                _project_onto_l1(vec_w, data_p, R, vec_temp); //project w on L1 ball.
+                _l1ballproj_condat(vec_w, vec_temp, data_p, R);//project w on L1 ball.
                 cblas_dcopy(data_p, vec_temp, 1, vec_w, 1);
                 a = sign(a) * fmin(fabs(a), R * kappa); //project a
                 b = sign(b) * fmin(fabs(b), R * kappa); //project b
-                // 65:72
                 cblas_dcopy(data_p, vec_w1, 1, vec_temp, 1);
                 cblas_daxpy(data_p, -1., vec_w, 1, vec_temp, 1);
                 double v_norm = cblas_ddot(data_p, vec_temp, 1, vec_temp, 1);
@@ -2802,6 +2808,20 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
             a_bar = (kk * a_bar + a) / (kk + 1.);
             b_bar = (kk * b_bar + b) / (kk + 1.);
             alpha_bar = (kk * alpha_bar + alpha) / (kk + 1.);
+
+            if ((fmod(t, para_step_len) == 1.)) { // to calculate AUC score
+                double cur_t_s = clock();
+                for (int q = 0; q < data_n; q++) {
+                    memset(xt, 0, sizeof(double) * data_p);
+                    xt_indices = x_tr_indices + x_tr_posis[q];
+                    xt_vals = x_tr_vals + x_tr_posis[q];
+                    for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
+                    y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
+                }
+                re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+                double eval_time = clock() - cur_t_s;
+                re_rts[auc_index++] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
+            }
         }//inner-stage
         Rk /= 2.0;
         cblas_dcopy(data_p, vec_a_n, 1, vec_a, 1); // 93: A = [A_n/n_n - A_p/n_p,0,0];
@@ -2818,6 +2838,8 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
         double beta_next = (1. + 8.0 * pow(kappa, 2.)) + (32. * tmp1) / tmp2; //update beta
         if (beta_next <= 0.0) {
             printf("beta_next is negative!");
+            free(y_pred);
+            free(xt);
             free(vec_a_n);
             free(vec_a_p);
             free(vec_a);
@@ -2836,6 +2858,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
         gamma = fmin(sqrt(beta_next / beta_prev) * (gamma / 2.), gamma);
         beta_prev = beta_next;
     }//outer-stage
+    free(y_pred);
     free(xt);
     free(zero_vec);
     free(vec_a_n);
