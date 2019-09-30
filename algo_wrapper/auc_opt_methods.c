@@ -2678,11 +2678,9 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         double *re_auc,
                         double *re_rts) {
 
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
+    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock();
-    //assume that kappa=1.0 for normalized data samples.
-    double kappa = 1.0;
+    double kappa = 1.0; //assume that kappa=1.0 for normalized data samples.
     double global_n = data_n * para_num_passes;
     // all initialize parameters
     int m = (int) floor(0.5 * log2((2.0 * global_n) / log2(global_n))) - 1;
@@ -2717,8 +2715,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
     int auc_index = 0;
     for (int k = 0; k < m; k++) {
         cblas_dcopy(data_p + 2, v_bar, 1, vec_v1, 1);
-        // some parameters for each stage
-        double delta = 0.1;
+        double delta = 0.1; // some parameters for each stage
         double alpha1 = cblas_ddot(data_p + 2, vec_a, 1, vec_v1, 1);
         double alpha = alpha1;
         cblas_dcopy(data_p, vec_v1, 1, vec_w1, 1);
@@ -2732,26 +2729,11 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
         double b_bar = 0.0;
         double alpha_bar = 0.0;
         double D0 = 2.0 * sqrt(2.0) * kappa * R0;
-        if (k != 0) {
-            // not in the first stage
+        if (k != 0) { // not in the first stage
             D0 += (4.0 * sqrt(2.0) * kappa * (2.0 + sqrt(2.0 * log(12.0 / delta))) *
                    (1.0 + 2.0 * kappa) * R) /
                   sqrt(min(p_hat, 1.0 - p_hat) * (double) n0 - sqrt(2.0 * n0 * log(12.0 / delta)));
-            if (D0 <= 0.0) {
-                printf("D0 is negative!");
-                free(y_pred);
-                free(xt);
-                free(vec_a_n);
-                free(vec_a_p);
-                free(vec_a);
-                free(gw);
-                free(vec_temp);
-                free(vec_v1);
-                free(vec_w);
-                free(vec_w1);
-                free(v_bar);
-                exit(0);
-            }
+            if (D0 <= 0.0) { D0 = 1e-7; }
         }
         double n_posi_nega = n_p + n_n;
         for (int kk = 0; kk < n0; kk++) {
@@ -2779,8 +2761,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
             a += -gamma * ga; // a = a-gamma*ga;
             b += -gamma * gb; // b = b-gamma*gb;
             alpha += gamma * galpha;
-            // project: w,a,b
-            for (int j = 0; j < K; j++) {
+            for (int j = 0; j < K; j++) { // project: w,a,b
                 _l1ballproj_condat(vec_w, vec_temp, data_p, R);//project w on L1 ball.
                 cblas_dcopy(data_p, vec_temp, 1, vec_w, 1);
                 a = sign(a) * fmin(fabs(a), R * kappa); //project a
@@ -2798,17 +2779,13 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                     b = b1 + tmp * b;
                 }
             }
-            //project: alpha
-            double tmp = fmin(fmin(D0 + alpha1, 2. * R * kappa), alpha);
+            double tmp = fmin(fmin(D0 + alpha1, 2. * R * kappa), alpha); //project: alpha
             alpha = fmax(-D0 + alpha1, fmax(-2 * R * kappa, tmp));
-
-            // 80:86
             cblas_dscal(data_p, 1. / (kk + 1.), w_bar, 1);
             cblas_daxpy(data_p, 1. / (kk + 1.), vec_w, 1, w_bar, 1);
             a_bar = (kk * a_bar + a) / (kk + 1.);
             b_bar = (kk * b_bar + b) / (kk + 1.);
             alpha_bar = (kk * alpha_bar + alpha) / (kk + 1.);
-
             if ((fmod(t, para_step_len) == 1.)) { // to calculate AUC score
                 double cur_t_s = clock();
                 for (int q = 0; q < data_n; q++) {
@@ -2822,6 +2799,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                 double eval_time = clock() - cur_t_s;
                 re_rts[auc_index++] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
             }
+            t = t + 1.0;
         }//inner-stage
         Rk /= 2.0;
         cblas_dcopy(data_p, vec_a_n, 1, vec_a, 1); // 93: A = [A_n/n_n - A_p/n_p,0,0];
@@ -2836,27 +2814,11 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
         double tmp1 = pow(kappa * (1. + 2. * kappa) * (2. + sqrt(2. * log(12. / delta))), 2.);
         double tmp2 = fmin(p_hat, 1. - p_hat) - sqrt(2. * log(12. / delta) / n0);
         double beta_next = (1. + 8.0 * pow(kappa, 2.)) + (32. * tmp1) / tmp2; //update beta
-        if (beta_next <= 0.0) {
-            printf("beta_next is negative!");
-            free(y_pred);
-            free(xt);
-            free(vec_a_n);
-            free(vec_a_p);
-            free(vec_a);
-            free(gw);
-            free(vec_temp);
-            free(vec_v1);
-            free(vec_w);
-            free(vec_w1);
-            free(v_bar);
-            exit(0);
-        }
         cblas_dcopy(data_p, v_bar, 1, re_wt, 1);
         cblas_dscal(data_p, 1. / (k + 1.), re_wt_bar, 1);
         cblas_daxpy(data_p, 1. / (k + 1.), re_wt, 1, re_wt_bar, 1);
         // to make sure the step size is not increasing.
-        gamma = fmin(sqrt(beta_next / beta_prev) * (gamma / 2.), gamma);
-        beta_prev = beta_next;
+        gamma = gamma / 2.;
     }//outer-stage
     free(y_pred);
     free(xt);

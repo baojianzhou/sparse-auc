@@ -361,7 +361,7 @@ static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
                           &data_p, &para_num_passes, &para_r, &para_g, &para_step_len,
                           &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
+    total_num_eval = (data_n * para_num_passes) / para_step_len;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -369,7 +369,8 @@ static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
     _algo_fsauc_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                        (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
                        (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_r, para_g,
-                       para_num_passes, re_wt, re_wt_bar, re_auc);
+                       para_num_passes, para_step_len, para_verbose, re_wt, re_wt_bar, re_auc,
+                       re_rts);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
     free(re_auc), free(re_wt_bar), free(re_wt);
     return results;

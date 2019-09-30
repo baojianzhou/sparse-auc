@@ -410,7 +410,6 @@ def cv_fsauc(run_id, fold_id, num_passes, data):
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
-            print(list_auc_wt[ind], list_auc_wt_bar[ind])
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         print('para_r: %.4f para_g: %.4f AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.2f' %
@@ -1063,7 +1062,7 @@ def test():
 
 def run_ms(method_name):
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
-    run_id, fold_id, num_passes = task_id / 5, task_id / 5, 5
+    run_id, fold_id, num_passes = task_id / 5, task_id / 5, 1
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)
     if method_name == 'spam_l1':
@@ -1095,7 +1094,7 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    num_passes = 20
+    num_passes = 1
     run_id, fold_id = task_id / 5, task_id / 5
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)
@@ -1153,7 +1152,7 @@ def run_testing():
 
 
 def main():
-    run_testing()
+    run_ms(method_name='fsauc')
 
 
 if __name__ == '__main__':
