@@ -128,11 +128,13 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                         int data_p,
                         double para_xi,
                         double para_r,
-                        int para_num_pass,
+                        int para_num_passes,
+                        int para_step_len,
                         int para_verbose,
                         double *re_wt,
                         double *re_wt_bar,
-                        double *re_auc);
+                        double *re_auc,
+                        double *re_rts);
 
 /**
  *
@@ -184,7 +186,8 @@ void _algo_spam_sparse(const double *x_values,
                        int para_verbose,
                        double *re_wt,
                        double *re_wt_bar,
-                       double *re_auc);
+                       double *re_auc,
+                       double *re_rts);
 
 /**
  * Stochastic Hard Thresholding for AUC maximization.
@@ -254,7 +257,8 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                          int para_verbose,
                          double *re_wt,
                          double *re_wt_bar,
-                         double *re_auc);
+                         double *re_auc,
+                         double *re_rts);
 
 
 void _algo_graph_am(const double *data_x_tr,
