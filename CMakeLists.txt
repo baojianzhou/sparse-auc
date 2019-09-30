@@ -20,6 +20,8 @@ include_directories(${OPENBLAS_INCLUDE_DIR})
 find_package(PythonLibs 2.7 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 
+add_executable(test_l1ballproj algo_wrapper/condat_l1ballproj.c)
+target_link_libraries(test_l1ballproj -Wall -O3 -lm)
 
 add_executable(test_kth_selection test_kth_selection.c
         algo_wrapper/kth_selection.c algo_wrapper/kth_selection.h)

@@ -1228,7 +1228,62 @@ void _project_onto_l1(const double *w, int p, double r, double *proj_v) {
     free(abs_w);
 }
 
-void 
+static void _l1ballproj_condat(double *y, double *x, int length, const double a) {
+    if (a <= 0.0) {
+        if (a == 0.0) memset(x, 0, length * sizeof(double));
+        return;
+    }
+    double *aux = (x == y ? (double *) malloc(length * sizeof(double)) : x);
+    int aux_len = 1;
+    int aux_len_hold = -1;
+    double tau = (*aux = (*y >= 0.0 ? *y : -*y)) - a;
+    int i = 1;
+    for (; i < length; i++) {
+        if (y[i] > 0.0) {
+            if (y[i] > tau) {
+                if ((tau += ((aux[aux_len] = y[i]) - tau) / (aux_len - aux_len_hold)) <=
+                    y[i] - a) {
+                    tau = y[i] - a;
+                    aux_len_hold = aux_len - 1;
+                }
+                aux_len++;
+            }
+        } else if (y[i] != 0.0) {
+            if (-y[i] > tau) {
+                if ((tau += ((aux[aux_len] = -y[i]) - tau) / (aux_len - aux_len_hold))
+                    <= aux[aux_len] - a) {
+                    tau = aux[aux_len] - a;
+                    aux_len_hold = aux_len - 1;
+                }
+                aux_len++;
+            }
+        }
+    }
+    if (tau <= 0) {    /* y is in the l1 ball => x=y */
+        if (x != y) memcpy(x, y, length * sizeof(double));
+        else free(aux);
+    } else {
+        double *aux0 = aux;
+        if (aux_len_hold >= 0) {
+            aux_len -= ++aux_len_hold;
+            aux += aux_len_hold;
+            while (--aux_len_hold >= 0)
+                if (aux0[aux_len_hold] > tau)
+                    tau += ((*(--aux) = aux0[aux_len_hold]) - tau) / (++aux_len);
+        }
+        do {
+            aux_len_hold = aux_len - 1;
+            for (i = aux_len = 0; i <= aux_len_hold; i++)
+                if (aux[i] > tau)
+                    aux[aux_len++] = aux[i];
+                else
+                    tau += (tau - aux[i]) / (aux_len_hold - i + aux_len);
+        } while (aux_len <= aux_len_hold);
+        for (i = 0; i < length; i++)
+            x[i] = (y[i] - tau > 0.0 ? y[i] - tau : (y[i] + tau < 0.0 ? y[i] + tau : 0.0));
+        if (x == y) free(aux0);
+    }
+}
 
 
 bool _algo_solam(const double *data_x_tr,
@@ -2517,7 +2572,9 @@ void _algo_fsauc(const double *data_x_tr,
 
             // project: w,a,b
             for (int j = 0; j < K; j++) {
-                _project_onto_l1(vec_w, data_p, R, vec_temp); //project w on L1 ball.
+                // _l1ballproj_condat(double *y, double *x, int length, const double a)
+                // _project_onto_l1(vec_w, data_p, R, vec_temp); //project w on L1 ball.
+                _l1ballproj_condat(vec_w, vec_temp, data_p, R);//project w on L1 ball.
                 cblas_dcopy(data_p, vec_temp, 1, vec_w, 1);
                 a = sign(a) * fmin(fabs(a), R * kappa); //project a
                 b = sign(b) * fmin(fabs(b), R * kappa); //project b
