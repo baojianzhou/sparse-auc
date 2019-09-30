@@ -1295,7 +1295,8 @@ bool _algo_solam(const double *data_x_tr,
                  int para_num_pass,
                  int para_verbose,
                  double *re_wt,
-                 double *re_wt_bar) {
+                 double *re_wt_bar,
+                 double *re_auc) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -1403,7 +1404,8 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                         int para_num_pass,
                         int para_verbose,
                         double *re_wt,
-                        double *re_wt_bar) {
+                        double *re_wt_bar,
+                        double *re_auc) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -2355,7 +2357,8 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         double eta,
                         double lambda,
                         double *wt,
-                        double *wt_bar) {
+                        double *wt_bar,
+                        double *re_auc) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
