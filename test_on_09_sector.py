@@ -1136,7 +1136,6 @@ def run_testing():
     _, _, _, para_c, para_beta = ms[key][method][0][(run_id, fold_id)]['para']
     results[key][method] = run_spam_l2(run_id, fold_id, para_c, para_beta, num_passes, data)
     print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
-    exit()
     # -----------------------
     method = 'sht_am'
     ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
