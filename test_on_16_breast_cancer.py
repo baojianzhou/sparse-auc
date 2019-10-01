@@ -1,8 +1,31 @@
 # -*- coding: utf-8 -*-
 import os
 import csv
-import pickle
+import sys
 import numpy as np
+import pickle as pkl
+from sklearn.model_selection import KFold
+from itertools import product
+from sklearn.metrics import roc_auc_score
+
+try:
+    sys.path.append(os.getcwd())
+    import sparse_module
+
+    try:
+        from sparse_module import c_algo_spam
+        from sparse_module import c_algo_solam
+        from sparse_module import c_algo_solam_sparse
+        from sparse_module import c_algo_opauc
+        from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_graph_am
+        from sparse_module import c_algo_fsauc
+    except ImportError:
+        print('cannot find some function(s) in sparse_module')
+        pass
+except ImportError:
+    print('cannot find the module: sparse_module')
+    pass
 
 
 def get_related_genes():
@@ -58,7 +81,7 @@ def raw_data_process(root_input):
             'y': np.asarray([_[1] for _ in raw['Y']], dtype=float),
             'entrez': [_[0] for _ in np.asarray(raw['entrez'])]}
     for i, each_row in enumerate(data['x']):
-        print(i, np.linalg.norm(each_row), np.mean((each_row)), np.std(each_row))
+        print(i, np.linalg.norm(each_row), np.mean(each_row), np.std(each_row))
     for i in range(len(data['x'][0])):
         if np.mean(data['x'][:, i]) == 0. and np.std(data['x'][:, i]) == 0.0:
             print('default values.')
@@ -152,62 +175,7 @@ def raw_data_process(root_input):
     print('all related genes: %d' % len(all_related_genes))
     print('all valid related genes: %d' % len(finalized_cancer_gene))
     data['cancer_related_genes'] = finalized_cancer_gene
-    pickle.dump(data, open(root_input + 'raw_input/raw_input_bc.pkl', 'wb'))
-
-
-def generate_original_data(root_input):
-    row_samples_list = []
-    col_gene_substance_list = []
-    col_gene_name_list = []
-    data_log_ratio = np.zeros(shape=(24496, 295))
-    data_log_ratio_err = np.zeros(shape=(24496, 295))
-    data_p_value = np.zeros(shape=(24496, 295))
-    data_intensity = np.zeros(shape=(24496, 295))
-    data_flag = np.zeros(shape=(24496, 295))
-    anchor_list = [0, 50, 100, 150, 200, 250]
-    step_list = [50, 50, 50, 50, 50, 45]
-    for table_i in range(1, 7):
-        f_name = 'data/Table_NKI_295_%d.txt' % table_i
-        print('load data from: %s' % f_name)
-        with open(f_name) as csvfile:
-            edge_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
-            all_lines = [row for row_ind, row in enumerate(edge_reader)]
-            if table_i == 1:
-                col_gene_substance_list = \
-                    [row[0] for row_ind, row in enumerate(all_lines)
-                     if row_ind >= 2]
-                col_gene_name_list = \
-                    [row[1] for row_ind, row in enumerate(all_lines)
-                     if row_ind >= 2]
-            for row_ind, row in enumerate(all_lines):
-                if row_ind >= 2:
-                    ii = anchor_list[table_i - 1]
-                    step = step_list[table_i - 1]
-                    re = [_ for _ind, _ in enumerate(row[2:]) if _ind % 5 == 0]
-                    re = [float(_) for _ in re]
-                    data_log_ratio[row_ind - 2][ii:ii + step] = re
-                    re = [_ for _ind, _ in enumerate(row[2:]) if _ind % 5 == 1]
-                    re = [float(_) for _ in re]
-                    data_log_ratio_err[row_ind - 2][ii:ii + step] = re
-                    re = [_ for _ind, _ in enumerate(row[2:]) if _ind % 5 == 2]
-                    re = [float(_) for _ in re]
-                    data_p_value[row_ind - 2][ii:ii + step] = re
-                    re = [_ for _ind, _ in enumerate(row[2:]) if _ind % 5 == 3]
-                    re = [float(_) for _ in re]
-                    data_intensity[row_ind - 2][ii:ii + step] = re
-                    re = [_ for _ind, _ in enumerate(row[2:]) if _ind % 5 == 4]
-                    re = [float(_) for _ in re]
-                    data_flag[row_ind - 2][ii:ii + step] = re
-    data = {'row_samples_list': row_samples_list,
-            'col_gene_substance_list': col_gene_substance_list,
-            'col_gene_name_list': col_gene_name_list,
-            'data_log_ratio': data_log_ratio,
-            'data_log_ratio_err': data_log_ratio_err,
-            'data_p_value': data_p_value,
-            'data_intensity': data_intensity,
-            'data_flag': data_flag}
-    f_name = root_input + 'original_data.pkl'
-    pickle.dump(data, open(f_name, 'wb'))
+    pkl.dump(data, open(root_input + 'raw_input/raw_input_bc.pkl', 'wb'))
 
 
 def map_entrez_gene_name(root_input):
@@ -220,8 +188,8 @@ def map_entrez_gene_name(root_input):
                     test_entrez_gene_names[int(row[2])] = []
                 test_entrez_gene_names[int(row[2])].append(row[3])
 
-    overlap_data = pickle.load(open(root_input + 'overlap_data.pkl'))
-    original_data = pickle.load(open(root_input + 'original_data.pkl'))
+    overlap_data = pkl.load(open(root_input + 'overlap_data.pkl'))
+    original_data = pkl.load(open(root_input + 'original_data.pkl'))
     entrez_gene_names = dict()
     final_results = dict()
     with open(root_input + 'entrez_gene_map_from_uniprot.tab') as csvfile:
@@ -278,7 +246,7 @@ def map_entrez_gene_name(root_input):
     print('number of genes not found: %d number of entrez not found: %d' %
           (num_gene_not_found, num_entrez_not_found))
     f_name = root_input + 'final_entrez_gene_map.pkl'
-    pickle.dump(final_results, open(f_name, 'wb'))
+    pkl.dump(final_results, open(f_name, 'wb'))
     return final_results
 
 
@@ -358,20 +326,63 @@ def get_single_data(root_input):
         data['edges'][edge_ind][1] = vv
     input_data = {'all_x_tr': np.asarray(data['data_X'], dtype=float),
                   'all_y_tr': np.asarray(data['data_Y'], dtype=float),
-                  'all_edges': data['data_edges'],
-                  'all_entrez': data['data_entrez'],
+                  'all_edges': data['data_edges'], 'all_entrez': data['data_entrez'],
                   'cancer_related_genes': data['cancer_related_genes'],
                   'data_x_tr': np.asarray(data['x'], dtype=float),
                   'data_y_tr': np.asarray(data['y'], dtype=float),
                   'data_weights': np.asarray(data['costs'], dtype=float),
-                  'data_edges': data['edges'],
-                  'data_nodes': data['nodes'],
-                  'map_entrez': data['map_entrez']}
-    pickle.dump(input_data, open(os.path.join(root_input, 'input_bc.pkl'), 'wb'))
+                  'data_edges': data['edges'], 'data_nodes': data['nodes'],
+                  'map_entrez': data['map_entrez'],
+                  'n': 295,
+                  'p': 3243,
+                  'num_runs': 20,
+                  'num_k_fold': 5}
+    for run_index in range(input_data['num_runs']):
+        kf = KFold(n_splits=input_data['num_k_fold'], shuffle=False)
+        # just need the number of training samples
+        fake_x = np.zeros(shape=(input_data['n'], 1))
+        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
+            # since original data is ordered, we need to shuffle it!
+            rand_perm = np.random.permutation(input_data['n'])
+            print(rand_perm[:10], len(rand_perm[train_index]), len(rand_perm[test_index]))
+            input_data['run_%d_fold_%d' % (run_index, fold_index)] = {
+                'tr_index': rand_perm[train_index],
+                'te_index': rand_perm[test_index]}
+    pkl.dump(input_data, open(os.path.join(root_input, 'input_bc.pkl'), 'wb'))
+
+
+def run_ms(method_name):
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
+    if method_name == 'spam_l1':
+        data = pkl.load(open(data_path + 'input_bc.pkl', 'rb'))
+        for run_id in range(20):
+            for fold_id in range(5):
+                tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+                te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+                num_posi = len([_ for _ in data['data_y_tr'][te_index] if _ > 0.])
+                total_posi = len([_ for _ in data['data_y_tr'] if _ > 0.])
+                print(len(tr_index), len(te_index), num_posi, total_posi)
+                reg_opt, step_len, verbose = 0, 10000000, 0
+                list_c = 10. ** np.arange(-5, 1, 1, dtype=float)
+                list_l1 = 10. ** np.arange(-5, 1, 1, dtype=float)
+                num_passes = 5
+                for para_c, para_l1 in product(list_c, list_l1):
+                    wt, wt_bar, auc, rts = c_algo_spam(
+                        np.asarray(data['data_x_tr'][tr_index], dtype=float),
+                        np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                        para_c, para_l1, 0.0, reg_opt, num_passes, step_len, verbose)
+                    auc_wt = roc_auc_score(y_true=data['data_y_tr'][te_index],
+                                           y_score=np.dot(data['data_x_tr'][te_index], wt))
+                    auc_wt_bar = roc_auc_score(y_true=data['data_y_tr'][te_index],
+                                               y_score=np.dot(data['data_x_tr'][te_index],
+                                                              wt_bar))
+                    print(auc_wt, auc_wt_bar)
+                break
+            break
 
 
 def main():
-    get_single_data(root_input='/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/')
+    run_ms(method_name='spam_l1')
 
 
 if __name__ == '__main__':
