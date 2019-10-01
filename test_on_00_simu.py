@@ -497,18 +497,18 @@ def run_spam_l1(task_id, fold_id, para_c, para_l1, num_passes, data):
     tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
     reg_opt, step_len, verbose = 0, 10000000, 0
-    re = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                     np.asarray(data['y_tr'][tr_index], dtype=float),
-                     para_c, para_l1, 0.0, reg_opt, num_passes, step_len, verbose)
-    wt = np.asarray(re[0])
-    wt_bar = np.asarray(re[1])
-    t_auc = np.asarray(re[2])
+    wt, wt_bar, auc, rts = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
+                                       np.asarray(data['y_tr'][tr_index], dtype=float),
+                                       para_c, para_l1, 0.0, reg_opt, num_passes, step_len,
+                                       verbose)
     return {'algo_para': [task_id, fold_id, para_c, para_l1],
             'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                     y_score=np.dot(data['x_tr'][te_index], wt)),
             'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
                                         y_score=np.dot(data['x_tr'][te_index], wt_bar)),
-            't_auc': t_auc,
+            'auc': auc,
+            'rts': rts,
+            'wt': wt,
             'nonzero_wt': np.count_nonzero(wt),
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
@@ -923,7 +923,6 @@ def test_spaml1_simu():
     posi_ratio_list = [0.5]
     fig_list = ['fig_2']
     results = dict()
-    s_time = time.time()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
@@ -933,14 +932,36 @@ def test_spaml1_simu():
             method = 'spam'
             list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
             list_l1 = 10. ** np.arange(-5, 3, 1, dtype=float)
-            best_auc = None
+            best_auc, best_wt = 0.0, None
             for para_c, para_l1 in product(list_c, list_l1):
-                re = run_spam_l1(task_id, fold_id, para_c, para_l1, passes, data[fig_i])
-                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                    best_auc = re
+                tr_index = data[fig_i]['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+                te_index = data[fig_i]['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
+                reg_opt, step_len, verbose, num_passes = 0, 10000000, 0, 10
+                wt, wt_bar, auc, rts = c_algo_spam(
+                    np.asarray(data[fig_i]['x_tr'][tr_index], dtype=float),
+                    np.asarray(data[fig_i]['y_tr'][tr_index], dtype=float),
+                    para_c, para_l1, 0.0, reg_opt, num_passes, step_len,
+                    verbose)
+                wt_ = []
+                for _ in wt:
+                    if abs(_) < 1e-2:
+                        wt_.append(0.0)
+                    else:
+                        wt_.append(_)
+                wt_ = np.asarray(wt_)
+                auc1 = roc_auc_score(y_true=data[fig_i]['y_tr'][te_index],
+                                     y_score=np.dot(data[fig_i]['x_tr'][te_index], wt))
+                auc2 = roc_auc_score(y_true=data[fig_i]['y_tr'][te_index],
+                                     y_score=np.dot(data[fig_i]['x_tr'][te_index], wt_))
+                print(auc1, auc2, np.count_nonzero(wt), np.count_nonzero(wt_))
+                if best_auc < auc1:
+                    best_auc = auc1
+                    best_wt = wt
             results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'],
-                  best_auc['auc_wt_bar'], time.time() - s_time)
+            import matplotlib.pyplot as plt
+            plt.plot(np.sort(np.abs(best_wt))[::-1])
+            plt.show()
+            break
 
 
 def test_spaml2_simu():
@@ -1027,7 +1048,7 @@ def test_fsauc_simu():
 
 
 def main():
-    run_ms(method_name='fsauc')
+    test_spaml1_simu()
 
 
 if __name__ == '__main__':

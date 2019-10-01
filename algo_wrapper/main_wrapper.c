@@ -120,7 +120,7 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
                data_n, data_p, para_xi, para_l1_reg, para_l2_reg, para_num_passes, para_step_len,
                para_reg_opt, para_verbose, re_wt, re_wt_bar, re_auc);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
-    free(re_wt), free(re_wt_bar), free(re_auc);
+    free(re_wt), free(re_wt_bar), free(re_auc), free(re_rts);
     return results;
 }
 
@@ -373,7 +373,7 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
                 data_n, data_p, para_r, para_g, para_num_passes, para_step_len, para_verbose,
                 re_wt, re_wt_bar, re_auc, re_rts);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
-    free(re_auc), free(re_wt_bar), free(re_wt);
+    free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);
     return results;
 }
 
