@@ -324,7 +324,7 @@ def cv_opauc(task_id, k_fold, num_passes, data):
 
 def cv_fsauc(task_id, k_fold, num_passes, data):
     list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-    list_g = 2. ** np.arange(-10, -2, 1, dtype=float)
+    list_g = 2. ** np.arange(-10, -0, 1, dtype=float)
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
     for fold_id, para_r, para_g in product(range(k_fold), list_r, list_g):
@@ -340,12 +340,13 @@ def cv_fsauc(task_id, k_fold, num_passes, data):
         list_num_nonzeros_wt = np.zeros(k_fold)
         list_num_nonzeros_wt_bar = np.zeros(k_fold)
         kf = KFold(n_splits=k_fold, shuffle=False)
+        verbose, step_len = 0, 10000000
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
-            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
-            re = c_algo_fsauc(sub_x_tr, sub_y_tr, data['p'], len(sub_tr_ind),
-                              num_passes, para_r, para_g)
+            re = c_algo_fsauc(
+                np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                para_r, para_g, num_passes, step_len, verbose)
             wt = np.asarray(re[0])
             wt_bar = np.asarray(re[1])
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
@@ -363,6 +364,9 @@ def cv_fsauc(task_id, k_fold, num_passes, data):
             auc_wt_bar[(task_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(task_id, fold_id)]['num_nonzeros'] = float(
                 np.mean(list_num_nonzeros_wt_bar))
+        print('fold-id:%d AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.4f' %
+              (fold_id, float(np.mean(list_auc_wt)), float(np.mean(list_auc_wt_bar)),
+               time.time() - s_time))
 
     run_time = time.time() - s_time
     print('-' * 40 + ' opauc ' + '-' * 40)
@@ -614,7 +618,7 @@ def run_fsauc(task_id, fold_id, num_passes, para_r, para_g, data):
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
     re = c_algo_fsauc(np.asarray(data['x_tr'][tr_index], dtype=float),
                       np.asarray(data['y_tr'][tr_index], dtype=float),
-                      num_passes, para_r, para_g)
+                      para_r, para_g, num_passes, 10000000, 0)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     return {'algo_para': [task_id, fold_id, para_r, para_g],
@@ -1007,35 +1011,23 @@ def test_fsauc_simu():
     else:
         task_id = 0
     k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.5]
-    fig_list = ['fig_2']
+    tr_list, mu_list, posi_ratio_list, fig_list = [1000], [0.3], [0.5], ['fig_4']
     results = dict()
-    s_time = time.time()
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
         data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'fsauc'
-            list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-            list_g = 2. ** np.arange(-10, 5, 1, dtype=float)
-            best_auc = None
-            for para_r, para_g in product(list_r, list_g):
-                re = run_fsauc(task_id, fold_id, passes, para_r, para_g, data[fig_i])
-                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                    best_auc = re
-            results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'],
-                  best_auc['auc_wt_bar'], time.time() - s_time)
+        fold_id = 0
+        key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
+        results[key] = dict()
+        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+        list_g = 2. ** np.arange(-10, -2, 1, dtype=float)
+        for para_r, para_g in product(list_r, list_g):
+            re = run_fsauc(task_id, fold_id, passes, para_r, para_g, data[fig_i])
+            print(para_r, para_g, re['auc_wt'])
 
 
 def main():
-    test_spaml2_simu()
-    print('-' * 80)
-    test_fsauc_simu()
+    run_ms(method_name='fsauc')
 
 
 if __name__ == '__main__':

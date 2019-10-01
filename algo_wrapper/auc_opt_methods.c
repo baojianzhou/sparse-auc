@@ -1186,48 +1186,13 @@ int _hard_thresholding(double *arr, int n, int k) {
     return 0;
 }
 
-
-void _project_onto_l1(const double *w, int p, double r, double *proj_v) {
-
-    // if the ||w||_1 <= r, return w directly.
-    double w_l1 = 0.0;
-    double *abs_w = malloc(sizeof(double) * p);
-    for (int i = 0; i < p; i++) {
-        abs_w[i] = fabs(w[i]);
-        w_l1 += fabs(w[i]);
-    }
-    if (w_l1 <= r) {
-        cblas_dcopy(p, w, 1, proj_v, 1);
-        free(abs_w);
-        return;
-    }
-    // sort vector abs_w
-    int *sorted_indices = malloc(sizeof(int) * p);
-    double *u = malloc(sizeof(double) * p);
-    double *sv = malloc(sizeof(double) * p);
-    _arg_sort_descend(abs_w, sorted_indices, p);
-    double prev_sum = 0.0;
-    for (int i = 0; i < p; i++) {
-        u[i] = abs_w[sorted_indices[i]];
-        sv[i] = prev_sum + u[i];
-        prev_sum = sv[i];
-    }
-    int last_rho = 0;
-    for (int i = 0; i < p; i++) {
-        if (u[i] > (sv[i] - r) / (i + 1.)) {
-            last_rho = i;
-        }
-    }
-    double theta = fmax(0.0, (sv[last_rho] - r) / (last_rho + 1.));
-    for (int i = 0; i < p; i++) {
-        proj_v[i] = sign(w[i]) * fmax(fabs(w[i]) - theta, 0.0);
-    }
-    free(sorted_indices);
-    free(u);
-    free(sv);
-    free(abs_w);
-}
-
+/**
+ * This code is implemented by Laurent Condat, PhD, CNRS research fellow in France.
+ * @param y
+ * @param x
+ * @param length
+ * @param a
+ */
 static void _l1ballproj_condat(double *y, double *x, int length, const double a) {
     if (a <= 0.0) {
         if (a == 0.0) memset(x, 0, length * sizeof(double));
@@ -2487,178 +2452,135 @@ void _algo_fsauc(const double *data_x_tr,
                  double para_r,
                  double para_g,
                  int para_num_passes,
+                 int para_step_len,
+                 int para_verbose,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
                  double *re_rts) {
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
-    double kappa = 1.0; // kappa=1.0 for normalized data samples.
-    double global_n = data_n * para_num_passes;
-    int m = (int) floor(0.5 * log2((2.0 * global_n) / log2(global_n))) - 1;
-    int n0 = (int) floor(global_n / (double) m);
-    double R0 = 2. * sqrt(1. + 2. * pow(kappa, 2.)) * para_r;
-    double beta_prev = 1. + 8.0 * pow(kappa, 2.);
-    double *v_bar = malloc(sizeof(double) * (data_p + 2));
-    memset(v_bar, 0, sizeof(double) * (data_p + 2));
+    double start_time = clock(), delta = 0.1, eta = para_g, R = para_r;
+    if (para_verbose > 0) { printf("eta: %.12f R: %.12f", eta, R); }
+    double n_ids = para_num_passes * data_n;
+    double *v_1 = malloc(sizeof(double) * (data_p + 2)), alpha_1 = 0.0, alpha;
+    memset(v_1, 0, sizeof(double) * (data_p + 2));
+    double *sx_pos = malloc(sizeof(double) * (data_p));
+    memset(sx_pos, 0, sizeof(double) * data_p);
+    double *sx_neg = malloc(sizeof(double) * (data_p));
+    memset(sx_neg, 0, sizeof(double) * data_p);
+    double *m_pos = malloc(sizeof(double) * (data_p));
+    memset(m_pos, 0, sizeof(double) * data_p);
+    double *m_neg = malloc(sizeof(double) * (data_p));
+    memset(m_neg, 0, sizeof(double) * data_p);
+    int m = (int) floor(0.5 * log2(2 * n_ids / log2(n_ids))) - 1;
+    int n_0 = (int) floor(n_ids / m);
+    para_r = 2. * sqrt(3.) * R;
+    double p_hat = 0.0, beta = 9.0, D = 2. * sqrt(2.) * para_r, sp = 0.0, t = 0.0;;
+    double *gd = malloc(sizeof(double) * (data_p + 2)), gd_alpha;
+    memset(gd, 0, sizeof(double) * (data_p + 2));
+    double *v_ave = malloc(sizeof(double) * (data_p + 2));
+    memset(v_ave, 0, sizeof(double) * (data_p + 2));
+    double *v_sum = malloc(sizeof(double) * (data_p + 2));
+    double *v = malloc(sizeof(double) * (data_p + 2));
+    double *vd = malloc(sizeof(double) * (data_p + 2)), ad;
+    double *tmp_proj = malloc(sizeof(double) * data_p), beta_new;
+    double *y_pred = malloc(sizeof(double) * data_n);
+    int auc_index = 0;
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
-    double Rk = R0;
-    double *vec_v1 = malloc(sizeof(double) * (data_p + 2));
-    double *vec_w = malloc(sizeof(double) * data_p);
-    double *vec_w1 = malloc(sizeof(double) * data_p);
-    double *w_bar = malloc(sizeof(double) * data_p);
-    double R = para_r;
-    double *gw = malloc(sizeof(double) * data_p);
-    double *vec_temp = malloc(sizeof(double) * data_p);
-    int K = 1; // number of alternative projections.
-    double p_hat = 0.0; //some global updates
-    double *vec_a = malloc(sizeof(double) * (data_p + 2));
-    memset(vec_a, 0, sizeof(double) * (data_p + 2));
-    double *vec_a_p = malloc(sizeof(double) * data_p), n_p = 0.0;
-    memset(vec_a_p, 0, sizeof(double) * data_p);
-    double *vec_a_n = malloc(sizeof(double) * data_p), n_n = 0.0;
-    memset(vec_a_n, 0, sizeof(double) * data_p);
-    double gamma = para_g;
     for (int k = 0; k < m; k++) {
-        cblas_dcopy(data_p + 2, v_bar, 1, vec_v1, 1);
-        double delta = 0.1; // some parameters for each stage
-        double alpha1 = cblas_ddot(data_p + 2, vec_a, 1, vec_v1, 1);
-        double alpha = alpha1;
-        cblas_dcopy(data_p, vec_v1, 1, vec_w1, 1);
-        cblas_dcopy(data_p, vec_w1, 1, vec_w, 1);
-        double a1 = vec_v1[data_p];
-        double b1 = vec_v1[data_p + 1];
-        double a = a1;
-        double b = b1;
-        memset(w_bar, 0, sizeof(double) * data_p);
-        double a_bar = 0.0;
-        double b_bar = 0.0;
-        double alpha_bar = 0.0;
-        double D0 = 2.0 * sqrt(2.0) * kappa * R0;
-        if (k != 0) {
-            // not in the first stage
-            D0 += (4.0 * sqrt(2.0) * kappa * (2.0 + sqrt(2.0 * log(12.0 / delta))) *
-                   (1.0 + 2.0 * kappa) * R) /
-                  sqrt(min(p_hat, 1.0 - p_hat) * (double) n0 - sqrt(2.0 * n0 * log(12.0 / delta)));
-            if (D0 <= 0.0) {
-                printf("D0 is negative!");
-                free(vec_a_n);
-                free(vec_a_p);
-                free(vec_a);
-                free(gw);
-                free(vec_temp);
-                free(vec_v1);
-                free(vec_w);
-                free(vec_w1);
-                free(v_bar);
-                exit(0);
+        memset(v_sum, 0, sizeof(double) * (data_p + 2));
+        cblas_dcopy(data_p + 2, v_1, 1, v, 1);
+        alpha = alpha_1;
+        for (int kk = 0; kk < n_0; kk++) {
+            int ind = (k * n_0 + kk) % data_n;
+            const double *xt = data_x_tr + ind * data_p;
+            double yt = data_y_tr[ind];
+            double wx = cblas_ddot(data_p, xt, 1, v, 1);
+            double is_posi_y = is_posi(yt), is_nega_y = is_nega(yt);
+            sp = sp + is_posi_y;
+            p_hat = sp / (t + 1.);
+            cblas_daxpy(data_p, is_posi_y, xt, 1, sx_pos, 1);
+            cblas_daxpy(data_p, is_nega_y, xt, 1, sx_neg, 1);
+            double weight = (1. - p_hat) * (wx - v[data_p] - 1. - alpha) * is_posi_y;
+            weight += p_hat * (wx - v[data_p + 1] + 1. + alpha) * is_nega_y;
+            cblas_dcopy(data_p, xt, 1, gd, 1);
+            cblas_dscal(data_p, weight, gd, 1);
+            gd[data_p] = (p_hat - 1.) * (wx - v[data_p]) * is_posi_y;
+            gd[data_p + 1] = p_hat * (v[data_p + 1] - wx) * is_nega_y;
+            gd_alpha = (p_hat - 1.) * (wx + p_hat * alpha) * is_posi_y +
+                       p_hat * (wx + (p_hat - 1.) * alpha) * is_nega_y;
+            cblas_daxpy(data_p + 2, -eta, gd, 1, v, 1);
+            alpha = alpha + eta * gd_alpha;
+            _l1ballproj_condat(v, tmp_proj, data_p, R); //projection to l1-ball
+            cblas_dcopy(data_p, tmp_proj, 1, v, 1);
+            if (fabs(v[data_p]) > R) { v[data_p] = v[data_p] * (R / fabs(v[data_p])); }
+            if (fabs(v[data_p + 1]) > R) {
+                v[data_p + 1] = v[data_p + 1] * (R / fabs(v[data_p + 1]));
+            }
+            if (fabs(alpha) > 2. * R) { alpha = alpha * (2. * R / fabs(alpha)); }
+            cblas_dcopy(data_p + 2, v, 1, vd, 1);
+            cblas_daxpy(data_p + 2, -1., v_1, 1, vd, 1);
+            double norm_vd = sqrt(cblas_ddot(data_p + 2, vd, 1, vd, 1));
+            if (norm_vd > para_r) { cblas_dscal(data_p + 2, para_r / norm_vd, vd, 1); }
+            cblas_dcopy(data_p + 2, vd, 1, v, 1);
+            cblas_daxpy(data_p + 2, 1., v_1, 1, v, 1);
+            ad = alpha - alpha_1;
+            if (fabs(ad) > D) { ad = ad * (D / fabs(ad)); }
+            alpha = alpha_1 + ad;
+            cblas_daxpy(data_p + 2, 1., v, 1, v_sum, 1);
+            cblas_dcopy(data_p + 2, v_sum, 1, v_ave, 1);
+            cblas_dscal(data_p + 2, 1. / (kk + 1.), v_ave, 1);
+            t = t + 1.0;
+            if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
+                double t_eval = clock();
+                cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                            data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
+                double auc = _auc_score(data_y_tr, y_pred, data_n);
+                t_eval = clock() - t_eval;
+                re_auc[auc_index] = auc;
+                re_rts[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
             }
         }
-        double n_posi_nega = n_p + n_n;
-        for (int kk = 0; kk < n0; kk++) {
-            int global_index = k * n0 + kk;
-            const double *xt = data_x_tr + (global_index % data_n) * data_p;
-            double yt = data_y_tr[global_index % data_n];
-            double is_posi_yt = is_posi(yt);
-            double is_nega_yt = is_nega(yt);
-            p_hat = ((n_posi_nega + kk) * p_hat + is_posi_yt) / (kk + 1. + n_posi_nega);
-            // this is update a_p, a_n, n_p, n_n
-            cblas_daxpy(data_p, is_posi_yt, xt, 1, vec_a_p, 1); // 89: A_p = A_p + (X*(y==1))';
-            cblas_daxpy(data_p, is_nega_yt, xt, 1, vec_a_n, 1); // 90: A_n = A_n + (X*(y==-1))';
-            n_p += is_posi_yt; // 91: n_p = n_p + sum(y==1);
-            n_n += is_nega_yt; // 92: n_n = n_n + sum(y==-1);
-
-            // compute gradient
-            double pred = cblas_ddot(data_p, vec_w, 1, xt, 1);
-            double temp = 2. * (is_nega_yt * p_hat - is_posi_yt * (1. - p_hat));
-            double ga = 2. * is_posi_yt * (1. - p_hat) * (a - pred);
-            double gb = 2. * is_nega_yt * p_hat * (b - pred);
-            memset(gw, 0, sizeof(double) * data_p);
-            cblas_daxpy(data_p, (1. + alpha) * temp - ga - gb, xt, 1, gw, 1);
-            double galpha = temp * pred - 2.0 * p_hat * (1. - p_hat) * alpha;
-
-            // updates w,a,b,alpha
-            cblas_daxpy(data_p, -gamma, gw, 1, vec_w, 1); // w = w-gamma*gw;
-            a += -gamma * ga; // a = a-gamma*ga;
-            b += -gamma * gb; // b = b-gamma*gb;
-            alpha += gamma * galpha;
-
-            // project: w,a,b
-            for (int j = 0; j < K; j++) {
-                // _l1ballproj_condat(double *y, double *x, int length, const double a)
-                // _project_onto_l1(vec_w, data_p, R, vec_temp); //project w on L1 ball.
-                _l1ballproj_condat(vec_w, vec_temp, data_p, R);//project w on L1 ball.
-                cblas_dcopy(data_p, vec_temp, 1, vec_w, 1);
-                a = sign(a) * fmin(fabs(a), R * kappa); //project a
-                b = sign(b) * fmin(fabs(b), R * kappa); //project b
-                // 65:72
-                cblas_dcopy(data_p, vec_w1, 1, vec_temp, 1);
-                cblas_daxpy(data_p, -1., vec_w, 1, vec_temp, 1);
-                double v_norm = cblas_ddot(data_p, vec_temp, 1, vec_temp, 1);
-                v_norm += (a - a1) * (a - a1) + (b - b1) * (b - b1);
-                v_norm = sqrt(v_norm);
-                if (v_norm > R0) {
-                    double tmp = R0 / v_norm;
-                    cblas_dscal(data_p, tmp, vec_w, 1);
-                    cblas_daxpy(data_p, 1., vec_w1, 1, vec_temp, 1);
-                    a = a1 + tmp * a;
-                    b = b1 + tmp * b;
-                }
-            }
-            //project: alpha
-            double tmp = fmin(fmin(D0 + alpha1, 2. * R * kappa), alpha);
-            alpha = fmax(-D0 + alpha1, fmax(-2 * R * kappa, tmp));
-
-            // 80:86
-            cblas_dscal(data_p, 1. / (kk + 1.), w_bar, 1);
-            cblas_daxpy(data_p, 1. / (kk + 1.), vec_w, 1, w_bar, 1);
-            a_bar = (kk * a_bar + a) / (kk + 1.);
-            b_bar = (kk * b_bar + b) / (kk + 1.);
-            alpha_bar = (kk * alpha_bar + alpha) / (kk + 1.);
-        }//inner-stage
-        Rk /= 2.0;
-        cblas_dcopy(data_p, vec_a_n, 1, vec_a, 1); // 93: A = [A_n/n_n - A_p/n_p,0,0];
-        cblas_dscal(data_p, 1. / n_n, vec_a, 1);
-        cblas_daxpy(data_p, -1. / n_p, vec_a_p, 1, vec_a, 1);
-        vec_a[data_p] = 0.0;
-        vec_a[data_p + 1] = 0.0;
-        cblas_dcopy(data_p, w_bar, 1, v_bar, 1); // 94: v_bar = [w_bar;a_bar;b_bar];
-        v_bar[data_p] = a_bar;
-        v_bar[data_p + 1] = b_bar;
-        // update beta and D
-        double tmp1 = pow(kappa * (1. + 2. * kappa) * (2. + sqrt(2. * log(12. / delta))), 2.);
-        double tmp2 = fmin(p_hat, 1. - p_hat) - sqrt(2. * log(12. / delta) / n0);
-        double beta_next = (1. + 8.0 * pow(kappa, 2.)) + (32. * tmp1) / tmp2; //update beta
-        if (beta_next <= 0.0) {
-            printf("beta_next is negative!");
-            free(vec_a_n);
-            free(vec_a_p);
-            free(vec_a);
-            free(gw);
-            free(vec_temp);
-            free(vec_v1);
-            free(vec_w);
-            free(vec_w1);
-            free(v_bar);
-            exit(0);
+        para_r = para_r / 2.;
+        double tmp1 = 12. * sqrt(2.) * (2. + sqrt(2. * log(12. / delta))) * R;
+        double tmp2 = fmin(p_hat, 1. - p_hat) * n_0 - sqrt(2. * n_0 * log(12. / delta));
+        if (tmp2 > 0) { D = 2. * sqrt(2.) * para_r + tmp1 / sqrt(tmp2); } else { D = 1e7; }
+        tmp1 = 288. * (pow(2. + sqrt(2. * log(12 / delta)), 2.));
+        tmp2 = fmin(p_hat, 1. - p_hat) - sqrt(2. * log(12 / delta) / n_0);
+        if (tmp2 > 0) { beta_new = 9. + tmp1 / tmp2; } else { beta_new = 1e7; }
+        eta = fmin(sqrt(beta_new / beta) * eta / 2, eta);
+        beta = beta_new;
+        if (sp > 0.0) {
+            cblas_dcopy(data_p, sx_pos, 1, m_pos, 1);
+            cblas_dscal(data_p, 1. / sp, m_pos, 1);
         }
-        cblas_dcopy(data_p, v_bar, 1, re_wt, 1);
-        cblas_dscal(data_p, 1. / (k + 1.), re_wt_bar, 1);
-        cblas_daxpy(data_p, 1. / (k + 1.), re_wt, 1, re_wt_bar, 1);
-        // to make sure the step size is not increasing.
-        gamma = fmin(sqrt(beta_next / beta_prev) * (gamma / 2.), gamma);
-        beta_prev = beta_next;
-    }//outer-stage
-    free(vec_a_n);
-    free(vec_a_p);
-    free(vec_a);
-    free(gw);
-    free(vec_temp);
-    free(vec_v1);
-    free(vec_w);
-    free(vec_w1);
-    free(v_bar);
+        if (sp < t) {
+            cblas_dcopy(data_p, sx_neg, 1, m_neg, 1);
+            cblas_dscal(data_p, 1. / (t - sp), m_neg, 1);
+        }
+        cblas_dcopy(data_p + 2, v_ave, 1, v_1, 1);
+        cblas_dcopy(data_p, m_neg, 1, tmp_proj, 1);
+        cblas_daxpy(data_p, -1., m_pos, 1, tmp_proj, 1);
+        alpha_1 = cblas_ddot(data_p, v_ave, 1, tmp_proj, 1);
+        // wt_bar update
+        cblas_dscal(data_p, k / (k + 1.), re_wt_bar, 1);
+        cblas_daxpy(data_p, 1. / (k + 1.), v_ave, 1, re_wt_bar, 1);
+    }
+    cblas_dcopy(data_p, v_ave, 1, re_wt, 1);
+    free(y_pred);
+    free(tmp_proj);
+    free(vd);
+    free(v);
+    free(v_sum);
+    free(v_ave);
+    free(gd);
+    free(m_neg);
+    free(m_pos);
+    free(sx_neg);
+    free(sx_pos);
+    free(v_1);
 }
 
 void _algo_fsauc_sparse(const double *x_tr_vals,
@@ -2680,12 +2602,15 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock();
-    double kappa = 1.0; //assume that kappa=1.0 for normalized data samples.
-    double global_n = data_n * para_num_passes;
+    //assume that kappa=1.0 for normalized data samples.
+    double kappa = 1.0, t = 1., global_n = data_n * para_num_passes;
     // all initialize parameters
     int m = (int) floor(0.5 * log2((2.0 * global_n) / log2(global_n))) - 1;
     int n0 = (int) floor(global_n / (double) m);
-    double R0 = 2. * sqrt(1. + 2. * pow(kappa, 2.)) * para_r, t = 1.;
+    double R0 = 2. * sqrt(1. + 2. * pow(kappa, 2.)) * para_r;
+    if (para_verbose > 0) {
+        printf("m: %d n0: %d R0: %f", m, n0, R0);
+    }
     double beta_prev = 1. + 8.0 * pow(kappa, 2.);
     double *v_bar = malloc(sizeof(double) * (data_p + 2));
     memset(v_bar, 0, sizeof(double) * (data_p + 2));
@@ -2708,8 +2633,6 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
     double *vec_a_n = malloc(sizeof(double) * data_p), n_n = 0.0;
     memset(vec_a_n, 0, sizeof(double) * data_p);
     double gamma = para_g;
-    double *zero_vec = malloc(sizeof(double) * data_p);
-    memset(zero_vec, 0, sizeof(double) * data_p);
     double *xt = malloc(sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
     int auc_index = 0;
@@ -2822,7 +2745,6 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
     }//outer-stage
     free(y_pred);
     free(xt);
-    free(zero_vec);
     free(vec_a_n);
     free(vec_a_p);
     free(vec_a);

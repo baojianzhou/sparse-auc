@@ -382,7 +382,7 @@ def cv_fsauc(run_id, fold_id, num_passes, data):
     s_time = time.time()
     for para_r, para_g in product(list_r, list_g):
         # only run sub-tasks for parallel
-        algo_para = (run_id, fold_id, num_passes, para_r, para_g, data['num_k_fold'])
+        algo_para = (run_id, fold_id, num_passes, para_r, para_g)
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
