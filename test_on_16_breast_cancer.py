@@ -53,24 +53,24 @@ def get_related_genes():
 def raw_data_process(root_input):
     import scipy.io as sio
     import networkx as nx
-    root_p = 'data/'
-    raw = sio.loadmat(root_p + 'vant.mat')
-    data = {'x': np.asarray(raw['X']),
-            'y': np.asarray([_[1] for _ in raw['Y']]),
+    raw = sio.loadmat(os.path.join(root_input, 'raw_input/vant.mat'))
+    data = {'x': np.asarray(raw['X'], dtype=float),
+            'y': np.asarray([_[1] for _ in raw['Y']], dtype=float),
             'entrez': [_[0] for _ in np.asarray(raw['entrez'])]}
+    for i, each_row in enumerate(data['x']):
+        print(i, np.linalg.norm(each_row), np.mean((each_row)), np.std(each_row))
     for i in range(len(data['x'][0])):
         if np.mean(data['x'][:, i]) == 0. and np.std(data['x'][:, i]) == 0.0:
             print('default values.')
-    edges, costs = [], []
-    g = nx.Graph()
-    with open(root_p + 'edge.txt') as csvfile:
+    edges, costs, g = [], [], nx.Graph()
+    with open(os.path.join(root_input, 'raw_input/edge.txt')) as csvfile:
         edge_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
         for row in edge_reader:
             g.add_edge(row[0], row[1])
             edges.append([int(row[0]) - 1, int(row[1]) - 1])
             costs.append(1.)
     pathways = dict()
-    with open(root_p + 'pathways.txt') as csvfile:
+    with open(os.path.join(root_input, 'raw_input/pathways.txt')) as csvfile:
         edge_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
         for row in edge_reader:
             if int(row[0]) not in pathways:
@@ -87,7 +87,7 @@ def raw_data_process(root_input):
 
     # ------------- get entrez gene maps.
     test_entrez_gene_names = dict()
-    with open(root_input + 'entrez_gene_map_from_match_miner.txt') as csvfile:
+    with open(root_input + 'raw_input/entrez_gene_map_from_match_miner.txt') as csvfile:
         line_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
         for row_ind, row in enumerate(line_reader):
             if row_ind >= 21:
@@ -96,7 +96,7 @@ def raw_data_process(root_input):
                 test_entrez_gene_names[int(row[2])].append(row[3])
 
     entrez_gene_names = dict()
-    with open(root_input + 'entrez_gene_map_from_uniprot.tab') as csvfile:
+    with open(root_input + 'raw_input/entrez_gene_map_from_uniprot.tab') as csvfile:
         line_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
         for row_ind, row in enumerate(line_reader):
             if row_ind >= 1:
@@ -123,7 +123,7 @@ def raw_data_process(root_input):
     data['entrez_gene_name_map'] = all_entrez_gene_names
 
     # ---------------- get genes names from van_t_veer_2002 nature paper
-    f_name = root_p + 'raw/van_t_veer_2002/Table_NKI_295_1.txt'
+    f_name = os.path.join(root_input, 'raw_input/van_t_veer_2002/Table_NKI_295_1.txt')
     print('load data from: %s' % f_name)
     with open(f_name) as csvfile:
         edge_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
@@ -150,8 +150,9 @@ def raw_data_process(root_input):
         if not flag:
             print('cannot find: %s' % all_related_genes[entrez])
     print('all related genes: %d' % len(all_related_genes))
+    print('all valid related genes: %d' % len(finalized_cancer_gene))
     data['cancer_related_genes'] = finalized_cancer_gene
-    pickle.dump(data, open(root_input + 'overlap_data.pkl', 'wb'))
+    pickle.dump(data, open(root_input + 'raw_input/raw_input_bc.pkl', 'wb'))
 
 
 def generate_original_data(root_input):
@@ -281,98 +282,7 @@ def map_entrez_gene_name(root_input):
     return final_results
 
 
-def run_test(root_input, root_output):
-    import scipy.io as sio
-    f_name = root_input + 'original_data.pkl'
-    original_data = pickle.load(open(f_name))
-    f_name = 'results_bc_overlap_lasso_%02d.mat' % 0
-    dataset = sio.loadmat(root_output + f_name)
-    processed_data = dataset['data'][0][0]['XX']
-    f_name = root_input + 'original_data.pkl'
-    original_data = pickle.load(open(f_name))
-    xx = np.mean(original_data['data_flag'], axis=1)
-    print(len([_ for _ in xx if _ < 1e-3]))
-    pass
-
-
-def get_query(root_input):
-    # install mygene
-    import mygene
-
-    mg = mygene.MyGeneInfo()
-    f_name = root_input + 'gene_set.pkl'
-    gene_set = pickle.load(open(f_name))
-    gene_set = list(gene_set)
-    out = mg.querymany(gene_set, scopes='symbol', fields='entrezgene',
-                       species='human')
-    pickle.dump(out, open(root_input + 'entrez_list.pkl', 'wb'))
-    print(out)
-
-    import scipy.io as sio
-
-    f_name = 'entrez.mat'
-    dataset = sio.loadmat(root_input + f_name)['entrez']
-    entrez_list = [_[0] for _ in dataset]
-    f_name = open(root_input + 'entrez.txt', 'a')
-    print(f_name)
-    for _ in entrez_list:
-        f_name.write('%d\n' % _)
-    f_name.close()
-    exit()
-
-    data = pickle.load(open(root_input + 'entrez_list.pkl'))
-    f_open = open(root_input + 'gene_name_entrez_list.txt', 'a')
-    index = 0
-    for dat_ind, item in enumerate(data):
-        if 'query' in item and 'entrezgene' in item:
-            print('data_ind: %d gene name: %s entrezgene: %s' % (
-                index, item[u'query'], item[u'entrezgene']))
-            index += 1
-            f_open.write('%s %s\n' % (item[u'query'], item[u'entrezgene']))
-        else:
-            print('data_ind: ---- gene name: %s' % (item[u'query']))
-
-    f_open.close()
-
-
-def test_03(root_input):
-    import csv
-
-    entrez_ids = dict()
-    f_name = root_input + 'entrez.txt'
-    with open(f_name) as csvfile:
-        line_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
-        for row_ind, row in enumerate(line_reader):
-            entrez_ids[int(row[0])] = ''
-    entrez_gene_names = dict()
-    f_name = root_input + 'entrez_gene_name.tab'
-    with open(f_name) as csvfile:
-        line_reader = csv.reader(csvfile, delimiter='\t', quotechar='|')
-        for row_ind, row in enumerate(line_reader):
-            if row_ind >= 1:
-                if str.find(row[-1], ',') != -1:
-                    for entrez_id in str.split(row[-1], ','):
-                        gene_names = str.split(row[-2], ' ')
-                        gene_names = [_ for _ in gene_names if len(_) > 0]
-                        if int(entrez_id) not in entrez_gene_names:
-                            entrez_gene_names[int(entrez_id)] = []
-                        entrez_gene_names[int(entrez_id)].extend(gene_names)
-                else:
-                    entrez_id = int(row[-1])
-                    gene_names = str.split(row[-2], ' ')
-                    gene_names = [_ for _ in gene_names if len(_) > 0]
-                    if int(entrez_id) not in entrez_gene_names:
-                        entrez_gene_names[int(entrez_id)] = []
-                    entrez_gene_names[int(entrez_id)].extend(gene_names)
-    index = 0
-    for item in entrez_ids:
-        if item not in entrez_gene_names:
-            print(item)
-            index += 1
-    pass
-
-
-def get_single_data(trial_i, root_input):
+def get_single_data(root_input):
     import scipy.io as sio
     cancer_related_genes = {
         4288: 'MKI67', 1026: 'CDKN1A', 472: 'ATM', 7033: 'TFF3', 2203: 'FBP1',
@@ -382,8 +292,7 @@ def get_single_data(trial_i, root_input):
         7155: 'TOP2B', 896: 'CCND3', 894: 'CCND2', 10551: 'AGR2',
         3169: 'FOXA1', 2296: 'FOXC1'}
     data = dict()
-    f_name = 'overlap_data_%02d.mat' % trial_i
-    re = sio.loadmat(root_input + f_name)['save_data'][0][0]
+    re = sio.loadmat(root_input + 'raw_input/overlap_data_00.mat')['save_data'][0][0]
     data['data_X'] = np.asarray(re['data_X'], dtype=np.float64)
     data_y = [_[0] for _ in re['data_Y']]
     data['data_Y'] = np.asarray(data_y, dtype=np.float64)
@@ -394,8 +303,7 @@ def get_single_data(trial_i, root_input):
     data_entrez = [_[0] for _ in re['data_entrez']]
     data['data_entrez'] = np.asarray(data_entrez, dtype=int)
     data['data_splits'] = {i: dict() for i in range(5)}
-    data['data_subsplits'] = {i: {j: dict() for j in range(5)}
-                              for i in range(5)}
+    data['data_subsplits'] = {i: {j: dict() for j in range(5)} for i in range(5)}
     for i in range(5):
         xx = re['data_splits'][0][i][0][0]['train']
         data['data_splits'][i]['train'] = [_ - 1 for _ in xx[0]]
@@ -406,49 +314,11 @@ def get_single_data(trial_i, root_input):
             data['data_subsplits'][i][j]['train'] = [_ - 1 for _ in xx[0]]
             xx = re['data_subsplits'][0][i][0][j]['test'][0][0]
             data['data_subsplits'][i][j]['test'] = [_ - 1 for _ in xx[0]]
-    re_path = [_[0] for _ in re['re_path_varInPath']]
-    data['re_path_varInPath'] = np.asarray(re_path)
-    re_path_entrez = [_[0] for _ in re['re_path_entrez']]
-    data['re_path_entrez'] = np.asarray(re_path_entrez)
-    re_path_ids = [_[0] for _ in re['re_path_ids']]
-    data['re_path_ids'] = np.asarray(re_path_ids)
-    re_path_lambdas = [_ for _ in re['re_path_lambdas'][0]]
-    data['re_path_lambdas'] = np.asarray(re_path_lambdas)
-    re_path_groups = [_[0][0] for _ in re['re_path_groups_lasso'][0]]
-    data['re_path_groups_lasso'] = np.asarray(re_path_groups)
-    re_path_groups_overlap = [_[0][0] for _ in re['re_path_groups_overlap'][0]]
-    data['re_path_groups_overlap'] = np.asarray(re_path_groups_overlap)
-    re_edge = [_[0] for _ in re['re_edge_varInGraph']]
-    data['re_edge_varInGraph'] = np.asarray(re_edge)
-    re_edge_entrez = [_[0] for _ in re['re_edge_entrez']]
-    data['re_edge_entrez'] = np.asarray(re_edge_entrez)
-    data['re_edge_groups_lasso'] = np.asarray(re['re_edge_groups_lasso'])
-    data['re_edge_groups_overlap'] = np.asarray(re['re_edge_groups_overlap'])
-    for method in ['re_path_re_lasso', 're_path_re_overlap',
-                   're_edge_re_lasso', 're_edge_re_overlap']:
-        res = {fold_i: dict() for fold_i in range(5)}
-        for fold_ind, fold_i in enumerate(range(5)):
-            res[fold_i]['lambdas'] = re[method][0][fold_i]['lambdas'][0][0][0]
-            res[fold_i]['kidx'] = re[method][0][fold_i]['kidx'][0][0][0]
-            res[fold_i]['kgroups'] = re[method][0][fold_i]['kgroups'][0][0][0]
-            res[fold_i]['kgroupidx'] = re[method][0][fold_i]['kgroupidx'][0][0]
-            res[fold_i]['groups'] = re[method][0][fold_i]['groups'][0]
-            res[fold_i]['sbacc'] = re[method][0][fold_i]['sbacc'][0]
-            res[fold_i]['AS'] = re[method][0][fold_i]['AS'][0]
-            res[fold_i]['completeAS'] = re[method][0][fold_i]['completeAS'][0]
-            res[fold_i]['lstar'] = re[method][0][fold_i]['lstar'][0][0][0][0]
-            res[fold_i]['auc'] = re[method][0][fold_i]['auc'][0]
-            res[fold_i]['acc'] = re[method][0][fold_i]['acc'][0]
-            res[fold_i]['bacc'] = re[method][0][fold_i]['bacc'][0]
-            res[fold_i]['perf'] = re[method][0][fold_i]['perf'][0][0]
-            res[fold_i]['pred'] = re[method][0][fold_i]['pred']
-            res[fold_i]['Ws'] = re[method][0][fold_i]['Ws'][0][0]
-            res[fold_i]['oWs'] = re[method][0][fold_i]['oWs'][0][0]
-            res[fold_i]['nextGrad'] = re[method][0][fold_i]['nextGrad'][0]
-        data[method] = res
     import networkx as nx
     g = nx.Graph()
     ind_pathways = {_: i for i, _ in enumerate(data['data_entrez'])}
+    re_path_entrez = [_[0] for _ in re['re_path_entrez']]
+    data['re_path_entrez'] = np.asarray(re_path_entrez)
     all_nodes = {ind_pathways[_]: '' for _ in data['re_path_entrez']}
     maximum_nodes, maximum_list_edges = set(), []
     for edge in data['data_edges']:
@@ -471,7 +341,7 @@ def get_single_data(trial_i, root_input):
             if edge[0] != edge[1]:  # remove some self-loops
                 maximum_list_edges.append(edge)
             subgraph.add_edge(edge[0], edge[1])
-    print(nx.number_connected_components(subgraph))
+    print('number of connected components: %d' % nx.number_connected_components(subgraph))
     data['map_entrez'] = np.asarray([data['data_entrez'][_]
                                      for _ in maximum_nodes])
     data['edges'] = np.asarray(maximum_list_edges, dtype=int)
@@ -486,70 +356,22 @@ def get_single_data(trial_i, root_input):
         vv = list(maximum_nodes).index(edge[1])
         data['edges'][edge_ind][0] = uu
         data['edges'][edge_ind][1] = vv
-    method_list = ['re_path_re_lasso', 're_path_re_overlap',
-                   're_edge_re_lasso', 're_edge_re_overlap']
-    found_set = {method: set() for method in method_list}
-    for method in method_list:
-        for fold_i in range(5):
-            best_lambda = data[method][fold_i]['lstar']
-            kidx = data[method][fold_i]['kidx']
-            re = list(data[method][fold_i]['lambdas']).index(best_lambda)
-            ws = data[method][fold_i]['oWs'][:, re]
-            for item in [kidx[_] for _ in np.nonzero(ws[1:])[0]]:
-                if item in cancer_related_genes:
-                    found_set[method].add(cancer_related_genes[item])
-        print(method, found_set[method])
-    data['found_related_genes'] = found_set
-    return data
-
-
-def summary_data(root_input):
-    method_list = ['re_path_re_lasso', 're_path_re_overlap',
-                   're_edge_re_lasso', 're_edge_re_overlap']
-    summarized_data = dict()
-    for folding_i in range(0, 20):
-        print('processing folding_%02d' % folding_i)
-        summarized_data[folding_i] = dict()
-        data = get_single_data(folding_i, root_input)
-        summarized_data[folding_i]['data_entrez'] = data['data_entrez']
-        summarized_data[folding_i]['cancer_related_genes'] = \
-            data['cancer_related_genes']
-        summarized_data[folding_i]['found_related_genes'] = \
-            data['found_related_genes']
-        for method in method_list:
-            summarized_data[folding_i][method] = dict()
-        for method in method_list:
-            all_involved_genes = set()
-            bacc = [data[method][fold_i]['perf'][0][0]
-                    for fold_i in range(5)]
-            summarized_data[folding_i][method]['bacc'] = bacc
-            auc, nonzeros_list = [], []
-            for fold_i in range(5):
-                kidx = data[method][fold_i]['kidx']
-                summarized_data[folding_i][method]['kidx_%d' % fold_i] = kidx
-                all_related_entrez = [data['data_entrez'][_] for _ in kidx]
-                all_involved_genes = all_involved_genes.union(
-                    set([data['cancer_related_genes'][_]
-                         for _ in all_related_entrez
-                         if _ in data['cancer_related_genes']]))
-                best_lambda = data[method][fold_i]['lstar']
-                ii = list(data[method][fold_i]['lambdas']).index(best_lambda)
-                ws = data[method][fold_i]['oWs'][:, ii]
-                nonzeros = np.nonzero(ws[1:])[0]
-                summarized_data[folding_i][method]['ws_%d' % fold_i] = ws[1:]
-                summarized_data[folding_i][method]['ws_nonzeros_%d' % fold_i] = \
-                    nonzeros
-                auc.append(data[method][fold_i]['auc'][0][0][ii])
-                nonzeros_list.append(len(nonzeros))
-            summarized_data[folding_i][method]['auc'] = auc
-            summarized_data[folding_i][method]['num_nonzeros'] = nonzeros_list
-            print(all_involved_genes)
-    f_name = root_input + 'overlap_data_summarized.pkl'
-    pickle.dump(summarized_data, open(f_name, 'wb'))
+    input_data = {'all_x_tr': np.asarray(data['data_X'], dtype=float),
+                  'all_y_tr': np.asarray(data['data_Y'], dtype=float),
+                  'all_edges': data['data_edges'],
+                  'all_entrez': data['data_entrez'],
+                  'cancer_related_genes': data['cancer_related_genes'],
+                  'data_x_tr': np.asarray(data['x'], dtype=float),
+                  'data_y_tr': np.asarray(data['y'], dtype=float),
+                  'data_weights': np.asarray(data['costs'], dtype=float),
+                  'data_edges': data['edges'],
+                  'data_nodes': data['nodes'],
+                  'map_entrez': data['map_entrez']}
+    pickle.dump(input_data, open(os.path.join(root_input, 'input_bc.pkl'), 'wb'))
 
 
 def main():
-    summary_data(root_input='data/')
+    get_single_data(root_input='/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/')
 
 
 if __name__ == '__main__':
