@@ -406,9 +406,19 @@ def show_sparsity():
     plt.close()
 
 
+def results_16_bc():
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
+    for method_name in ['sht_am', 'spam_l1']:
+        re_mean = np.zeros(25)
+        for task_id in range(25):
+            f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
+            results = pkl.load(open(f_path, 'rb'))
+            aucs = [results[(task_id, fold_id)][method_name]['auc_wt'] for fold_id in range(5)]
+            re_mean[task_id] = np.mean(aucs)
+            print('task-%02d %.4f %.4f' % (task_id, np.mean(aucs), np.std(aucs)))
+        print('---')
+        print('%.4f %.4f' % (np.mean(re_mean), np.std(re_mean)))
+
+
 if __name__ == '__main__':
-    show_sparsity()
-    exit()
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-    dd = pkl.load(open(data_path + 'ms_task_22_tr_1000_mu_0.3_p-ratio_0.3_fig_3.pkl', 'rb'))
-    pass
+    results_16_bc()
