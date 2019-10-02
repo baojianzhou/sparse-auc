@@ -286,7 +286,7 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     PyArrayObject *data_x_tr, *data_y_tr;
     int data_p, data_n, para_num_passes, para_step_len, para_verbose, total_num_eval;
     double para_eta, para_lambda, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    if (!PyArg_ParseTuple(args, "O!O!iiddii", &PyArray_Type, &data_x_tr, &PyArray_Type,
+    if (!PyArg_ParseTuple(args, "O!O!ddiii", &PyArray_Type, &data_x_tr, &PyArray_Type,
                           &data_y_tr, &para_eta, &para_lambda, &para_num_passes,
                           &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_x_tr->dimensions[0];
@@ -297,7 +297,7 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
     _algo_opauc((double *) PyArray_DATA(data_x_tr), (double *) PyArray_DATA(data_y_tr),
-                data_n, data_p, para_eta, para_lambda, para_num_passes, para_step_len,
+                data_n, data_p, para_eta, para_lambda, para_step_len,
                 para_verbose, re_wt, re_wt_bar, re_auc, re_rts);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
     free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);

@@ -2209,7 +2209,6 @@ void _algo_opauc(const double *data_x_tr,
                  int data_p,
                  double para_eta,
                  double para_lambda,
-                 int para_num_passes,
                  int para_step_len,
                  int para_verbose,
                  double *re_wt,
@@ -2239,6 +2238,7 @@ void _algo_opauc(const double *data_x_tr,
     memset(tmp_vec, 0, sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
     int auc_index = 0;
+    if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n; t++) {
         const double *cur_x = data_x_tr + t * data_p;
         double cur_y = data_y_tr[t];
@@ -2316,7 +2316,7 @@ void _algo_opauc(const double *data_x_tr,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
             t_eval = clock() - t_eval;
-            re_auc[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+            re_rts[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
         }
     }
     free(tmp_vec);
