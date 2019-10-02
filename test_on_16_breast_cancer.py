@@ -357,11 +357,11 @@ def pred(wt, wt_bar, te_index, data):
     return auc_wt, auc_wt_bar
 
 
-def cv_spam_l1(method_name, task_id, num_passes, step_len, data):
+def cv_spam_l1(k_fold, method_name, task_id, num_passes, step_len, data):
     results = dict()
     list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
     list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
-    for fold_id in range(5):
+    for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
@@ -380,11 +380,11 @@ def cv_spam_l1(method_name, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_spam_l2(method_name, task_id, num_passes, step_len, data):
+def cv_spam_l2(k_fold, method_name, task_id, num_passes, step_len, data):
     results = dict()
     list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
     list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
-    for fold_id in range(5):
+    for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
@@ -403,12 +403,12 @@ def cv_spam_l2(method_name, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_sht_am(method_name, task_id, num_passes, step_len, data):
+def cv_sht_am(k_fold, method_name, task_id, num_passes, step_len, data):
     results = dict()
     list_b = [20]
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_sparsity = [50, 100, 150, 200, 250, 300, 350, 400]
-    for fold_id in range(5):
+    for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
@@ -463,13 +463,13 @@ def run_ms(method_name):
     data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
     results = dict()
     if method_name == 'spam_l1':
-        results = cv_spam_l1(method_name, task_id, num_passes, step_len, data)
+        results = cv_spam_l1(method_name, k_fold, task_id, num_passes, step_len, data)
     if method_name == 'spam_l2':
-        results = cv_spam_l2(method_name, task_id, num_passes, step_len, data)
+        results = cv_spam_l2(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'sht_am':
-        results = cv_sht_am(method_name, task_id, num_passes, step_len, data)
+        results = cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'graph_am':
-        results = cv_graph_am(method_name, task_id, num_passes, step_len, data)
+        results = cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data)
     f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
     pkl.dump(results, open(f_path, 'wb'))
 
