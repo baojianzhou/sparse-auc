@@ -459,6 +459,7 @@ def cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data):
 def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
     list_b = [59]
+    num_passes = 10
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_sparsity = [50, 100, 150, 200, 250, 300, 350, 400]
     for fold_id in range(k_fold):
@@ -474,7 +475,7 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
                 np.asarray(data['data_weights'], dtype=float),
                 sparsity, para_b, para_c, 0.0, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(para_b, para_c, sparsity, auc_wt, auc_wt_bar)
+            print(fold_id, para_b, para_c, sparsity, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
                 best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
                             'auc': auc, 'rts': rts, 'para_c': para_c, 'sparsity': sparsity}
@@ -497,7 +498,7 @@ def cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data):
                 np.asarray(data['data_y_tr'][tr_index], dtype=float),
                 para_r, para_g, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(para_r, para_g, auc_wt, auc_wt_bar)
+            print(fold_id, para_r, para_g, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
                 best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
                             'auc': auc, 'rts': rts, 'para_r': para_r, 'para_g': para_g}
@@ -520,7 +521,7 @@ def cv_solam(method_name, k_fold, task_id, num_passes, step_len, data):
                 np.asarray(data['data_y_tr'][tr_index], dtype=float),
                 para_xi, para_r, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(para_xi, para_r, auc_wt, auc_wt_bar)
+            print(fold_id, para_xi, para_r, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
                 best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
                             'auc': auc, 'rts': rts, 'para_xi': para_xi, 'para_r': para_r}
@@ -543,7 +544,7 @@ def cv_opauc(method_name, k_fold, task_id, num_passes, step_len, data):
                 np.asarray(data['data_y_tr'][tr_index], dtype=float),
                 para_eta, para_lambda, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(para_eta, para_lambda, auc_wt, auc_wt_bar)
+            print(fold_id, para_eta, para_lambda, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
                 best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar, 'auc': auc, 'rts': rts,
                             'para_eta': para_eta, 'para_lambda': para_lambda}
