@@ -250,7 +250,7 @@ def map_entrez_gene_name(root_input):
     return final_results
 
 
-def get_single_data(root_input):
+def get_processed_data(root_input):
     import scipy.io as sio
     cancer_related_genes = {
         4288: 'MKI67', 1026: 'CDKN1A', 472: 'ATM', 7033: 'TFF3', 2203: 'FBP1',
@@ -326,7 +326,7 @@ def get_single_data(root_input):
                   'map_entrez': data['map_entrez'],
                   'n': 295,
                   'p': 3243,
-                  'num_runs': 20,
+                  'num_runs': 25,
                   'num_k_fold': 5}
     for run_index in range(input_data['num_runs']):
         kf = KFold(n_splits=input_data['num_k_fold'], shuffle=False)
