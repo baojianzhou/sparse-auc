@@ -408,16 +408,23 @@ def show_sparsity():
 
 def results_16_bc():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
-    for method_name in ['sht_am', 'spam_l1']:
-        re_mean = np.zeros(25)
-        for task_id in range(25):
+    all_results = dict()
+    method_list = ['sht_am', 'spam_l1', 'spam_l2']
+    print(' ' * 10 + '         '.join(method_list))
+    for task_id in range(25):
+        all_results[task_id] = dict()
+        print('task-%02d' % task_id),
+        for method_name in method_list:
             f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
             results = pkl.load(open(f_path, 'rb'))
             aucs = [results[(task_id, fold_id)][method_name]['auc_wt'] for fold_id in range(5)]
-            re_mean[task_id] = np.mean(aucs)
-            print('task-%02d %.4f %.4f' % (task_id, np.mean(aucs), np.std(aucs)))
-        print('---')
-        print('%.4f %.4f' % (np.mean(re_mean), np.std(re_mean)))
+            all_results[task_id][method_name] = np.mean(aucs)
+            print(' %.4f,%.4f' % (float(np.mean(aucs)), float(np.std(aucs)))),
+        print('')
+    print('aver:  '),
+    for method in method_list:
+        mean_aucs = [all_results[task_id][method] for task_id in range(25)]
+        print(' %.4f,%.4f' % (float(np.mean(mean_aucs)), float(np.std(mean_aucs)))),
 
 
 if __name__ == '__main__':

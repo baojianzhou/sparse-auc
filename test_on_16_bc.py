@@ -250,7 +250,8 @@ def map_entrez_gene_name(root_input):
     return final_results
 
 
-def get_processed_data(root_input):
+def get_processed_data():
+    root_input = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
     import scipy.io as sio
     cancer_related_genes = {
         4288: 'MKI67', 1026: 'CDKN1A', 472: 'ATM', 7033: 'TFF3', 2203: 'FBP1',
@@ -312,6 +313,10 @@ def get_processed_data(root_input):
         vv = list(maximum_nodes).index(edge[1])
         data['edges'][edge_ind][0] = uu
         data['edges'][edge_ind][1] = vv
+    # data normalization
+    x_mean = np.tile(np.mean(data['x'], axis=0), (len(data['x']), 1))
+    x_std = np.tile(np.std(data['x'], axis=0), (len(data['x']), 1))
+    data['x'] = np.nan_to_num(np.divide(data['x'] - x_mean, x_std))
     normalized_data = []
     for row in data['x']:
         normalized_data.append(row / np.linalg.norm(row))
@@ -477,6 +482,10 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
     return results
 
 
+def cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data):
+    pass
+
+
 def run_ms(method_name):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -488,20 +497,22 @@ def run_ms(method_name):
     results = dict()
     if method_name == 'spam_l1':
         results = cv_spam_l1(method_name, k_fold, task_id, num_passes, step_len, data)
-    if method_name == 'spam_l2':
+    elif method_name == 'spam_l2':
         results = cv_spam_l2(method_name, k_fold, task_id, num_passes, step_len, data)
-    if method_name == 'spam_l1l2':
+    elif method_name == 'spam_l1l2':
         results = cv_spam_l1l2(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'sht_am':
         results = cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'graph_am':
         results = cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data)
+    elif method_name == 'fsauc':
+        results = cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data)
     f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
     pkl.dump(results, open(f_path, 'wb'))
 
 
 def main():
-    run_ms(method_name='graph_am')
+    run_ms(method_name='sht_am')
 
 
 if __name__ == '__main__':
