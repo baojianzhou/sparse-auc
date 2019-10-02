@@ -357,7 +357,7 @@ def pred(wt, wt_bar, te_index, data):
     return auc_wt, auc_wt_bar
 
 
-def cv_spam_l1(k_fold, method_name, task_id, num_passes, step_len, data):
+def cv_spam_l1(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
     list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
     list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
@@ -380,7 +380,7 @@ def cv_spam_l1(k_fold, method_name, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_spam_l2(k_fold, method_name, task_id, num_passes, step_len, data):
+def cv_spam_l2(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
     list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
     list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
@@ -403,7 +403,7 @@ def cv_spam_l2(k_fold, method_name, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_spam_l1l2(k_fold, method_name, task_id, num_passes, step_len, data):
+def cv_spam_l1l2(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
     list_c = 10. ** np.arange(-2, 3, 1, dtype=float)
     list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
@@ -427,7 +427,7 @@ def cv_spam_l1l2(k_fold, method_name, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_sht_am(k_fold, method_name, task_id, num_passes, step_len, data):
+def cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
     list_b = [20]
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
@@ -451,12 +451,12 @@ def cv_sht_am(k_fold, method_name, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_graph_am(method_name, task_id, num_passes, step_len, data):
+def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
     list_b = [20]
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_sparsity = [50, 100, 150, 200, 250, 300, 350, 400]
-    for fold_id in range(5):
+    for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
