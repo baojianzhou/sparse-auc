@@ -409,7 +409,7 @@ def show_sparsity():
 def results_16_bc():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
     all_results = dict()
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'spam_l1l2']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'solam']
     print(' ' * 10 + '         '.join(method_list))
     for task_id in range(25):
         all_results[task_id] = dict()

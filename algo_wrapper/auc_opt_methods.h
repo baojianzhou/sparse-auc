@@ -308,9 +308,13 @@ void _algo_opauc(const double *data_x_tr,
                  int data_p,
                  double para_eta,
                  double para_lambda,
+                 int para_num_passes,
+                 int para_step_len,
+                 int para_verbose,
                  double *re_wt,
                  double *re_wt_bar,
-                 double *re_auc);
+                 double *re_auc,
+                 double *re_rts);
 
 
 void _algo_opauc_sparse(const double *x_tr_vals,
