@@ -512,7 +512,7 @@ def run_ms(method_name):
 
 
 def main():
-    run_ms(method_name='sht_am')
+    run_ms(method_name=sys.argv[1])
 
 
 if __name__ == '__main__':
