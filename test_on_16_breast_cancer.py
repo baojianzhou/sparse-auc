@@ -405,7 +405,7 @@ def cv_spam_l2(k_fold, method_name, task_id, num_passes, step_len, data):
 
 def cv_spam_l1l2(k_fold, method_name, task_id, num_passes, step_len, data):
     results = dict()
-    list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_c = 10. ** np.arange(-2, 3, 1, dtype=float)
     list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
     list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
     for fold_id in range(k_fold):
