@@ -501,7 +501,7 @@ def run_ms(method_name):
 
 
 def main():
-    run_ms(method_name='spam_l2')
+    run_ms(method_name='spam_l1l2')
 
 
 if __name__ == '__main__':
