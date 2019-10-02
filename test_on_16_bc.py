@@ -501,11 +501,7 @@ def run_ms(method_name):
 
 
 def main():
-<<<<<<< HEAD
-    run_ms(method_name='spam_l2')
-=======
     run_ms(method_name='graph_am')
->>>>>>> acb214061b46e032f32c5c26450ee525fdcc0890
 
 
 if __name__ == '__main__':
