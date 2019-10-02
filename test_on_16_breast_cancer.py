@@ -270,18 +270,6 @@ def get_single_data(root_input):
     data['data_pathways'] = np.asarray(data_pathways, dtype=int)
     data_entrez = [_[0] for _ in re['data_entrez']]
     data['data_entrez'] = np.asarray(data_entrez, dtype=int)
-    data['data_splits'] = {i: dict() for i in range(5)}
-    data['data_subsplits'] = {i: {j: dict() for j in range(5)} for i in range(5)}
-    for i in range(5):
-        xx = re['data_splits'][0][i][0][0]['train']
-        data['data_splits'][i]['train'] = [_ - 1 for _ in xx[0]]
-        xx = re['data_splits'][0][i][0][0]['test']
-        data['data_splits'][i]['test'] = [_ - 1 for _ in xx[0]]
-        for j in range(5):
-            xx = re['data_subsplits'][0][i][0][j]['train'][0][0]
-            data['data_subsplits'][i][j]['train'] = [_ - 1 for _ in xx[0]]
-            xx = re['data_subsplits'][0][i][0][j]['test'][0][0]
-            data['data_subsplits'][i][j]['test'] = [_ - 1 for _ in xx[0]]
     import networkx as nx
     g = nx.Graph()
     ind_pathways = {_: i for i, _ in enumerate(data['data_entrez'])}
@@ -324,11 +312,14 @@ def get_single_data(root_input):
         vv = list(maximum_nodes).index(edge[1])
         data['edges'][edge_ind][0] = uu
         data['edges'][edge_ind][1] = vv
+    normalized_data = []
+    for row in data['x']:
+        normalized_data.append(row / np.linalg.norm(row))
     input_data = {'all_x_tr': np.asarray(data['data_X'], dtype=float),
                   'all_y_tr': np.asarray(data['data_Y'], dtype=float),
                   'all_edges': data['data_edges'], 'all_entrez': data['data_entrez'],
                   'cancer_related_genes': data['cancer_related_genes'],
-                  'data_x_tr': np.asarray(data['x'], dtype=float),
+                  'data_x_tr': np.asarray(normalized_data, dtype=float),
                   'data_y_tr': np.asarray(data['y'], dtype=float),
                   'data_weights': np.asarray(data['costs'], dtype=float),
                   'data_edges': data['edges'], 'data_nodes': data['nodes'],
@@ -351,34 +342,110 @@ def get_single_data(root_input):
     pkl.dump(input_data, open(os.path.join(root_input, 'input_bc.pkl'), 'wb'))
 
 
+def pred(wt, wt_bar, te_index, data):
+    if (not np.isnan(wt).any()) and (not np.isinf(wt).any()):
+        auc_wt = roc_auc_score(y_true=data['data_y_tr'][te_index],
+                               y_score=np.dot(data['data_x_tr'][te_index], wt))
+    else:
+        auc_wt = 0.0
+    if (not np.isnan(wt_bar).any()) and (not np.isinf(wt_bar).any()):
+        auc_wt_bar = roc_auc_score(
+            y_true=data['data_y_tr'][te_index],
+            y_score=np.dot(data['data_x_tr'][te_index], wt_bar))
+    else:
+        auc_wt_bar = 0.0
+    return auc_wt, auc_wt_bar
+
+
+def cv_spam_l1(method_name, task_id, num_passes, step_len, data):
+    results = dict()
+    list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    for fold_id in range(5):
+        results[(task_id, fold_id)] = dict()
+        tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+        best_auc = None
+        for para_c, para_l1 in product(list_c, list_l1):
+            wt, wt_bar, auc, rts = c_algo_spam(
+                np.asarray(data['data_x_tr'][tr_index], dtype=float),
+                np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                para_c, para_l1, 0.0, 0, num_passes, step_len, 0)
+            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+            print(para_c, para_l1, auc_wt, auc_wt_bar)
+            if best_auc is None or best_auc['auc_wt'] < auc_wt:
+                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+                            'auc': auc, 'rts': rts, 'para_c': para_c, 'para_l1': para_l1}
+        results[(task_id, fold_id)][method_name] = best_auc
+    return results
+
+
+def cv_sht_am(method_name, task_id, num_passes, step_len, data):
+    results = dict()
+    list_b = [20]
+    list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
+    list_sparsity = [50, 100, 150, 200, 250, 300, 350, 400]
+    for fold_id in range(5):
+        results[(task_id, fold_id)] = dict()
+        tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+        best_auc = None
+        for para_b, para_c, sparsity in product(list_b, list_c, list_sparsity):
+            wt, wt_bar, auc, rts = c_algo_sht_am(
+                np.asarray(data['data_x_tr'][tr_index], dtype=float),
+                np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                sparsity, para_b, para_c, 0.0, num_passes, step_len, 0)
+            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+            print(para_b, para_c, sparsity, auc_wt, auc_wt_bar)
+            if best_auc is None or best_auc['auc_wt'] < auc_wt:
+                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+                            'auc': auc, 'rts': rts, 'para_c': para_c, 'sparsity': sparsity}
+        results[(task_id, fold_id)][method_name] = best_auc
+    return results
+
+
+def cv_graph_am(method_name, task_id, num_passes, step_len, data):
+    results = dict()
+    list_b = [20]
+    list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
+    list_sparsity = [50, 100, 150, 200, 250, 300, 350, 400]
+    for fold_id in range(5):
+        results[(task_id, fold_id)] = dict()
+        tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+        best_auc = None
+        for para_b, para_c, sparsity in product(list_b, list_c, list_sparsity):
+            wt, wt_bar, auc, rts = c_algo_graph_am(
+                np.asarray(data['data_x_tr'][tr_index], dtype=float),
+                np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                np.asarray(data['data_edges'], dtype=np.int32),
+                np.asarray(data['data_weights'], dtype=float),
+                sparsity, para_b, para_c, 0.0, num_passes, step_len, 0)
+            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+            print(para_b, para_c, sparsity, auc_wt, auc_wt_bar)
+            if best_auc is None or best_auc['auc_wt'] < auc_wt:
+                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+                            'auc': auc, 'rts': rts, 'para_c': para_c, 'sparsity': sparsity}
+        results[(task_id, fold_id)][method_name] = best_auc
+    return results
+
+
 def run_ms(method_name):
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    k_fold, num_passes, step_len = 5, 50, 20
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
+    data = pkl.load(open(data_path + 'input_bc.pkl', 'rb'))
+    results = dict()
     if method_name == 'spam_l1':
-        data = pkl.load(open(data_path + 'input_bc.pkl', 'rb'))
-        for run_id in range(20):
-            for fold_id in range(5):
-                tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-                te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
-                num_posi = len([_ for _ in data['data_y_tr'][te_index] if _ > 0.])
-                total_posi = len([_ for _ in data['data_y_tr'] if _ > 0.])
-                print(len(tr_index), len(te_index), num_posi, total_posi)
-                reg_opt, step_len, verbose = 0, 10000000, 0
-                list_c = 10. ** np.arange(-5, 1, 1, dtype=float)
-                list_l1 = 10. ** np.arange(-5, 1, 1, dtype=float)
-                num_passes = 5
-                for para_c, para_l1 in product(list_c, list_l1):
-                    wt, wt_bar, auc, rts = c_algo_spam(
-                        np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                        np.asarray(data['data_y_tr'][tr_index], dtype=float),
-                        para_c, para_l1, 0.0, reg_opt, num_passes, step_len, verbose)
-                    auc_wt = roc_auc_score(y_true=data['data_y_tr'][te_index],
-                                           y_score=np.dot(data['data_x_tr'][te_index], wt))
-                    auc_wt_bar = roc_auc_score(y_true=data['data_y_tr'][te_index],
-                                               y_score=np.dot(data['data_x_tr'][te_index],
-                                                              wt_bar))
-                    print(auc_wt, auc_wt_bar)
-                break
-            break
+        results = cv_spam_l1(method_name, task_id, num_passes, step_len, data)
+    if method_name == 'sht_am':
+        results = cv_sht_am(method_name, task_id, num_passes, step_len, data)
+    if method_name == 'graph_am':
+        results = cv_graph_am(method_name, task_id, num_passes, step_len, data)
+    pkl.dump(results, open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
 
 
 def main():

@@ -2037,8 +2037,8 @@ void _algo_graph_am(const double *data_x_tr,
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
             //to do graph projection.
             for (int kk = 0; kk < data_p; kk++) { proj_prizes[kk] = u[kk] * u[kk]; }
-            int g = 1, sparsity_low = para_sparsity, sparsity_high = para_sparsity + 2;
-            int tail_max_iter = 50, verbose = 0;
+            int g = 1, sparsity_low = para_sparsity, sparsity_high = para_sparsity + 10;
+            int tail_max_iter = 20, verbose = 0;
             head_tail_binsearch(edges, weights, proj_prizes, data_p, data_m, g, -1, sparsity_low,
                                 sparsity_high, tail_max_iter, GWPruning, verbose, graph_stat);
             cblas_dscal(data_p, 0.0, re_wt, 1);
