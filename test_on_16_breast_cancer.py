@@ -372,10 +372,33 @@ def cv_spam_l1(method_name, task_id, num_passes, step_len, data):
                 np.asarray(data['data_y_tr'][tr_index], dtype=float),
                 para_c, para_l1, 0.0, 0, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(para_c, para_l1, auc_wt, auc_wt_bar)
+            print(fold_id, para_c, para_l1, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
                 best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
                             'auc': auc, 'rts': rts, 'para_c': para_c, 'para_l1': para_l1}
+        results[(task_id, fold_id)][method_name] = best_auc
+    return results
+
+
+def cv_spam_l2(method_name, task_id, num_passes, step_len, data):
+    results = dict()
+    list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    for fold_id in range(5):
+        results[(task_id, fold_id)] = dict()
+        tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+        best_auc = None
+        for para_c, para_l2 in product(list_c, list_l2):
+            wt, wt_bar, auc, rts = c_algo_spam(
+                np.asarray(data['data_x_tr'][tr_index], dtype=float),
+                np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                para_c, 0.0, para_l2, 1, num_passes, step_len, 0)
+            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+            print(fold_id, para_c, para_l2, auc_wt, auc_wt_bar)
+            if best_auc is None or best_auc['auc_wt'] < auc_wt:
+                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+                            'auc': auc, 'rts': rts, 'para_c': para_c, 'para_l2': para_l2}
         results[(task_id, fold_id)][method_name] = best_auc
     return results
 
@@ -396,7 +419,7 @@ def cv_sht_am(method_name, task_id, num_passes, step_len, data):
                 np.asarray(data['data_y_tr'][tr_index], dtype=float),
                 sparsity, para_b, para_c, 0.0, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(para_b, para_c, sparsity, auc_wt, auc_wt_bar)
+            print(fold_id, para_b, para_c, sparsity, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
                 best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
                             'auc': auc, 'rts': rts, 'para_c': para_c, 'sparsity': sparsity}
@@ -437,19 +460,22 @@ def run_ms(method_name):
         task_id = 0
     k_fold, num_passes, step_len = 5, 50, 20
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
-    data = pkl.load(open(data_path + 'input_bc.pkl', 'rb'))
+    data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
     results = dict()
     if method_name == 'spam_l1':
         results = cv_spam_l1(method_name, task_id, num_passes, step_len, data)
-    if method_name == 'sht_am':
+    if method_name == 'spam_l2':
+        results = cv_spam_l2(method_name, task_id, num_passes, step_len, data)
+    elif method_name == 'sht_am':
         results = cv_sht_am(method_name, task_id, num_passes, step_len, data)
-    if method_name == 'graph_am':
+    elif method_name == 'graph_am':
         results = cv_graph_am(method_name, task_id, num_passes, step_len, data)
-    pkl.dump(results, open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method_name), 'wb'))
+    f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
+    pkl.dump(results, open(f_path, 'wb'))
 
 
 def main():
-    run_ms(method_name='spam_l1')
+    run_ms(method_name='spam_l2')
 
 
 if __name__ == '__main__':
