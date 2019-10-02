@@ -1258,10 +1258,12 @@ bool _algo_solam(const double *data_x_tr,
                  double para_xi,
                  double para_r,
                  int para_num_pass,
+                 int para_step_len,
                  int para_verbose,
                  double *re_wt,
                  double *re_wt_bar,
-                 double *re_auc) {
+                 double *re_auc,
+                 double *re_rts) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -1284,7 +1286,8 @@ bool _algo_solam(const double *data_x_tr,
     memset(v_bar_prev, 0, sizeof(double) * (data_p + 2));
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt, 1);
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt_bar, 1);
-
+    double *y_pred = malloc(sizeof(double) * data_n);
+    int auc_index = 0;
     for (int i = 0; i < para_num_pass; i++) {
         for (int j = 0; j < data_n; j++) {
             // current sample
@@ -1344,11 +1347,19 @@ bool _algo_solam(const double *data_x_tr,
             gamma_bar_prev = gamma_bar;
             cblas_dcopy(data_p + 2, v_bar, 1, v_bar_prev, 1);
             cblas_dcopy(data_p + 2, v, 1, v_prev, 1);
+
+            if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
+                cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                            data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
+                re_auc[auc_index++] = _auc_score(data_y_tr, y_pred, data_n);
+            }
             // update the counts
             t = t + 1.;
+
         }
     }
     cblas_dcopy(data_p, v_bar, 1, re_wt, 1);
+    free(y_pred);
     free(v_bar_prev);
     free(v_bar);
     free(grad_v);
@@ -1563,8 +1574,7 @@ void _algo_spam(const double *data_x_tr,
             if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
                             data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-                double auc = _auc_score(data_y_tr, y_pred, data_n);
-                re_auc[auc_index++] = auc;
+                re_auc[auc_index++] = _auc_score(data_y_tr, y_pred, data_n);
             }
             t = t + 1.0; // increase time
         }

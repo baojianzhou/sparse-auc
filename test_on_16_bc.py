@@ -505,6 +505,29 @@ def cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data):
     return results
 
 
+def cv_solam(method_name, k_fold, task_id, num_passes, step_len, data):
+    results = dict()
+    list_xi = np.arange(1, 101, 9, dtype=float)
+    list_r = 10 ** np.arange(-1, 6, 1, dtype=float)
+    for fold_id in range(k_fold):
+        results[(task_id, fold_id)] = dict()
+        tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+        best_auc = None
+        for para_xi, para_r in product(list_xi, list_r):
+            wt, wt_bar, auc, rts = c_algo_solam(
+                np.asarray(data['data_x_tr'][tr_index], dtype=float),
+                np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                para_xi, para_r, num_passes, step_len, 0)
+            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+            print(para_xi, para_r, auc_wt, auc_wt_bar)
+            if best_auc is None or best_auc['auc_wt'] < auc_wt:
+                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
+                            'auc': auc, 'rts': rts, 'para_xi': para_xi, 'para_r': para_r}
+        results[(task_id, fold_id)][method_name] = best_auc
+    return results
+
+
 def run_ms(method_name):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -526,6 +549,8 @@ def run_ms(method_name):
         results = cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'fsauc':
         results = cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data)
+    elif method_name == 'solam':
+        results = cv_solam(method_name, k_fold, task_id, num_passes, step_len, data)
     f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
     pkl.dump(results, open(f_path, 'wb'))
 

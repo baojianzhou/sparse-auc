@@ -114,10 +114,12 @@ bool _algo_solam(const double *data_x_tr,
                  double para_xi,
                  double para_r,
                  int para_num_pass,
+                 int para_step_len,
                  int para_verbose,
                  double *re_wt,
                  double *re_wt_bar,
-                 double *re_auc);
+                 double *re_auc,
+                 double *re_rts);
 
 bool _algo_solam_sparse(const double *x_tr_vals,
                         const int *x_tr_indices,
