@@ -489,7 +489,7 @@ def run_test_result():
 
 
 def main():
-    run_test_result()
+    run_ms_sht_am()
 
 
 if __name__ == '__main__':
