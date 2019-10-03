@@ -182,9 +182,9 @@ def cv_spam_l2(run_id, fold_id, num_passes, data):
 
 
 def cv_spam_l1l2(run_id, fold_id, num_passes, data):
-    list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-    list_beta = 10. ** np.arange(-5, 6, 1, dtype=float)
-    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_c = 10. ** np.arange(-2, 3, 1, dtype=float)
+    list_beta = 10. ** np.arange(-5, 2, 1, dtype=float)
+    list_l1 = 10. ** np.arange(-5, 2, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for para_c, para_beta, para_l1 in product(list_c, list_beta, list_l1):
