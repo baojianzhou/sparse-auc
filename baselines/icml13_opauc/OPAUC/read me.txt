@@ -1,0 +1,11 @@
+Description: This package includes the MATLAB code of One-Pass AUC Optimization (OPAUC).
+
+Reference: 
+[1]  Wei Gao, Rong Jin, Shenghou Zhu and Zhi-Hua Zhou. One-Pass AUC Optimzation. In: Proceedings of the 30th International conference on Machine Learning (ICML'13), Atlanta, GA, 2013, JMLR: W&CP 28(3), pp.906-914. 
+[2] Wei Gao, Lu Wang, Rong Jin, Shenghou Zhu and Zhi-Hua Zhou. One-Pass AUC Optimzation. Artificial Intelligence. In press.
+
+ATTN: This package is free for academic usage. You can run it at your own risk. For other purposes, please contact Prof. Zhi-Hua Zhou (zhouzh@nju.edu.cn). 
+
+Requirement: The package was developed with MATLAB 
+
+ATTN2: This package was developed by Mr. Wei Gao (gaow@lamda.nju.edu.cn). For any problem concerning the code, please feel free to contact Mr. Gao.
