@@ -4,6 +4,14 @@
 #include "auc_opt_methods.h"
 
 
+void randn(int n, double *samples) {
+    for (int i = 0; i < n; i++) {
+        double x = (double) random() / (RAND_MAX * 1.);
+        double y = (double) random() / (RAND_MAX * 1.);
+        samples[i] = sqrt(-2.0 * log(x)) * cos(2.0 * M_PI * y);
+    }
+}
+
 static inline int __comp_descend(const void *a, const void *b) {
     if (((data_pair *) a)->val < ((data_pair *) b)->val) {
         return 1;
@@ -2336,9 +2344,9 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         const double *data_y_tr,
                         int data_n,
                         int data_p,
+                        int para_tau,
                         double para_eta,
                         double para_lambda,
-                        double para_r,
                         double para_step_len,
                         double para_verbose,
                         double *re_wt,
@@ -2351,22 +2359,25 @@ void _algo_opauc_sparse(const double *x_tr_vals,
     double num_p = 0.0, num_n = 0.0;
     double *center_p = malloc(sizeof(double) * data_p);
     double *center_n = malloc(sizeof(double) * data_p);
-    double *cov_p = malloc(sizeof(double) * data_p * data_p);
-    double *cov_n = malloc(sizeof(double) * data_p * data_p);
+    double *h_center_p = malloc(sizeof(double) * para_tau);
+    double *h_center_n = malloc(sizeof(double) * para_tau);
+    double *z_p = malloc(sizeof(double) * data_p * para_tau);
+    double *z_n = malloc(sizeof(double) * data_p * para_tau);
     double *grad_wt = malloc(sizeof(double) * data_p);
     memset(center_p, 0, sizeof(double) * data_p);
     memset(center_n, 0, sizeof(double) * data_p);
-    memset(cov_p, 0, sizeof(double) * data_p * data_p);
-    memset(cov_n, 0, sizeof(double) * data_p * data_p);
+    memset(z_p, 0, sizeof(double) * data_p * data_p);
+    memset(z_n, 0, sizeof(double) * data_p * data_p);
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
 
-    double *tmp_mat = malloc(sizeof(double) * data_p * data_p);
+    double *tmp_mat = malloc(sizeof(double) * data_p * para_tau);
     double *tmp_vec = malloc(sizeof(double) * data_p);
     memset(tmp_mat, 0, sizeof(double) * data_p);
     memset(tmp_vec, 0, sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
     double *xt = malloc(sizeof(double) * data_p);
+    double *gaussian_samples = malloc(sizeof(double) * para_tau);
     int auc_index = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n; t++) {
@@ -2374,8 +2385,9 @@ void _algo_opauc_sparse(const double *x_tr_vals,
         const double *xt_vals = x_tr_vals + x_tr_posis[t];
         memset(xt, 0, sizeof(double) * data_p);
         for (int tt = 0; tt < x_tr_lens[t]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
-        double cur_y = data_y_tr[t];
-        if (cur_y > 0) {
+        randn(para_tau, gaussian_samples);
+        cblas_dscal(para_tau, 1. / sqrt(para_tau), gaussian_samples);
+        if (data_y_tr[t] > 0) {
             num_p++;
             cblas_dcopy(data_p, center_p, 1, tmp_vec, 1); // copy previous center
             cblas_dscal(data_p, (num_p - 1.) / num_p, center_p, 1); // update center_p
@@ -2460,6 +2472,7 @@ void _algo_opauc_sparse(const double *x_tr_vals,
             re_rts[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
         }
     }
+    free(gaussian_samples);
     free(xt);
     free(y_pred);
     free(tmp_vec);
@@ -2467,6 +2480,8 @@ void _algo_opauc_sparse(const double *x_tr_vals,
     free(grad_wt);
     free(cov_n);
     free(cov_p);
+    free(h_center_n);
+    free(h_center_p);
     free(center_n);
     free(center_p);
 

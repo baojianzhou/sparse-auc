@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <limits.h>
 
 // These are the third part library needed.
 #include <cblas.h>
@@ -323,9 +324,9 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         const double *data_y_tr,
                         int data_n,
                         int data_p,
+                        int para_tau,
                         double para_eta,
                         double para_lambda,
-                        double para_r,
                         double para_step_len,
                         double para_verbose,
                         double *re_wt,

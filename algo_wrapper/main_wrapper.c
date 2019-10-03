@@ -308,12 +308,12 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
 static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; } // error: unknown error !!
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
-    int data_n, data_p, para_num_passes, para_step_len, para_verbose, total_num_eval;
+    int data_n, data_p, para_tau, para_num_passes, para_step_len, para_verbose, total_num_eval;
     double para_eta, para_lambda, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiddii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiddiii",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds,
                           &PyArray_Type, &x_tr_posis, &PyArray_Type, &x_tr_lens,
-                          &PyArray_Type, &data_y_tr, &data_p, &para_eta, &para_lambda,
+                          &PyArray_Type, &data_y_tr, &data_p, &para_tau, &para_eta, &para_lambda,
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
     total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
@@ -323,8 +323,8 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
     re_rts = malloc(sizeof(double) * total_num_eval);
     _algo_opauc_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                        (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
-                       (double *) PyArray_DATA(data_y_tr), data_p, data_n, para_eta, para_lambda,
-                       re_wt, re_wt_bar, re_auc);
+                       (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_tau, para_eta,
+                       para_lambda, re_wt, re_wt_bar, re_auc);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
     free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);
     return results;

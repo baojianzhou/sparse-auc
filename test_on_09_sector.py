@@ -304,15 +304,17 @@ def cv_solam(run_id, fold_id, num_passes, data):
 
 
 def cv_opauc(run_id, fold_id, num_passes, data):
+    list_tau = [50]
     list_eta = 2. ** np.arange(-12, -4, 1, dtype=float)
     list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
     auc_wt, auc_wt_bar = dict(), dict()
     s_time = time.time()
-    for para_eta, para_lambda in product(list_eta, list_lambda):
+    step_len = 1000000
+    for para_tau, para_eta, para_lambda in product(list_tau, list_eta, list_lambda):
         if fold_id == 1:
             break
         # only run sub-tasks for parallel
-        algo_para = (run_id, fold_id, num_passes, para_eta, para_lambda)
+        algo_para = (run_id, fold_id, num_passes, para_tau, para_eta, para_lambda)
         tr_index = data['task_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
@@ -333,7 +335,7 @@ def cv_opauc(run_id, fold_id, num_passes, data):
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], para_eta, para_lambda, num_passes, 0)
+                data['p'], para_tau, para_eta, para_lambda, num_passes, step_len, 0)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
