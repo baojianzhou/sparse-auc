@@ -384,8 +384,7 @@ def cv_fsauc(run_id, fold_id, num_passes, data):
         # only run sub-tasks for parallel
         algo_para = (run_id, fold_id, num_passes, para_r, para_g)
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-        # cross validate based on tr_index
-        if (run_id, fold_id) not in auc_wt:
+        if (run_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
         list_auc_wt = np.zeros(data['num_k_fold'])
@@ -398,18 +397,23 @@ def cv_fsauc(run_id, fold_id, num_passes, data):
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
             sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
-            re = c_algo_fsauc_sparse(
+            wt, wt_bar, aucs, rts = c_algo_fsauc_sparse(
                 np.asarray(sub_x_values, dtype=float),
                 np.asarray(sub_x_indices, dtype=np.int32),
                 np.asarray(sub_x_positions, dtype=np.int32),
                 np.asarray(sub_x_len_list, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                data['p'], num_passes, para_r, para_g, step_len, verbose)
-            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+                data['p'], para_r, para_g, num_passes, step_len, verbose)
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
+            if (not np.isnan(y_pred_wt).any()) and (not np.isinf(y_pred_wt).any()):
+                list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
+            else:
+                list_auc_wt[ind] = 0.0
+            if (not np.isnan(y_pred_wt_bar).any()) and (not np.isinf(y_pred_wt_bar).any()):
+                list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
+            else:
+                list_auc_wt_bar[ind] = 0.0
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         print('para_r: %.4f para_g: %.4f AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.2f' %
