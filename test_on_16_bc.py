@@ -472,7 +472,7 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
                 np.asarray(data['data_y_tr'][tr_index], dtype=float),
                 np.asarray(data['data_edges'], dtype=np.int32),
                 np.asarray(data['data_weights'], dtype=float),
-                sparsity, para_b, para_c, 0.0, num_passes, step_len, 0)
+                sparsity, para_b, para_c, 1e-3, num_passes, step_len, 0)
             auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
             print(fold_id, para_b, para_c, sparsity, auc_wt, auc_wt_bar)
             if best_auc is None or best_auc['auc_wt'] < auc_wt:
