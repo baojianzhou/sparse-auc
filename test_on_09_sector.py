@@ -311,11 +311,9 @@ def cv_opauc(run_id, fold_id, num_passes, data):
     s_time = time.time()
     step_len = 1000000
     for para_tau, para_eta, para_lambda in product(list_tau, list_eta, list_lambda):
-        if fold_id == 1:
-            break
         # only run sub-tasks for parallel
         algo_para = (run_id, fold_id, num_passes, para_tau, para_eta, para_lambda)
-        tr_index = data['task_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+        tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (run_id, fold_id) not in auc_wt:
             auc_wt[(run_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -328,19 +326,17 @@ def cv_opauc(run_id, fold_id, num_passes, data):
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(
                 kf.split(np.zeros(shape=(len(tr_index), 1)))):
             _ = get_sub_data_by_indices(data, tr_index, sub_tr_ind)
-            sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
-            re = c_algo_opauc_sparse(
-                np.asarray(sub_x_values, dtype=float),
-                np.asarray(sub_x_indices, dtype=np.int32),
-                np.asarray(sub_x_positions, dtype=np.int32),
-                np.asarray(sub_x_len_list, dtype=np.int32),
+            sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens = _
+            wt, wt_bar, aucs, rts = c_algo_opauc_sparse(
+                np.asarray(sub_x_vals, dtype=float), np.asarray(sub_x_inds, dtype=np.int32),
+                np.asarray(sub_x_posis, dtype=np.int32), np.asarray(sub_x_lens, dtype=np.int32),
                 np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
                 data['p'], para_tau, para_eta, para_lambda, num_passes, step_len, 0)
-            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             y_pred_wt, y_pred_wt_bar = pred(data, tr_index, sub_te_ind, wt, wt_bar)
-            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt_bar)
+            list_auc_wt[ind] = roc_auc_score(data['y_tr'][tr_index[sub_te_ind]], y_pred_wt)
+            list_auc_wt_bar[ind] = roc_auc_score(data['y_tr'][tr_index[sub_te_ind]], y_pred_wt_bar)
+            print(ind, list_auc_wt[ind], list_auc_wt_bar[ind], np.linalg.norm(wt),
+                  np.linalg.norm(wt_bar), time.time() - s_time)
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         print('fold-id:%d AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.4f' %
@@ -355,17 +351,6 @@ def cv_opauc(run_id, fold_id, num_passes, data):
             auc_wt_bar[(run_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(run_id, fold_id)]['num_nonzeros'] = float(
                 np.mean(list_num_nonzeros_wt_bar))
-    # to save some model selection time.
-    for fold_id in range(data['num_k_fold']):
-        if (run_id, fold_id) not in auc_wt:
-            auc_wt[(run_id, fold_id)] = {
-                'auc': auc_wt[(run_id, 0)]['auc'],
-                'para': auc_wt[(run_id, 0)]['para'],
-                'num_nonzeros': auc_wt[(run_id, 0)]['num_nonzeros']}
-            auc_wt_bar[(run_id, fold_id)] = {
-                'auc': auc_wt_bar[(run_id, 0)]['auc'],
-                'para': auc_wt_bar[(run_id, 0)]['para'],
-                'num_nonzeros': auc_wt_bar[(run_id, 0)]['num_nonzeros']}
     run_time = time.time() - s_time
     print('-' * 40 + ' opauc ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -1158,7 +1143,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='fsauc')
+    run_ms(method_name='opauc')
 
 
 if __name__ == '__main__':
