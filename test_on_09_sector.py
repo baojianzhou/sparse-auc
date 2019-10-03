@@ -1143,7 +1143,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='fsauc')
+    run_ms(method_name='opauc')
 
 
 if __name__ == '__main__':
