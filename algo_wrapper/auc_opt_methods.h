@@ -317,17 +317,21 @@ void _algo_opauc(const double *data_x_tr,
 
 
 void _algo_opauc_sparse(const double *x_tr_vals,
-                        const int *x_tr_indices,
+                        const int *x_tr_inds,
                         const int *x_tr_posis,
                         const int *x_tr_lens,
-                        const double *y_tr,
-                        int p,
-                        int n,
-                        double eta,
-                        double lambda,
-                        double *wt,
-                        double *wt_bar,
-                        double *re_auc);
+                        const double *data_y_tr,
+                        int data_n,
+                        int data_p,
+                        double para_eta,
+                        double para_lambda,
+                        double para_r,
+                        double para_step_len,
+                        double para_verbose,
+                        double *re_wt,
+                        double *re_wt_bar,
+                        double *re_auc,
+                        double *re_rts);
 
 /**
  *
