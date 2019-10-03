@@ -8,7 +8,7 @@ void randn(int n, double *samples) {
     for (int i = 0; i < n; i++) {
         double x = drand48() / (RAND_MAX * 1.);
         double y = drand48() / (RAND_MAX * 1.);
-        samples[i] = sqrt(-2.0 * log(x)) * cos(2.0 * M_PI * y);
+        samples[i] = sqrt(-2.0 * log(x)) * cos(2.0 * PI * y);
     }
 }
 

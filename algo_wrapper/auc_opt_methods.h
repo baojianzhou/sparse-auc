@@ -17,6 +17,7 @@
 #include <cblas.h>
 #include "fast_pcst.h"
 
+#define PI 3.14159265358979323846
 #define sign(x) (x > 0) - (x < 0)
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) < (b) ? (a) : (b))
