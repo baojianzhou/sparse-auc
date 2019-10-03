@@ -324,7 +324,7 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
     _algo_opauc_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                        (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
                        (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_tau, para_eta,
-                       para_lambda, re_wt, re_wt_bar, re_auc);
+                       para_lambda, para_step_len, para_verbose, re_wt, re_wt_bar, re_auc, re_rts);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
     free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);
     return results;
