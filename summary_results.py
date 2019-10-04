@@ -434,5 +434,9 @@ def results_16_bc():
     print(' & '.join(list_means)),
 
 
+def results_09_sector():
+    pass
+
+
 if __name__ == '__main__':
     results_16_bc()
