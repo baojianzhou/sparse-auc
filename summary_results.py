@@ -435,8 +435,25 @@ def results_16_bc():
 
 
 def results_09_sector():
-    pass
+    num_passes = 20
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/09_sector/'
+    method_list = ['spam_l2', 'spam_l1', 'fsauc', 'solam', 'sht_am']
+    print(' ' * 10 + '         '.join(method_list))
+    for method_name in method_list:
+        aucs = []
+        for run_id in range(5):
+            for fold_id in range(5):
+                task_id = run_id * 5 + fold_id
+                xx = pkl.load(
+                    open(os.path.join(data_path,
+                                      'results_task_%02d_passes_%s.pkl' % (task_id, num_passes)),
+                         'rb'))
+                for item in xx:
+                    aucs.append(xx[item][method_name]['auc_wt'])
+        print(method_name, '%.4f %.4f' % (np.mean(aucs), np.std(aucs)))
 
 
 if __name__ == '__main__':
-    results_16_bc()
+    print(np.mean([0.969078979396444, 0.967962123475392,
+                   0.9691899510640349, 0.9647413228268559, 0.967910096671877]))
+    # results_09_sector()

@@ -456,21 +456,8 @@ def test():
     print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
 
 
-def run_testing():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        task_id = 0
-    run_id, fold_id, num_passes, step_len = task_id / 5, task_id / 5, 20, 10000000
-    data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
-
-    ms_f_name = data_path + 'ms_task_%02d_%s.pkl'
-    tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-    te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
-    _ = get_data_by_ind(data, tr_index, range(len(tr_index)))
-    x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr = _
-    results, key = dict(), (run_id, fold_id)
-    results[key] = dict()
+def test():
+    exit()
     # -----------------------
     method = 'spam_l1'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
@@ -508,17 +495,38 @@ def run_testing():
         data['p'], _[3], _[4], num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
     print(fold_id, method, results[key][method]['auc_wt'])
-    # -----------------------
-    method = 'solam'
-    ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
-    _, _, _, para_xi, para_r = ms[key][method][0][(run_id, fold_id)]['para']
-    wt, wt_bar, auc, rts = c_algo_solam_sparse(
-        x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
-        data['p'], para_xi, para_r, num_passes, step_len, 0)
-    results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
-    print(fold_id, method, results[key][method]['auc_wt'])
     f_name = 'results_task_%02d_passes_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, num_passes)), 'wb'))
+
+
+def run_testing():
+    s_time = time.time()
+    if 'SLURM_ARRAY_TASK_ID' in os.environ:
+        task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
+    else:
+        task_id = 0
+    for task_id in range(25):
+        run_id, fold_id, num_passes, step_len = task_id / 5, task_id % 5, 50, 10000000
+        data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
+
+        ms_f_name = data_path + 'ms_task_%02d_%s.pkl'
+        tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
+        _ = get_data_by_ind(data, tr_index, range(len(tr_index)))
+        x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr = _
+        results, key = dict(), (run_id, fold_id)
+        results[key] = dict()
+        # -----------------------
+        method = 'solam'
+        ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
+        for item in ms:
+            _, _, _, para_xi, para_r = ms[item][method][0][(run_id, task_id / 5)]['para']
+        wt, wt_bar, auc, rts = c_algo_solam_sparse(
+            x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
+            data['p'], para_xi, para_r, num_passes, step_len, 0)
+        results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_xi, para_r), te_index,
+                                            data)
+        print(fold_id, method, results[key][method]['auc_wt'], time.time() - s_time)
 
 
 def main():
