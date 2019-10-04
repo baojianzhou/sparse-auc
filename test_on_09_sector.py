@@ -502,10 +502,10 @@ def run_testing():
     # -----------------------
     method = 'fsauc'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
-    _, _, _, para_r, para_g, _ = ms[key][method][0][(run_id, fold_id)]['para']
+    _ = ms[key][method][0][(run_id, fold_id)]['para']
     wt, wt_bar, auc, rts = c_algo_fsauc_sparse(
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
-        data['p'], para_r, para_g, num_passes, step_len, 0)
+        data['p'], _[3], _[4], num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
     print(fold_id, method, results[key][method]['auc_wt'])
     # -----------------------
