@@ -1929,7 +1929,7 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
             cblas_dcopy(data_p, u, 1, re_wt, 1);
             cblas_dscal(data_p, (t - 1.) / t, re_wt_bar, 1);
             cblas_daxpy(data_p, 1. / t, re_wt, 1, re_wt_bar, 1);
-            if (true) { // to calculate AUC score
+            if (false) { // to calculate AUC score
                 double cur_t_s = clock();
                 for (int q = 0; q < data_n; q++) {
                     memset(xt, 0, sizeof(double) * data_p);

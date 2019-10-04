@@ -204,7 +204,7 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
                         para_xi, para_l2_reg, para_num_passes, para_step_len, para_verbose, re_wt,
                         re_wt_bar, re_auc, re_rts);
     PyObject *results = get_results(data_p, total_num_eval, re_wt, re_wt_bar, re_auc, re_rts);
-    free(re_wt), free(re_wt_bar), free(re_auc);
+    free(re_wt), free(re_wt_bar), free(re_auc), free(re_rts);
     return results;
 }
 

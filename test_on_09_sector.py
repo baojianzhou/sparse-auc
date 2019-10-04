@@ -431,9 +431,7 @@ def run_ms(method_name):
 
 
 def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
-    y_pred_wt, y_pred_wt_bar = pred_auc(data, te_index, range(len(te_index)), wt, wt_bar)
-    return {'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt),
-            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index], y_score=y_pred_wt_bar),
+    return {'auc_wt': pred_auc(data, te_index, range(len(te_index)), wt),
             'nonzero_wt': np.count_nonzero(wt),
             'algo_para': para_list,
             'auc': auc,
@@ -463,22 +461,16 @@ def run_testing():
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    run_id, fold_id, num_passes, step_len = task_id / 5, task_id / 5, 2, 10000000
+    run_id, fold_id, num_passes, step_len = task_id / 5, task_id / 5, 20, 10000000
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
 
     ms_f_name = data_path + 'ms_task_%02d_%s.pkl'
     tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
     te_index = data['run_%d_fold_%d' % (run_id, fold_id)]['te_index']
     _ = get_data_by_ind(data, tr_index, range(len(tr_index)))
-    sub_x_values, sub_x_indices, sub_x_positions, sub_x_len_list = _
-    x_tr_vals = np.asarray(sub_x_values, dtype=float)
-    x_tr_inds = np.asarray(sub_x_indices, dtype=np.int32)
-    x_tr_posis = np.asarray(sub_x_positions, dtype=np.int32)
-    x_tr_lens = np.asarray(sub_x_len_list, dtype=np.int32)
-    y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+    x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr = _
     results, key = dict(), (run_id, fold_id)
     results[key] = dict()
-
     # -----------------------
     method = 'spam_l1'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
@@ -487,7 +479,7 @@ def run_testing():
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         data['p'], para_c, para_l1, 0.0, 0, num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
-    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
+    print(fold_id, method, results[key][method]['auc_wt'])
     # -----------------------
     method = 'spam_l2'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
@@ -496,7 +488,7 @@ def run_testing():
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         data['p'], para_c, 0.0, para_beta, 1, num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
-    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
+    print(fold_id, method, results[key][method]['auc_wt'])
     # -----------------------
     method = 'sht_am'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
@@ -506,16 +498,16 @@ def run_testing():
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         data['p'], sparsity, b, para_c, 0.0, num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
-    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
+    print(fold_id, method, results[key][method]['auc_wt'])
     # -----------------------
     method = 'fsauc'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
-    _, _, _, para_r, para_g = ms[key][method][0][(run_id, fold_id)]['para']
+    _, _, _, para_r, para_g, _ = ms[key][method][0][(run_id, fold_id)]['para']
     wt, wt_bar, auc, rts = c_algo_fsauc_sparse(
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         data['p'], para_r, para_g, num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
-    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
+    print(fold_id, method, results[key][method]['auc_wt'])
     # -----------------------
     method = 'solam'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
@@ -524,7 +516,7 @@ def run_testing():
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         data['p'], para_xi, para_r, num_passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
-    print(fold_id, method, results[key][method]['auc_wt'], results[key][method]['auc_wt_bar'])
+    print(fold_id, method, results[key][method]['auc_wt'])
     f_name = 'results_task_%02d_passes_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, num_passes)), 'wb'))
 
