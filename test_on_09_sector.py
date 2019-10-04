@@ -511,7 +511,7 @@ def run_testing():
     # -----------------------
     method = 'solam'
     ms = pkl.load(open(ms_f_name % (task_id, method), 'rb'))
-    _, _, _, para_xi, para_r = ms[key][method][0][(task_id, fold_id)]['para']
+    _, _, _, para_xi, para_r = ms[key][method][0][(run_id, fold_id)]['para']
     wt, wt_bar, auc, rts = c_algo_solam_sparse(
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         data['p'], para_xi, para_r, num_passes, step_len, 0)
