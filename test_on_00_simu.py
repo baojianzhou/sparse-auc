@@ -579,9 +579,9 @@ def run_graph_am(task_id, fold_id, para_c, sparsity, b, num_passes, data):
     step_len, verbose = len(tr_index), 0
     re = c_algo_graph_am(np.asarray(data['x_tr'][tr_index], dtype=float),
                          np.asarray(data['y_tr'][tr_index], dtype=float),
-                         sparsity, b, para_c, 0.0, num_passes, step_len, verbose,
                          np.asarray(data['edges'], dtype=np.int32),
-                         np.asarray(data['weights'], dtype=float))
+                         np.asarray(data['weights'], dtype=float),
+                         sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     t_auc = np.asarray(re[3])
@@ -600,7 +600,7 @@ def run_opauc(task_id, fold_id, para_eta, para_lambda, data):
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
     re = c_algo_opauc(np.asarray(data['x_tr'][tr_index], dtype=float),
                       np.asarray(data['y_tr'][tr_index], dtype=float),
-                      data['p'], len(tr_index), para_eta, para_lambda)
+                      para_eta, para_lambda, 1, 1000000, 0)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     return {'algo_para': [task_id, fold_id, para_eta, para_lambda],
@@ -636,7 +636,7 @@ def run_solam(task_id, fold_id, para_xi, para_r, num_passes, data):
     te_index = data['task_%d_fold_%d' % (task_id, fold_id)]['te_index']
     re = c_algo_solam(np.asarray(data['x_tr'][tr_index], dtype=float),
                       np.asarray(data['y_tr'][tr_index], dtype=float),
-                      para_xi, para_r, num_passes, 0)
+                      para_xi, para_r, num_passes, 1000000, 0)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
     return {'algo_para': [task_id, fold_id, para_xi, para_r],
@@ -769,14 +769,16 @@ def run_testing():
             method = 'sht_am'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
-            re = run_sht_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
+            tr_index = data[fig_i]['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+            re = run_sht_am(task_id, fold_id, para_c, sparsity, len(tr_index), passes, data[fig_i])
             results[key][method] = re
             print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
             method = 'graph_am'
             ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
             _, _, _, para_c, sparsity, _ = ms[item][method][0][(task_id, fold_id)]['para']
-            re = run_graph_am(task_id, fold_id, para_c, sparsity, passes, data[fig_i])
+            re = run_graph_am(task_id, fold_id, para_c, sparsity, len(tr_index), passes,
+                              data[fig_i])
             results[key][method] = re
             print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
             # -----------------------
@@ -1048,7 +1050,7 @@ def test_fsauc_simu():
 
 
 def main():
-    test_spaml1_simu()
+    run_testing()
 
 
 if __name__ == '__main__':
