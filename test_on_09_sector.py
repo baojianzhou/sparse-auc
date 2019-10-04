@@ -28,10 +28,10 @@ except ImportError:
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/09_sector/'
 
 
-def get_data_by_ind(data, tr_index, sub_tr_ind):
+def get_data_by_ind(data, tr_ind, sub_tr_ind):
     sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens = [], [], [], []
     prev_posi = 0
-    for index in tr_index[sub_tr_ind]:
+    for index in tr_ind[sub_tr_ind]:
         cur_len = data['x_tr_lens'][index]
         cur_posi = data['x_tr_posis'][index]
         sub_x_vals.extend(data['x_tr_vals'][cur_posi:cur_posi + cur_len])
@@ -43,42 +43,42 @@ def get_data_by_ind(data, tr_index, sub_tr_ind):
     sub_x_inds = np.asarray(sub_x_inds, dtype=np.int32)
     sub_x_posis = np.asarray(sub_x_posis, dtype=np.int32)
     sub_x_lens = np.asarray(sub_x_lens, dtype=np.int32)
-    sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
+    sub_y_tr = np.asarray(data['y_tr'][tr_ind[sub_tr_ind]], dtype=float)
     return sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens, sub_y_tr
 
 
 def pred_auc(data, tr_index, sub_te_ind, wt):
+    if np.isnan(wt).any() or np.isinf(wt).any():  # not a valid score function.
+        return 0.0
     _ = get_data_by_ind(data, tr_index, sub_te_ind)
-    sub_x_te_values, sub_x_te_indices, sub_x_te_positions, sub_x_te_len_list, _ = _
+    sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens, sub_y_te = _
     y_pred_wt = np.zeros_like(sub_te_ind, dtype=float)
     for i in range(len(sub_te_ind)):
-        cur_posi = sub_x_te_positions[i]
-        cur_len = sub_x_te_len_list[i]
-        cur_x = sub_x_te_values[cur_posi:cur_posi + cur_len]
-        cur_ind = sub_x_te_indices[cur_posi:cur_posi + cur_len]
+        cur_posi = sub_x_posis[i]
+        cur_len = sub_x_lens[i]
+        cur_x = sub_x_vals[cur_posi:cur_posi + cur_len]
+        cur_ind = sub_x_inds[cur_posi:cur_posi + cur_len]
         y_pred_wt[i] = np.sum([cur_x[_] * wt[cur_ind[_]] for _ in range(cur_len)])
-    sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-    auc_wt = roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
-    return auc_wt
+    return roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
 
 
 def cv_spam_l1(run_id, fold_id, k_fold, num_passes, data):
     s_time, models = time.time(), {'auc': 0.0, 'para_c': 1e-5, 'para_l1': 1e-5}
+
     for para_c, para_l1 in product(10. ** np.arange(-5, 6, 1, dtype=float),
                                    10. ** np.arange(-5, 6, 1, dtype=float)):
         tr_index = data['run_%d_fold_%d' % (run_id, fold_id)]['tr_index']
-        cur_auc = 0.0
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(
-                KFold(n_splits=k_fold, shuffle=False).split(np.zeros(shape=(len(tr_index), 1)))):
+        auc_list, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
             x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
             wt, wt_bar, auc, rts = c_algo_spam_sparse(
                 x_vals, x_inds, x_posis, x_lens, y_tr,
                 data['p'], para_c, para_l1, 0.0, 0, num_passes, 10000000, 0)
-            cur_auc += pred_auc(data, tr_index, sub_te_ind, wt)
+            auc_list[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         print('run_%02d_fold_%d para_c: %.4f para-l1: %.4f AUC: %.4f run_time: %.2f' %
-              (run_id, fold_id, para_c, para_l1, cur_auc / (k_fold * 1.), time.time() - s_time))
-        if models['auc'] < cur_auc / (k_fold * 1.):
-            models['auc'] = cur_auc / (k_fold * 1.)
+              (run_id, fold_id, para_c, para_l1, auc_list / (k_fold * 1.), time.time() - s_time))
+        if models['auc'] < auc_list / (k_fold * 1.):
+            models['auc'] = auc_list / (k_fold * 1.)
             models['para_c'] = para_c
             models['para_l1'] = para_l1
     print('total run_time: %.4f selected para:(%.6f,%.6f) best_auc: %.4f' %
@@ -403,12 +403,12 @@ def run_spam_l1l2(task_id, fold_id, para_c, para_beta, para_l1, num_passes, step
 
 def run_ms(method_name):
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
-    run_id, fold_id, num_passes = task_id / 5, task_id / 5, 5
+    run_id, fold_id, k_fold, num_passes = task_id / 5, task_id % 5, 5, 20
     data = pkl.load(open(data_path + 'processed_sector_normalized.pkl', 'rb'))
     results, key = dict(), (run_id, fold_id)
     if method_name == 'spam_l1':
         results[key] = dict()
-        results[key][method_name] = cv_spam_l1(run_id, fold_id, num_passes, data)
+        results[key][method_name] = cv_spam_l1(run_id, fold_id, k_fold, num_passes, data)
     elif method_name == 'spam_l2':
         results[key] = dict()
         results[key][method_name] = cv_spam_l2(run_id, fold_id, num_passes, data)
@@ -530,7 +530,7 @@ def run_testing():
 
 
 def main():
-    run_testing()
+    run_ms(method_name='spam_l1')
 
 
 if __name__ == '__main__':
