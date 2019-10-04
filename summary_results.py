@@ -411,21 +411,27 @@ def results_16_bc():
     all_results = dict()
     method_list = ['sht_am', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'solam', 'opauc',
                    'graph_am']
+    method_list = ['opauc', 'solam', 'spam_l2', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am',
+                   'graph_am']
     print(' ' * 10 + '         '.join(method_list))
     for task_id in range(25):
         all_results[task_id] = dict()
-        print('task-%02d' % task_id),
+        list_means = []
+        print('fold-%02d & ' % task_id),
         for method_name in method_list:
             f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
             results = pkl.load(open(f_path, 'rb'))
             aucs = [results[(task_id, fold_id)][method_name]['auc_wt'] for fold_id in range(5)]
             all_results[task_id][method_name] = np.mean(aucs)
-            print(' %.4f,%.4f' % (float(np.mean(aucs)), float(np.std(aucs)))),
-        print('')
-    print('aver:  '),
+            list_means.append('%.4f ' % float(np.mean(aucs)))
+        print(' & '.join(list_means)),
+        print('\\\\')
+    print('aver:  & '),
+    list_means = []
     for method in method_list:
         mean_aucs = [all_results[task_id][method] for task_id in range(25)]
-        print(' %.4f,%.4f' % (float(np.mean(mean_aucs)), float(np.std(mean_aucs)))),
+        list_means.append('%.4f ' % float(np.mean(mean_aucs)))
+    print(' & '.join(list_means)),
 
 
 if __name__ == '__main__':
