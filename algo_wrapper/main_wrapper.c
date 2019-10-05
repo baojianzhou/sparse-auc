@@ -128,12 +128,12 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
 
 static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; } // error: unknown error !!
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_reg_opt, para_num_passes, para_step_len, para_verbose, total_num_eval;
     double para_xi, para_l1_reg, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!idddiiii",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds,
-                          &PyArray_Type, &x_tr_posis, &PyArray_Type, &x_tr_lens,
+                          &PyArray_Type, &x_tr_poss, &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &data_y_tr, &data_p, &para_xi, &para_l1_reg, &para_l2_reg,
                           &para_reg_opt, &para_num_passes, &para_step_len,
                           &para_verbose)) { return NULL; }
@@ -144,7 +144,7 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
     _algo_spam_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
-                      (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
+                      (int *) PyArray_DATA(x_tr_poss), (int *) PyArray_DATA(x_tr_lens),
                       (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_xi, para_l1_reg,
                       para_l2_reg, para_num_passes, para_step_len, para_reg_opt, para_verbose,
                       re_wt, re_wt_bar, re_auc, re_rts);

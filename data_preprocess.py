@@ -226,7 +226,7 @@ def _gen_dataset_09_sector(run_id, data_path):
     assert (max_id + 1) == data['p']  # to make sure the number of features is p
     assert len(np.unique(data['y_tr'])) == 105  # we have total 105 classes.
     rand_ind = np.random.permutation(len(np.unique(data['y_tr'])))
-    print(run_id[:20])
+    print(rand_ind[:10])
     posi_classes = rand_ind[:len(np.unique(data['y_tr'])) / 2]
     nega_classes = rand_ind[len(np.unique(data['y_tr'])) / 2:]
     posi_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in posi_classes]
@@ -243,13 +243,14 @@ def _gen_dataset_09_sector(run_id, data_path):
     # randomly permute the datasets 100 times for future use.
     data['run_id'] = run_id
     data['k_fold'] = 5
-    kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
+    data['name'] = '09_sector'
+    kf = KFold(n_splits=data['k_fold'], shuffle=False)
     for fold_index, (train_index, test_index) in enumerate(kf.split(range(data['n']))):
         # since original data is ordered, we need to shuffle it!
         rand_perm = np.random.permutation(data['n'])
-        data['run_%d_fold_%d' % (run_id, fold_index)] = {'tr_index': rand_perm[train_index],
-                                                         'te_index': rand_perm[test_index]}
-    pkl.dump(data, open(os.path.join(data_path, 'processed_run_%d.pkl' % run_id), 'wb'))
+        data['fold_%d' % fold_index] = {'tr_index': rand_perm[train_index],
+                                        'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(os.path.join(data_path, 'data_run_%d.pkl' % run_id), 'wb'))
 
 
 def data_process_13_ad():

@@ -1590,13 +1590,13 @@ void _algo_spam(const double *data_x_tr,
 }
 
 void _algo_spam_sparse(const double *x_tr_vals,
-                       const int *x_tr_indices,
-                       const int *x_tr_posis,
+                       const int *x_tr_inds,
+                       const int *x_tr_poss,
                        const int *x_tr_lens,
                        const double *data_y_tr,
                        int data_n,
                        int data_p,
-                       double para_xi,
+                       double para_c,
                        double para_l1_reg,
                        double para_l2_reg,
                        int para_num_passes,
@@ -1627,8 +1627,8 @@ void _algo_spam_sparse(const double *x_tr_vals,
     double *xt = malloc(sizeof(double) * data_p);
     for (int i = 0; i < data_n; i++) {
         // receive training sample zt=(xt,yt)
-        const int *xt_indices = x_tr_indices + x_tr_posis[i];
-        const double *xt_vals = x_tr_vals + x_tr_posis[i];
+        const int *xt_indices = x_tr_inds + x_tr_poss[i];
+        const double *xt_vals = x_tr_vals + x_tr_poss[i];
         memset(xt, 0, sizeof(double) * data_p);
         for (int tt = 0; tt < x_tr_lens[i]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
         if (data_y_tr[i] > 0) {
@@ -1653,11 +1653,11 @@ void _algo_spam_sparse(const double *x_tr_vals,
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
         for (int j = 0; j < data_n; j++) { // for each training sample
             // receive training sample zt=(xt,yt)
-            const int *xt_indices = x_tr_indices + x_tr_posis[j];
-            const double *xt_vals = x_tr_vals + x_tr_posis[j];
+            const int *xt_indices = x_tr_inds + x_tr_poss[j];
+            const double *xt_vals = x_tr_vals + x_tr_poss[j];
             memset(xt, 0, sizeof(double) * data_p);
             for (int tt = 0; tt < x_tr_lens[j]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
-            eta_t = para_xi / sqrt(t); // current learning rate
+            eta_t = para_c / sqrt(t); // current learning rate
             a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1); // update a(wt)
             b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1); // para_b(wt)
             alpha_wt = b_wt - a_wt; // alpha(wt)
@@ -1698,8 +1698,8 @@ void _algo_spam_sparse(const double *x_tr_vals,
                 double cur_t_s = clock();
                 for (int q = 0; q < data_n; q++) {
                     memset(xt, 0, sizeof(double) * data_p);
-                    xt_indices = x_tr_indices + x_tr_posis[q];
-                    xt_vals = x_tr_vals + x_tr_posis[q];
+                    xt_indices = x_tr_inds + x_tr_poss[q];
+                    xt_vals = x_tr_vals + x_tr_poss[q];
                     for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
                     y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
                 }
