@@ -358,7 +358,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='spam_l1')
+    run_ms(method_name='solam')
 
 
 if __name__ == '__main__':
