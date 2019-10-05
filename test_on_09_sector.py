@@ -358,7 +358,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='solam')
+    run_ms(method_name='fsauc')
 
 
 if __name__ == '__main__':
