@@ -350,7 +350,7 @@ def run_testing():
 
 
 def main():
-    run_ms(method_name='spam_l2')
+    run_ms(method_name='spam_l1')
 
 
 if __name__ == '__main__':
