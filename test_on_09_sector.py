@@ -104,47 +104,51 @@ def cv_spam_l2(run_id, fold_id, k_fold, num_passes, step_len, data):
 
 def cv_spam_l1l2(run_id, fold_id, k_fold, num_passes, step_len, data):
     s_time, models = time.time(), dict()
-    for para_c, para_l1, para_beta in product(np.arange(1, 101, 9, dtype=float),
-                                              10. ** np.arange(-5, 6, 1, dtype=float),
-                                              10. ** np.arange(-5, 6, 1, dtype=float)):
+    list_c = np.arange(1, 101, 9, dtype=float)
+    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    for index, (para_c, para_l1, para_l2) in enumerate(product(list_c, list_l1, list_l2)):
         tr_index = data['fold_%d' % fold_id]['tr_index']
         auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
             x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
             wt, wt_bar, auc, rts = c_algo_spam_sparse(
                 x_vals, x_inds, x_posis, x_lens, y_tr,
-                data['p'], para_c, para_l1, para_beta, 0, num_passes, step_len, 0)
+                data['p'], para_c, para_l1, para_l2, 0, num_passes, step_len, 0)
             auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
-            print(para_c, para_l1, para_beta, auc_arr[ind])
-        models[(para_c, para_beta)] = auc_arr
+            print(para_c, para_l1, para_l2, auc_arr[ind])
+        models[index] = {'para_c': para_c, 'para_l2': para_l2, 'para_l1': para_l1,
+                         'auc_arr': auc_arr}
         print('run_%02d_fold_%d para_c: %.4f para_beta: %.4f AUC: %.4f run_time: %.2f' %
-              (run_id, fold_id, para_c, para_beta, float(np.mean(auc_arr)), time.time() - s_time))
+              (run_id, fold_id, para_c, para_l2, float(np.mean(auc_arr)), time.time() - s_time))
     return models
 
 
 def cv_solam(run_id, fold_id, k_fold, num_passes, step_len, data):
     s_time, models = time.time(), dict()
-    for para_xi, para_r in product(np.arange(1, 101, 9, dtype=float),
-                                   10. ** np.arange(-1, 6, 1, dtype=float)):
+    list_c = np.arange(1, 101, 9, dtype=float)
+    list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+    for index, (para_c, para_r) in enumerate(product(list_c, list_r)):
         tr_index = data['fold_%d' % fold_id]['tr_index']
         auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
             x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
             wt, wt_bar, auc, rts = c_algo_solam_sparse(
                 x_vals, x_inds, x_posis, x_lens, y_tr,
-                data['p'], para_xi, para_r, num_passes, step_len, 0)
+                data['p'], para_c, para_r, num_passes, step_len, 0)
             auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
-            print(para_xi, para_r, auc_arr[ind])
-        models[(para_xi, para_r)] = auc_arr
+            print(para_c, para_r, auc_arr[ind])
+        models[index] = {'para_c': para_c, 'para_r': para_r, 'auc_arr': auc_arr}
         print('run_%02d_fold_%d para_xi: %.4f para_r: %.4f AUC: %.4f run_time: %.2f' %
-              (run_id, fold_id, para_xi, para_r, float(np.mean(auc_arr)), time.time() - s_time))
+              (run_id, fold_id, para_c, para_r, float(np.mean(auc_arr)), time.time() - s_time))
     return models
 
 
 def cv_fsauc(run_id, fold_id, k_fold, num_passes, step_len, data):
     s_time, models = time.time(), dict()
-    for para_r, para_g in product(10. ** np.arange(-1, 6, 1, dtype=float),
-                                  2. ** np.arange(-10, 11, 1, dtype=float)):
+    list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+    list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
+    for index, (para_r, para_g) in enumerate(product(list_r, list_g)):
         tr_index = data['fold_%d' % fold_id]['tr_index']
         auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
@@ -154,7 +158,7 @@ def cv_fsauc(run_id, fold_id, k_fold, num_passes, step_len, data):
                 data['p'], para_r, para_g, num_passes, step_len, 0)
             auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
             print(para_r, para_g, auc_arr[ind])
-        models[(para_r, para_g)] = auc_arr
+        models[index] = {'para_r': para_r, 'para_g': para_g, 'auc_arr': auc_arr}
         print('run_%02d_fold_%d para_r: %.4f para_g: %.4f AUC: %.4f run_time: %.2f' %
               (run_id, fold_id, para_r, para_g, float(np.mean(auc_arr)), time.time() - s_time))
     return models
@@ -162,9 +166,11 @@ def cv_fsauc(run_id, fold_id, k_fold, num_passes, step_len, data):
 
 def cv_opauc(run_id, fold_id, k_fold, num_passes, step_len, data):
     s_time, models = time.time(), dict()
-    for para_tau, para_eta, para_lambda in product([50],
-                                                   2. ** np.arange(-12, -4, 1, dtype=float),
-                                                   2. ** np.arange(-10, -2, 1, dtype=float)):
+    list_tau = [50]
+    list_eta = 2. ** np.arange(-12, -4, 1, dtype=float)
+    list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
+    for index, (para_tau, para_eta, para_lambda) in enumerate(
+            product(list_tau, list_eta, list_lambda)):
         tr_index = data['fold_%d' % fold_id]['tr_index']
         auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
@@ -174,7 +180,8 @@ def cv_opauc(run_id, fold_id, k_fold, num_passes, step_len, data):
                 data['p'], para_tau, para_eta, para_lambda, num_passes, step_len, 0)
             auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
             print(para_tau, para_eta, para_lambda, auc_arr[ind])
-        models[(para_tau, para_eta, para_lambda)] = auc_arr
+        models[index] = {'para_tau': para_tau, 'para_eta': para_eta, 'para_lambda': para_lambda,
+                         'auc_arr': auc_arr}
         print('run_%02d_fold_%d para_eta: %.4f para_lambda: %.4f AUC: %.4f run_time: %.2f' %
               (run_id, fold_id, para_eta, para_lambda,
                float(np.mean(auc_arr)), time.time() - s_time))
@@ -183,9 +190,10 @@ def cv_opauc(run_id, fold_id, k_fold, num_passes, step_len, data):
 
 def cv_sht_am(run_id, fold_id, k_fold, num_passes, step_len, data):
     s_time, models = time.time(), dict()
-    for para_s, para_b, para_c in product([10000, 15000, 20000, 25000, 30000, 35000, 40000],
-                                          [108],
-                                          np.arange(1, 101, 9, dtype=float)):
+    list_s = [10000, 15000, 20000, 25000, 30000, 35000, 40000]
+    list_b = [108]
+    list_c = np.arange(1, 101, 9, dtype=float)
+    for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
         tr_index = data['fold_%d' % fold_id]['tr_index']
         auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
@@ -195,7 +203,7 @@ def cv_sht_am(run_id, fold_id, k_fold, num_passes, step_len, data):
                 data['p'], para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
             auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
             print(para_s, para_b, para_c, auc_arr[ind])
-        models[(para_s, para_b, para_c)] = auc_arr
+        models[index] = {'para_s': para_s, 'para_b': para_b, 'para_c': para_c, 'auc_arr': auc_arr}
         print('run_%02d_fold_%d para_s: %.4f para_b: %.4f AUC: %.4f run_time: %.2f' %
               (run_id, fold_id, para_s, para_b, float(np.mean(auc_arr)), time.time() - s_time))
     return models
