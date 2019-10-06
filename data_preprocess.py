@@ -167,8 +167,8 @@ def _gen_dataset_09_sector(run_id, data_path):
     data = dict()
     data['x_tr_vals'] = []
     data['x_tr_inds'] = []
-    data['x_tr_lens'] = []
     data['x_tr_poss'] = []
+    data['x_tr_lens'] = []
     data['y_tr'] = []
     max_id, max_nonzero = 0, 0
     words_freq = dict()
@@ -311,7 +311,7 @@ def data_process_13_ad():
                   'data_y': np.asarray(data_y)}, open('processed-13-ad.pkl', 'wb'))
 
 
-def _load_dataset_13_realsim(data_path):
+def _gen_dataset_13_realsim(run_id, data_path):
     """
     number of classes: 2
     number of samples: 72,309
@@ -319,27 +319,26 @@ def _load_dataset_13_realsim(data_path):
     URL: https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html
     :return:
     """
-    if os.path.exists(os.path.join(data_path, 'processed_realsim.pkl')):
-        return pkl.load(open(os.path.join(data_path, 'processed_realsim.pkl'), 'rb'))
+    np.random.seed(int(time.time()))
     data = dict()
     # sparse data to make it linear
-    data['x_values'] = []
-    data['x_indices'] = []
-    data['x_positions'] = []
-    data['x_len_list'] = []
+    data['x_tr_vals'] = []
+    data['x_tr_inds'] = []
+    data['x_tr_poss'] = []
+    data['x_tr_lens'] = []
     data['y_tr'] = []
-    prev_posi, min_id, max_id, non_zeros, max_len = 0, np.inf, 0, 0, 0
-    with open(os.path.join(data_path, 'real-sim')) as f:
+    prev_posi, min_id, max_id, max_len = 0, np.inf, 0, 0
+    with open(os.path.join(data_path, 'raw_data/real-sim'), 'rb') as f:
         for index, each_line in enumerate(f.readlines()):
             items = each_line.lstrip().rstrip().split(' ')
             data['y_tr'].append(int(items[0]))
             # do not need to normalize the data.
             cur_values = [float(_.split(':')[1]) for _ in items[1:]]
             cur_indices = [int(_.split(':')[0]) - 1 for _ in items[1:]]
-            data['x_values'].extend(cur_values)
-            data['x_indices'].extend(cur_indices)
-            data['x_positions'].append(prev_posi)
-            data['x_len_list'].append(len(cur_indices))
+            data['x_tr_vals'].extend(cur_values)
+            data['x_tr_inds'].extend(cur_indices)
+            data['x_tr_poss'].append(prev_posi)
+            data['x_tr_lens'].append(len(cur_indices))
             prev_posi += len(cur_indices)
             if len(cur_indices) != 0:
                 min_id = min(min(cur_indices), min_id)
@@ -347,11 +346,11 @@ def _load_dataset_13_realsim(data_path):
                 max_len = max(len(cur_indices), max_len)
             else:
                 print('warning, all features are zeros! of %d' % index)
-            non_zeros += len(cur_indices)
-        print(min_id, max_id, max_len, non_zeros)
-    data['x_values'] = np.asarray(data['x_values'], dtype=float)
-    data['x_indices'] = np.asarray(data['x_indices'], dtype=np.int32)
-    data['x_positions'] = np.asarray(data['x_positions'], dtype=np.int32)
+        print(min_id, max_id, max_len)
+    data['x_tr_vals'] = np.asarray(data['x_tr_vals'], dtype=float)
+    data['x_tr_inds'] = np.asarray(data['x_tr_inds'], dtype=np.int32)
+    data['x_tr_lens'] = np.asarray(data['x_tr_lens'], dtype=np.int32)
+    data['x_tr_poss'] = np.asarray(data['x_tr_poss'], dtype=np.int32)
     data['y_tr'] = np.asarray(data['y_tr'], dtype=float)
     assert len(data['y_tr']) == 72309  # total samples in train
     data['n'] = 72309
@@ -361,23 +360,21 @@ def _load_dataset_13_realsim(data_path):
     print('number of negative: %d' % len([_ for _ in data['y_tr'] if _ < 0]))
     data['num_posi'] = len([_ for _ in data['y_tr'] if _ > 0])
     data['num_nega'] = len([_ for _ in data['y_tr'] if _ < 0])
+    data['num_nonzeros'] = len(data['x_tr_vals'])
     # randomly permute the datasets 25 times for future use.
-    data['num_runs'] = 5
-    data['num_k_fold'] = 5
-    for run_index in range(data['num_runs']):
-        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
-        # just need the number of training samples
-        fake_x = np.zeros(shape=(data['n'], 1))
-        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
-            # since original data is ordered, we need to shuffle it!
-            rand_perm = np.random.permutation(data['n'])
-            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
-                                                                'te_index': rand_perm[test_index]}
-    pkl.dump(data, open(os.path.join(data_path, 'processed_realsim.pkl'), 'wb'))
-    return data
+    data['run_id'] = run_id
+    data['k_fold'] = 5
+    data['name'] = '13_realsim'
+    kf = KFold(n_splits=data['k_fold'], shuffle=False)
+    for fold_index, (train_index, test_index) in enumerate(kf.split(range(data['n']))):
+        # since original data is ordered, we need to shuffle it!
+        rand_perm = np.random.permutation(data['n'])
+        data['fold_%d' % fold_index] = {'tr_index': rand_perm[train_index],
+                                        'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(os.path.join(data_path, 'data_run_%d.pkl' % run_id), 'wb'))
 
 
-def generate_dataset():
+def run_generate_simu():
     root_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     for task_id in range(25):
         print('generate data: %02d' % task_id)
@@ -386,11 +383,15 @@ def generate_dataset():
 
 
 def main(dataset):
-    if dataset == 'sector':
+    if dataset == '09_sector':
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/09_sector'
         for run_id in range(5):
             _gen_dataset_09_sector(run_id=run_id, data_path=data_path)
+    elif dataset == '13_realsim':
+        data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/13_realsim'
+        for run_id in range(5):
+            _gen_dataset_13_realsim(run_id=run_id, data_path=data_path)
 
 
 if __name__ == '__main__':
-    main(dataset='sector')
+    main(dataset='13_realsim')
