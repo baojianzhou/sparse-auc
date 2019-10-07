@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-import os
-import sys
-import csv
-import time
-import numpy as np
-import pickle as pkl
 import multiprocessing
+import os
+import pickle as pkl
+import sys
+import time
 from itertools import product
-from sklearn.model_selection import KFold
+
+import numpy as np
 from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import KFold
 
 try:
     sys.path.append(os.getcwd())
@@ -371,6 +371,23 @@ def para_spaces():
     return para
 
 
+def reduce_para_space(data_name, run_id, fold_id):
+    sub_list_c, sub_list_l1, sub_list_l2 = set(), set(), set()
+    re_spam_l1 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                                            (data_name, run_id, fold_id, 'spam_l1')), 'rb'))
+    re_spam_l2 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                                            (data_name, run_id, fold_id, 'spam_l2')), 'rb'))
+    for item in re_spam_l1:
+        if np.mean(item['auc_arr']) >= 0.7:
+            sub_list_c.add(item['para'][5])
+            sub_list_l1.add(item['para'][6])
+    for item in re_spam_l2:
+        if np.mean(item['auc_arr']) >= 0.7:
+            sub_list_c.add(item['para'][5])
+            sub_list_l2.add(item['para'][6])
+    return np.sort(list(sub_list_c)), np.sort(list(sub_list_l1)), np.sort(list(sub_list_l2))
+
+
 def main():
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
@@ -404,9 +421,12 @@ def main():
                               (data_name, run_id, fold_id, method_name))
         pkl.dump(results, open(f_name, 'wb'))
     elif method_name == 'spam_l1l2':
+        # original para space is too large, we can reduce them based on spam_l1, spam_l2
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
         list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+        # pre-select parameters that have AUC=0.7+
+        list_c, list_l1, list_l2 = reduce_para_space('09_sector', 0, 0)
         input_data_list = []
         for index, (para_c, para_l1, para_l2) in enumerate(product(list_c, list_l1, list_l2)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, para_l2, data_name)

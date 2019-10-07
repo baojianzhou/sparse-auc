@@ -374,15 +374,94 @@ def _gen_dataset_13_realsim(run_id, data_path):
     pkl.dump(data, open(os.path.join(data_path, 'data_run_%d.pkl' % run_id), 'wb'))
 
 
-def run_generate_simu():
-    root_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
-    for task_id in range(25):
-        print('generate data: %02d' % task_id)
-        _generate_dataset_simu(data_path=os.path.join(root_path, '00_%s' % 'simu'),
-                               num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.3)
+def _gen_dataset_17_gisette(run_id, data_path):
+    """
+    number of classes: 2
+    number of samples: 7,000
+    number of features: 5,000
+    URL: https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html
+    :return:
+    """
+    np.random.seed(int(time.time()))
+    data = dict()
+    # sparse data to make it linear
+    data['x_tr_vals'] = []
+    data['x_tr_inds'] = []
+    data['x_tr_poss'] = []
+    data['x_tr_lens'] = []
+    data['y_tr'] = []
+    prev_posi, min_id, max_id, max_len = 0, np.inf, 0, 0
+    with open(os.path.join(data_path, 'raw_data/gisette_scale'), 'rb') as f:
+        for index, each_line in enumerate(f.readlines()):
+            items = each_line.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]))
+            # do not need to normalize the data.
+            cur_values = [float(_.split(':')[1]) for _ in items[1:]]
+            cur_indices = [int(_.split(':')[0]) - 1 for _ in items[1:]]
+            data['x_tr_vals'].extend(cur_values)
+            data['x_tr_inds'].extend(cur_indices)
+            data['x_tr_poss'].append(prev_posi)
+            data['x_tr_lens'].append(len(cur_indices))
+            prev_posi += len(cur_indices)
+            if len(cur_indices) != 0:
+                min_id = min(min(cur_indices), min_id)
+                max_id = max(max(cur_indices), max_id)
+                max_len = max(len(cur_indices), max_len)
+            else:
+                print('warning, all features are zeros! of %d' % index)
+        print(min_id, max_id, max_len)
+    with open(os.path.join(data_path, 'raw_data/gisette_scale.t'), 'rb') as f:
+        for index, each_line in enumerate(f.readlines()):
+            items = each_line.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]))
+            # do not need to normalize the data.
+            cur_values = [float(_.split(':')[1]) for _ in items[1:]]
+            cur_indices = [int(_.split(':')[0]) - 1 for _ in items[1:]]
+            data['x_tr_vals'].extend(cur_values)
+            data['x_tr_inds'].extend(cur_indices)
+            data['x_tr_poss'].append(prev_posi)
+            data['x_tr_lens'].append(len(cur_indices))
+            prev_posi += len(cur_indices)
+            if len(cur_indices) != 0:
+                min_id = min(min(cur_indices), min_id)
+                max_id = max(max(cur_indices), max_id)
+                max_len = max(len(cur_indices), max_len)
+            else:
+                print('warning, all features are zeros! of %d' % index)
+        print(min_id, max_id, max_len)
+    data['x_tr_vals'] = np.asarray(data['x_tr_vals'], dtype=float)
+    data['x_tr_inds'] = np.asarray(data['x_tr_inds'], dtype=np.int32)
+    data['x_tr_lens'] = np.asarray(data['x_tr_lens'], dtype=np.int32)
+    data['x_tr_poss'] = np.asarray(data['x_tr_poss'], dtype=np.int32)
+    data['y_tr'] = np.asarray(data['y_tr'], dtype=float)
+    assert len(data['y_tr']) == 7000  # total samples in train
+    data['n'] = 7000
+    data['p'] = 5000
+    assert len(np.unique(data['y_tr'])) == 2  # we have total 2 classes.
+    print('number of positive: %d' % len([_ for _ in data['y_tr'] if _ > 0]))
+    print('number of negative: %d' % len([_ for _ in data['y_tr'] if _ < 0]))
+    data['num_posi'] = len([_ for _ in data['y_tr'] if _ > 0])
+    data['num_nega'] = len([_ for _ in data['y_tr'] if _ < 0])
+    data['num_nonzeros'] = len(data['x_tr_vals'])
+    # randomly permute the datasets 25 times for future use.
+    data['run_id'] = run_id
+    data['k_fold'] = 5
+    data['name'] = '13_realsim'
+    kf = KFold(n_splits=data['k_fold'], shuffle=False)
+    for fold_index, (train_index, test_index) in enumerate(kf.split(range(data['n']))):
+        # since original data is ordered, we need to shuffle it!
+        rand_perm = np.random.permutation(data['n'])
+        data['fold_%d' % fold_index] = {'tr_index': rand_perm[train_index],
+                                        'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(os.path.join(data_path, 'data_run_%d.pkl' % run_id), 'wb'))
 
 
 def main(dataset):
+    if dataset == '00_simu':
+        root_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
+        for task_id in range(25):
+            _generate_dataset_simu(data_path=os.path.join(root_path, '00_%s' % 'simu'),
+                                   num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.3)
     if dataset == '09_sector':
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/09_sector'
         for run_id in range(5):
@@ -391,7 +470,11 @@ def main(dataset):
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/13_realsim'
         for run_id in range(5):
             _gen_dataset_13_realsim(run_id=run_id, data_path=data_path)
+    elif dataset == '17_gisette':
+        data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/17_gisette'
+        for run_id in range(5):
+            _gen_dataset_17_gisette(run_id=run_id, data_path=data_path)
 
 
 if __name__ == '__main__':
-    main(dataset='13_realsim')
+    main(dataset='17_gisette')
