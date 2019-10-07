@@ -4,10 +4,10 @@
 # $3: partition name
 # $4: node id
 # $5: python_file
-#SBATCH --job-name=09-spam-l1
+#SBATCH --job-name=09-sht-am
 #SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%02a.out
-#SBATCH --array=00-01
-#SBATCH --nodelist=ceashpc-01
+#SBATCH --array=00-24
+#SBATCH --nodelist=ceashpc-06
 #SBATCH --time=96:00:00
 #SBATCH --partition=ceashpc
 #SBATCH --mem=8G
@@ -19,5 +19,5 @@
 # /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_13_realsim.py 
 # /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_00_simu.py 
 # /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_09_sector.py 
-/network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_high_dim_data.py 
+/network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_high_dim_data.py 09_sector sht_am 
 # /network/rit/lab/ceashpc/bz383376/opt/env-python2.7.14/bin/python test_on_16_bc.py graph_am 
