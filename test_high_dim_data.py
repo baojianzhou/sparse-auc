@@ -147,63 +147,78 @@ def run_single_solam(para):
     return results
 
 
-def cv_fsauc(run_id, fold_id, k_fold, num_passes, step_len, data):
-    s_time, models = time.time(), dict()
-    list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-    list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
-    for index, (para_r, para_g) in enumerate(product(list_r, list_g)):
-        tr_index = data['fold_%d' % fold_id]['tr_index']
-        auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
-            x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
-            wt, wt_bar, aucs, rts = c_algo_fsauc_sparse(
-                x_vals, x_inds, x_posis, x_lens, y_tr,
-                data['p'], para_r, para_g, num_passes, step_len, 0)
-            auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
-            print(para_r, para_g, auc_arr[ind])
-        models[index] = {'para_r': para_r, 'para_g': para_g, 'auc_arr': auc_arr}
-        print('run_%02d_fold_%d para_r: %.4f para_g: %.4f AUC: %.4f run_time: %.2f' %
-              (run_id, fold_id, para_r, para_g, float(np.mean(auc_arr)), time.time() - s_time))
-    return models
+def run_single_fsauc(para):
+    run_id, fold_id, k_fold, num_passes, step_len, para_r, para_g, data_name = para
+    results = {'auc_arr': np.zeros(k_fold, dtype=float),
+               'run_time': np.zeros(k_fold, dtype=float),
+               'para': para}
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    fold = KFold(n_splits=k_fold, shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+        s_time = time.time()
+        x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
+        wt, wt_bar, aucs, rts = c_algo_fsauc_sparse(
+            x_vals, x_inds, x_posis, x_lens, y_tr,
+            data['p'], para_r, para_g, num_passes, step_len, 0)
+        results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
+        results['run_time'][ind] = time.time() - s_time
+        print(run_id, fold_id, para_r, para_g, results['auc_arr'][ind], time.time() - s_time)
+    return results
 
 
-def cv_opauc(run_id, fold_id, k_fold, num_passes, step_len, data):
-    s_time, models = time.time(), dict()
-    list_tau = [50]
-    list_eta = 2. ** np.arange(-12, -4, 1, dtype=float)
-    list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
-    for index, (para_tau, para_eta, para_lambda) in enumerate(
-            product(list_tau, list_eta, list_lambda)):
-        tr_index = data['fold_%d' % fold_id]['tr_index']
-        auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
-            x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
-            wt, wt_bar, aucs, rts = c_algo_opauc_sparse(
-                x_vals, x_inds, x_posis, x_lens, y_tr,
-                data['p'], para_tau, para_eta, para_lambda, num_passes, step_len, 0)
-            auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
-            print(para_tau, para_eta, para_lambda, auc_arr[ind])
-        models[index] = {'para_tau': para_tau, 'para_eta': para_eta, 'para_lambda': para_lambda,
-                         'auc_arr': auc_arr}
-        print('run_%02d_fold_%d para_eta: %.4f para_lambda: %.4f AUC: %.4f run_time: %.2f' %
-              (run_id, fold_id, para_eta, para_lambda,
-               float(np.mean(auc_arr)), time.time() - s_time))
-    return models
+def run_single_opauc(para):
+    run_id, fold_id, k_fold, num_passes, step_len, para_tau, para_eta, para_lam, data_name = para
+    results = {'auc_arr': np.zeros(k_fold, dtype=float),
+               'run_time': np.zeros(k_fold, dtype=float),
+               'para': para}
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    fold = KFold(n_splits=k_fold, shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+        s_time = time.time()
+        x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
+        wt, wt_bar, aucs, rts = c_algo_opauc_sparse(
+            x_vals, x_inds, x_posis, x_lens, y_tr,
+            data['p'], para_tau, para_eta, para_lam, num_passes, step_len, 0)
+        results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
+        results['run_time'][ind] = time.time() - s_time
+        print(run_id, fold_id, para_eta, para_lam, results['auc_arr'][ind], time.time() - s_time)
+    return results
+
+
+def run_single_sht_am(para):
+    run_id, fold_id, k_fold, num_passes, step_len, para_s, para_b, para_c, data_name = para
+    results = {'auc_arr': np.zeros(k_fold, dtype=float),
+               'run_time': np.zeros(k_fold, dtype=float),
+               'para': para}
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    fold = KFold(n_splits=k_fold, shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+        s_time = time.time()
+        x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
+        wt, wt_bar, aucs, rts = c_algo_sht_am_sparse(
+            x_vals, x_inds, x_posis, x_lens, y_tr,
+            data['p'], para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
+        results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
+        results['run_time'][ind] = time.time() - s_time
+        print(run_id, fold_id, para_s, para_b, results['auc_arr'][ind], time.time() - s_time)
+    return results
 
 
 def cv_sht_am(run_id, fold_id, k_fold, num_passes, step_len, data):
     s_time, models = time.time(), dict()
-    list_s = [10000, 15000, 20000, 25000, 30000, 35000, 40000]
-    list_b = [108]
-    list_c = np.arange(1, 101, 9, dtype=float)
+
     for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
         tr_index = data['fold_%d' % fold_id]['tr_index']
         auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
             x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
-            wt, wt_bar, aucs, rts = c_algo_sht_am_sparse(
-                x_vals, x_inds, x_posis, x_lens, y_tr,
-                data['p'], para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
+
             auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
             print(para_s, para_b, para_c, auc_arr[ind])
         models[index] = {'para_s': para_s, 'para_b': para_b, 'para_c': para_c, 'auc_arr': auc_arr}
@@ -412,6 +427,51 @@ def main():
             input_data_list.append(para)
         pool = multiprocessing.Pool(processes=num_cpus)
         results = pool.map(run_single_solam, input_data_list)
+        pool.close()
+        pool.join()
+        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                              (data_name, run_id, fold_id, method_name))
+        pkl.dump(results, open(f_name, 'wb'))
+    elif method_name == 'fsauc':
+        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+        list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
+        input_data_list = []
+        for index, (para_r, para_g) in enumerate(product(list_r, list_g)):
+            para = (run_id, fold_id, k_fold, passes, step_len, para_r, para_g, data_name)
+            input_data_list.append(para)
+        pool = multiprocessing.Pool(processes=num_cpus)
+        results = pool.map(run_single_fsauc, input_data_list)
+        pool.close()
+        pool.join()
+        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                              (data_name, run_id, fold_id, method_name))
+        pkl.dump(results, open(f_name, 'wb'))
+    elif method_name == 'opauc':
+        list_eta = 2. ** np.arange(-12, -4, 1, dtype=float)
+        list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
+        input_data_list = []
+        for index, (para_tau, para_eta, para_lam) in enumerate(
+                product([50], list_eta, list_lambda)):
+            para = (run_id, fold_id, k_fold, passes, step_len,
+                    para_tau, para_eta, para_lam, data_name)
+            input_data_list.append(para)
+        pool = multiprocessing.Pool(processes=num_cpus)
+        results = pool.map(run_single_opauc, input_data_list)
+        pool.close()
+        pool.join()
+        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                              (data_name, run_id, fold_id, method_name))
+        pkl.dump(results, open(f_name, 'wb'))
+    elif method_name == 'sht_am':
+        list_s = [10000, 15000, 20000, 25000, 30000, 35000, 40000]
+        list_b = [108]
+        list_c = np.arange(1, 101, 9, dtype=float)
+        input_data_list = []
+        for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
+            para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
+            input_data_list.append(para)
+        pool = multiprocessing.Pool(processes=num_cpus)
+        results = pool.map(run_single_sht_am, input_data_list)
         pool.close()
         pool.join()
         f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
