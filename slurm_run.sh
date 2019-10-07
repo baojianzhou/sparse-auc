@@ -5,7 +5,7 @@
 # $4: node id
 # $5: python_file
 #SBATCH --job-name=09-opauc
-#SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%a.out
+#SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%02a.out
 #SBATCH --array=00-24
 #SBATCH --nodelist=uagc19-05
 #SBATCH --time=96:00:00

@@ -5,6 +5,7 @@ import csv
 import time
 import numpy as np
 import pickle as pkl
+import multiprocessing
 from itertools import product
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
@@ -60,6 +61,44 @@ def pred_auc(data, tr_index, sub_te_ind, wt):
         cur_ind = sub_x_inds[cur_posi:cur_posi + cur_len]
         y_pred_wt[i] = np.sum([cur_x[_] * wt[cur_ind[_]] for _ in range(cur_len)])
     return roc_auc_score(y_true=sub_y_te, y_score=y_pred_wt)
+
+
+def run_single_test(para):
+    run_id, fold_id, k_fold, num_passes, step_len, para_c, para_l1, data_name = para
+    results = {'auc_arr': np.zeros(k_fold, dtype=float),
+               'run_time': np.zeros(k_fold, dtype=float)}
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    fold = KFold(n_splits=k_fold, shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+        s_time = time.time()
+        x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
+        wt, wt_bar, auc, rts = c_algo_spam_sparse(
+            x_vals, x_inds, x_posis, x_lens, y_tr,
+            data['p'], para_c, para_l1, 0.0, 0, num_passes, step_len, 0)
+        results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
+        results['run_time'][ind] = time.time() - s_time
+        print(run_id, fold_id, para_c, para_l1, results['auc_arr'][ind], time.time() - s_time)
+    return results
+
+
+def multi_thread():
+    list_c = np.arange(1, 101, 9, dtype=float)
+    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    num_cpus = 25
+    data_name = '09_sector'
+    run_id, fold_id, k_fold, num_passes, step_len = 0, 0, 5, 20, 10000000
+    input_data_list = []
+    for index, (para_c, para_l1) in enumerate(product(list_c, list_l1)):
+        para = (run_id, fold_id, k_fold, num_passes, step_len, para_c, para_l1, data_name)
+        input_data_list.append(para)
+    pool = multiprocessing.Pool(processes=num_cpus)
+    results_pool = pool.map(run_single_test, input_data_list)
+    pool.close()
+    pool.join()
+    f_name = os.path.join(data_path, '%s/ms_task_%02d_%s.pkl' % (data_name, task_id, method_name))
+    pkl.dump(results, open(f_name, 'wb'))
 
 
 def cv_spam_l1(run_id, fold_id, k_fold, num_passes, step_len, data):
