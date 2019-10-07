@@ -66,7 +66,8 @@ def pred_auc(data, tr_index, sub_te_ind, wt):
 def run_single_test(para):
     run_id, fold_id, k_fold, num_passes, step_len, para_c, para_l1, data_name = para
     results = {'auc_arr': np.zeros(k_fold, dtype=float),
-               'run_time': np.zeros(k_fold, dtype=float)}
+               'run_time': np.zeros(k_fold, dtype=float),
+               'para': para}
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
@@ -83,21 +84,20 @@ def run_single_test(para):
     return results
 
 
-def multi_thread():
+def multi_thread(data_name, method_name, run_id, fold_id, k_fold, passes, step_len):
     list_c = np.arange(1, 101, 9, dtype=float)
     list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
     num_cpus = 25
-    data_name = '09_sector'
-    run_id, fold_id, k_fold, num_passes, step_len = 0, 0, 5, 20, 10000000
     input_data_list = []
     for index, (para_c, para_l1) in enumerate(product(list_c, list_l1)):
-        para = (run_id, fold_id, k_fold, num_passes, step_len, para_c, para_l1, data_name)
+        para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, data_name)
         input_data_list.append(para)
     pool = multiprocessing.Pool(processes=num_cpus)
-    results_pool = pool.map(run_single_test, input_data_list)
+    results = pool.map(run_single_test, input_data_list)
     pool.close()
     pool.join()
-    f_name = os.path.join(data_path, '%s/ms_task_%02d_%s.pkl' % (data_name, task_id, method_name))
+    f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                          (data_name, run_id, fold_id, method_name))
     pkl.dump(results, open(f_name, 'wb'))
 
 
@@ -393,7 +393,10 @@ def para_spaces():
 
 
 def main():
-    run_ms(data_name='09_sector', method_name='spam_l1')
+    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
+    run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
+    method_name = 'spam_l1'
+    multi_thread('09_sector', method_name, run_id, fold_id, k_fold, passes, step_len)
 
 
 if __name__ == '__main__':
