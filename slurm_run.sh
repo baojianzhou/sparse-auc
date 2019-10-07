@@ -6,12 +6,13 @@
 # $5: python_file
 #SBATCH --job-name=09-opauc
 #SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%02a.out
-#SBATCH --array=00-24
+#SBATCH --array=00-01
 #SBATCH --nodelist=uagc19-05
 #SBATCH --time=96:00:00
 #SBATCH --partition=batch
 #SBATCH --mem=2G
 #SBATCH --ntasks=1
+#SBATCH --cpus-per-task=25
 # %A_%a notation is filled in with the master job id (%A) and the array task id (%a)
 # the environment variable SLURM_ARRAY_TASK_ID contains
 # the index corresponding to the current job step
