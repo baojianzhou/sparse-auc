@@ -87,7 +87,7 @@ def run_single_test(para):
 def multi_thread(data_name, method_name, run_id, fold_id, k_fold, passes, step_len):
     list_c = np.arange(1, 101, 9, dtype=float)
     list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
-    num_cpus = 25
+    num_cpus = 2
     input_data_list = []
     for index, (para_c, para_l1) in enumerate(product(list_c, list_l1)):
         para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, data_name)
