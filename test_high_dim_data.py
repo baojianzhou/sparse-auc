@@ -366,7 +366,7 @@ def run_testing():
 def para_spaces():
     method_list = ['spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'opauc',
                    'solam', 'sht_am', 'graph_am']
-    data_list = ['09-sector', '13-realsim']
+    data_list = ['09_sector', '13_realsim']
     para = {'method_list': method_list, 'data_list': data_list}
     return para
 
