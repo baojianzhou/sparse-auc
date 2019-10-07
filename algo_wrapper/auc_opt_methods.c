@@ -1735,6 +1735,7 @@ void _algo_sht_am(const double *data_x_tr,
                   double *re_auc) {
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
+    srand((unsigned int) time(NULL));
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
@@ -1769,19 +1770,24 @@ void _algo_sht_am(const double *data_x_tr,
     double *aver_grad = malloc(sizeof(double) * data_p);
     memset(aver_grad, 0, sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0;
+    int auc_index = 0, min_b_index = 0, max_b_index = data_n / para_b;
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
-        for (int j = 0; j < data_n / para_b; j++) { // n/b is the total number of blocks.
+        for (int jj = 0; jj < data_n / para_b; jj++) { // n/b is the total number of blocks.
+            // rand_ind is in [min_b_index,max_b_index-1]
+            int rand_ind = rand() % (max_b_index - min_b_index);
             // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
-            eta_t = para_xi / sqrt(t); // current learning rate
+            eta_t = para_xi; // current learning rate
             // receive a block of training samples to calculate the gradient
             memset(grad_wt, 0, sizeof(double) * data_p);
-            for (int kk = 0; kk < para_b; kk++) { // for each training sample j
-                const double *cur_xt = data_x_tr + j * para_b * data_p + kk * data_p;
-                double cur_yt = data_y_tr[j * para_b + kk];
+            // notice that, there are remain samples are not in blocks,
+            // we include it into the last block.
+            int cur_b_size = (rand_ind == (max_b_index - 1) ? para_b + (data_n % para_b) : para_b);
+            for (int kk = 0; kk < cur_b_size; kk++) { // for each training sample j
+                const double *cur_xt = data_x_tr + rand_ind * para_b * data_p + kk * data_p;
+                double cur_yt = data_y_tr[rand_ind * para_b + kk];
                 double wt_dot = cblas_ddot(data_p, re_wt, 1, cur_xt, 1);
                 double weight = cur_yt > 0 ? 2. * (1.0 - prob_p) * (wt_dot - a_wt) -
                                              2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
@@ -1790,7 +1796,7 @@ void _algo_sht_am(const double *data_x_tr,
             }
             cblas_dscal(data_p, (t - 1.) / t, aver_grad, 1); // take average of wt --> wt_bar
             cblas_daxpy(data_p, 1. / t, grad_wt, 1, aver_grad, 1);
-            cblas_dscal(data_p, 1. / (para_b * 1.0), grad_wt, 1);
+            cblas_dscal(data_p, 1. / (cur_b_size * 1.0), grad_wt, 1);
             cblas_dcopy(data_p, re_wt, 1, u, 1); //gradient descent: u= wt - eta * grad(wt)
             cblas_daxpy(data_p, -eta_t, grad_wt, 1, u, 1);
             /**

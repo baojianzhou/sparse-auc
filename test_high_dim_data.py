@@ -210,59 +210,6 @@ def run_single_sht_am(para):
     return results
 
 
-def cv_sht_am(run_id, fold_id, k_fold, num_passes, step_len, data):
-    s_time, models = time.time(), dict()
-
-    for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
-        tr_index = data['fold_%d' % fold_id]['tr_index']
-        auc_arr, fold = np.zeros(k_fold, dtype=float), KFold(n_splits=k_fold, shuffle=False)
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
-            x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
-
-            auc_arr[ind] = pred_auc(data, tr_index, sub_te_ind, wt)
-            print(para_s, para_b, para_c, auc_arr[ind])
-        models[index] = {'para_s': para_s, 'para_b': para_b, 'para_c': para_c, 'auc_arr': auc_arr}
-        print('run_%02d_fold_%d para_s: %.4f para_b: %.4f AUC: %.4f run_time: %.2f' %
-              (run_id, fold_id, para_s, para_b, float(np.mean(auc_arr)), time.time() - s_time))
-    return models
-
-
-def load_data(data_name, run_id):
-    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
-    data = pkl.load(open(f_name, 'rb'))
-    return data
-
-
-def run_ms(data_name, method_name):
-    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
-    run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
-    data = load_data(data_name=data_name, run_id=run_id)
-    results, key = dict(), (run_id, fold_id)
-    if method_name == 'spam_l1':
-        results[key] = dict()
-        results[key][method_name] = cv_spam_l1(run_id, fold_id, k_fold, passes, step_len, data)
-    elif method_name == 'spam_l2':
-        results[key] = dict()
-        results[key][method_name] = cv_spam_l2(run_id, fold_id, k_fold, passes, step_len, data)
-    elif method_name == 'spam_l1l2':
-        results[key] = dict()
-        results[key][method_name] = cv_spam_l1l2(run_id, fold_id, k_fold, passes, step_len, data)
-    elif method_name == 'solam':
-        results[key] = dict()
-        results[key][method_name] = cv_solam(run_id, fold_id, k_fold, passes, step_len, data)
-    elif method_name == 'fsauc':
-        results[key] = dict()
-        results[key][method_name] = cv_fsauc(run_id, fold_id, k_fold, passes, step_len, data)
-    elif method_name == 'opauc':
-        results[key] = dict()
-        results[key][method_name] = cv_opauc(run_id, fold_id, k_fold, passes, step_len, data)
-    elif method_name == 'sht_am':
-        results[key] = dict()
-        results[key][method_name] = cv_sht_am(run_id, fold_id, k_fold, passes, step_len, data)
-    f_name = os.path.join(data_path, '%s/ms_task_%02d_%s.pkl' % (data_name, task_id, method_name))
-    pkl.dump(results, open(f_name, 'wb'))
-
-
 def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
     return {'auc_wt': pred_auc(data, te_index, range(len(te_index)), wt),
             'nonzero_wt': np.count_nonzero(wt),
@@ -363,15 +310,8 @@ def run_testing():
     pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, passes)), 'wb'))
 
 
-def para_spaces():
-    method_list = ['spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'opauc',
-                   'solam', 'sht_am', 'graph_am']
-    data_list = ['09_sector', '13_realsim']
-    para = {'method_list': method_list, 'data_list': data_list}
-    return para
-
-
 def reduce_para_space(data_name, run_id, fold_id):
+    """ Reduce parameter space by using the model selection of spam_l1 and spam_l2. """
     sub_list_c, sub_list_l1, sub_list_l2 = set(), set(), set()
     re_spam_l1 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
                                             (data_name, run_id, fold_id, 'spam_l1')), 'rb'))
@@ -483,9 +423,11 @@ def main():
                               (data_name, run_id, fold_id, method_name))
         pkl.dump(results, open(f_name, 'wb'))
     elif method_name == 'sht_am':
-        list_s = [10000, 15000, 20000, 25000, 30000, 35000, 40000]
-        list_b = [108]
-        list_c = np.arange(1, 101, 9, dtype=float)
+        f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+        data = pkl.load(open(f_name, 'rb'))
+        list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+        list_b = [50, 100]
+        list_c = 2. ** np.arange(-12, 0, 2, dtype=float)
         input_data_list = []
         for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
