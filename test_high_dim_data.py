@@ -374,7 +374,7 @@ def para_spaces():
 def main():
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
-    data_name, method_name, num_cpus = sys.argv[1], sys.argv[2], 25
+    data_name, method_name, num_cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
     if method_name == 'spam_l1':
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
