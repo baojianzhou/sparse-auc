@@ -6,13 +6,8 @@
 # $5: python_file
 #SBATCH --job-name=09-spam-l1
 #SBATCH --output=/network/rit/lab/ceashpc/bz383376/git/sparse-auc/logs/array_%A_%02a.out
-<<<<<<< HEAD
-#SBATCH --array=00-00
-#SBATCH --nodelist=ceashpc-01
-=======
 #SBATCH --array=00-01
-#SBATCH --nodelist=uagc19-05
->>>>>>> 100666f04b55326bfd583c3ef4efa30dcd72e8d9
+#SBATCH --nodelist=ceashpc-01
 #SBATCH --time=96:00:00
 #SBATCH --partition=ceashpc
 #SBATCH --mem=8G
