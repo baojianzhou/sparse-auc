@@ -206,7 +206,8 @@ def run_single_sht_am(para):
             data['p'], para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
-        print(run_id, fold_id, para_s, para_b, results['auc_arr'][ind], time.time() - s_time)
+        print(run_id, fold_id, para_s, para_b, para_c,
+              results['auc_arr'][ind], time.time() - s_time)
     return results
 
 
