@@ -311,6 +311,107 @@ def data_process_13_ad():
                   'data_y': np.asarray(data_y)}, open('processed-13-ad.pkl', 'wb'))
 
 
+def _gen_dataset_12_news20(run_id, data_path):
+    """
+    number of samples: 19,928
+    number of features: 62,061 (notice: some features are all zeros.)
+    :return:
+    """
+    np.random.seed(int(time.time()))
+    data = dict()
+    data['x_tr_vals'] = []
+    data['x_tr_inds'] = []
+    data['x_tr_poss'] = []
+    data['x_tr_lens'] = []
+    data['y_tr'] = []
+    max_id, min_id, max_nonzero = 0, np.inf, 0
+    words_freq = dict()
+    # training part
+    with open(os.path.join(data_path, 'raw_data/news20.scale'), 'rb') as f:
+        for row in f.readlines():
+            items = row.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
+            # each feature value pair.
+            data['x_tr_inds'].extend([_[0] for _ in items])
+            data['x_tr_vals'].extend([_[1] for _ in items])
+            data['x_tr_lens'].append(len(items))
+            max_id = max(max([item[0] for item in items]), max_id)
+            min_id = min(min([item[0] for item in items]), min_id)
+            max_nonzero = max(len(items), max_nonzero)
+
+            for item in items:
+                word = item[0]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+    print(min_id, max_id)
+    assert len(data['y_tr']) == 15935  # total samples in train
+    # testing part
+    with open(data_path + '/raw_data/news20.t.scale', 'rb') as f:
+        for row in f.readlines():
+            items = row.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            items = [(int(_.split(':')[0]) - 1, float(_.split(':')[1])) for _ in items[1:]]
+            # each feature value pair.
+            data['x_tr_inds'].extend([_[0] for _ in items])
+            data['x_tr_vals'].extend([_[1] for _ in items])
+            data['x_tr_lens'].append(len(items))
+            max_id = max(max([item[0] for item in items]), max_id)
+            min_id = min(min([item[0] for item in items]), min_id)
+            max_nonzero = max(len(items), max_nonzero)
+            for item in items:
+                word = item[0]
+                if word not in words_freq:
+                    words_freq[word] = 0
+                words_freq[word] += 1
+    print(min_id, max_id)
+    # update positions
+    prev_posi = 0
+    for i in range(len(data['y_tr'])):
+        data['x_tr_poss'].append(prev_posi)
+        prev_posi += data['x_tr_lens'][i]
+    print('maximal length is: %d' % max_nonzero)
+    data['y_tr'] = np.asarray(data['y_tr'], dtype=float)
+    data['x_tr_vals'] = np.asarray(data['x_tr_vals'], dtype=float)
+    data['x_tr_poss'] = np.asarray(data['x_tr_poss'], dtype=np.int32)
+    data['x_tr_lens'] = np.asarray(data['x_tr_lens'], dtype=np.int32)
+    data['x_tr_inds'] = np.asarray(data['x_tr_inds'], dtype=np.int32)
+    assert len(data['y_tr']) == 19928  # total samples in the dataset
+    data['n'] = 19928
+    data['p'] = 62061
+    data['max_nonzero'] = max_nonzero  # maximal number of nonzero features.
+    print(max_id)
+    assert (max_id + 1) == data['p']  # to make sure the number of features is p
+    assert len(np.unique(data['y_tr'])) == 20  # we have total 105 classes.
+    rand_ind = np.random.permutation(len(np.unique(data['y_tr'])))
+    print(rand_ind[:10])
+    posi_classes = rand_ind[:len(np.unique(data['y_tr'])) / 2]
+    nega_classes = rand_ind[len(np.unique(data['y_tr'])) / 2:]
+    posi_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in posi_classes]
+    nega_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in nega_classes]
+    data['y_tr'][posi_indices] = 1
+    data['y_tr'][nega_indices] = -1
+    print('number of positive: %d' % len(posi_indices))
+    print('number of negative: %d' % len(nega_indices))
+    print('%d features frequency is less than 10!' %
+          len([word for word in words_freq if words_freq[word] <= 10]))
+    data['num_posi'] = len(posi_indices)
+    data['num_nega'] = len(nega_indices)
+    data['num_nonzeros'] = len(data['x_tr_vals'])
+    # randomly permute the datasets 100 times for future use.
+    data['run_id'] = run_id
+    data['k_fold'] = 5
+    data['name'] = '09_sector'
+    kf = KFold(n_splits=data['k_fold'], shuffle=False)
+    for fold_index, (train_index, test_index) in enumerate(kf.split(range(data['n']))):
+        # since original data is ordered, we need to shuffle it!
+        rand_perm = np.random.permutation(data['n'])
+        data['fold_%d' % fold_index] = {'tr_index': rand_perm[train_index],
+                                        'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(os.path.join(data_path, 'data_run_%d.pkl' % run_id), 'wb'))
+
+
 def _gen_dataset_13_realsim(run_id, data_path):
     """
     number of classes: 2
@@ -462,10 +563,14 @@ def main(dataset):
         for task_id in range(25):
             _generate_dataset_simu(data_path=os.path.join(root_path, '00_%s' % 'simu'),
                                    num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.3)
-    if dataset == '09_sector':
+    elif dataset == '09_sector':
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/09_sector'
         for run_id in range(5):
             _gen_dataset_09_sector(run_id=run_id, data_path=data_path)
+    elif dataset == '12_news20':
+        data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/12_news20'
+        for run_id in range(5):
+            _gen_dataset_12_news20(run_id=run_id, data_path=data_path)
     elif dataset == '13_realsim':
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/13_realsim'
         for run_id in range(5):
@@ -477,4 +582,4 @@ def main(dataset):
 
 
 if __name__ == '__main__':
-    main(dataset='17_gisette')
+    main(dataset='12_news20')
