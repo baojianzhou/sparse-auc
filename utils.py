@@ -803,11 +803,11 @@ def results_09_sector():
 
 
 if __name__ == '__main__':
-    data_name = '09_sector'
+    data_name = '01_pcmac'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['spam_l2', 'spam_l1', 'spam_l1l2', 'fsauc', 'solam', 'sht_am', 'opauc']
     results = {_: [] for _ in method_list}
-    for run_id, fold_id in product(range(1), range(5)):
+    for run_id, fold_id in product(range(5), range(5)):
         task_id = run_id * 5 + fold_id
         passes = 20
         f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
@@ -816,4 +816,5 @@ if __name__ == '__main__':
         for _ in re[(run_id, fold_id)]:
             results[_].append(re[(run_id, fold_id)][_]['auc_wt'])
     for method in method_list:
-        print(method, np.mean(results[method]), np.std(results[method]))
+        print(method, '%.4f %.4f' % (float(np.mean(results[method])),
+                                     float(np.std(results[method]))))

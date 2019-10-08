@@ -1892,9 +1892,11 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
     double *aver_grad = malloc(sizeof(double) * data_p);
     memset(aver_grad, 0, sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0;
+    int auc_index = 0, min_b_index = 0, max_b_index = data_n / para_b;
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
-        for (int j = 0; j < data_n / para_b; j++) { // data_n/b is the total number of blocks.
+        for (int jj = 0; jj < data_n / para_b; jj++) { // data_n/b is the total number of blocks.
+            // rand_ind is in [min_b_index,max_b_index-1]
+            int rand_ind = rand() % (max_b_index - min_b_index);
             // update a(wt), para_b(wt), and alpha(wt)
             a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1);
@@ -1902,8 +1904,11 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
             eta_t = para_xi / sqrt(t); // current learning rate
             // receive a block of training samples to calculate the gradient
             memset(grad_wt, 0, sizeof(double) * data_p);
-            for (int kk = 0; kk < para_b; kk++) {
-                int ind = j * para_b + kk; // current ind:
+            // notice that, there are remain samples are not in blocks,
+            // we include it into the last block.
+            int cur_b_size = (rand_ind == (max_b_index - 1) ? para_b + (data_n % para_b) : para_b);
+            for (int kk = 0; kk < cur_b_size; kk++) {
+                int ind = rand_ind * para_b + kk; // current ind:
                 const int *xt_indices = x_tr_indices + x_tr_posis[ind];
                 const double *xt_vals = x_tr_vals + x_tr_posis[ind];
                 memset(xt, 0, sizeof(double) * data_p);
@@ -1917,7 +1922,7 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
             }
             cblas_dscal(data_p, (t - 1.) / t, aver_grad, 1); // take average of wt --> wt_bar
             cblas_daxpy(data_p, 1. / t, grad_wt, 1, aver_grad, 1);
-            cblas_dscal(data_p, 1. / (para_b * 1.0), grad_wt, 1);
+            cblas_dscal(data_p, 1. / (cur_b_size * 1.0), grad_wt, 1);
             cblas_dcopy(data_p, re_wt, 1, u, 1); //gradient descent: u= wt - eta * grad(wt)
             cblas_daxpy(data_p, -eta_t, grad_wt, 1, u, 1);
             /**
@@ -1948,7 +1953,6 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                 double eval_time = clock() - cur_t_s;
                 re_rts[auc_index++] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
             }
-
             t = t + 1.; // increase time
         }
     }
