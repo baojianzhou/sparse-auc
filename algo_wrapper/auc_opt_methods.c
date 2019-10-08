@@ -1779,7 +1779,7 @@ void _algo_sht_am(const double *data_x_tr,
             a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1);
             b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1);
             alpha_wt = b_wt - a_wt;
-            eta_t = para_xi; // current learning rate
+            eta_t = para_xi / sqrt(t); // current learning rate
             // receive a block of training samples to calculate the gradient
             memset(grad_wt, 0, sizeof(double) * data_p);
             // notice that, there are remain samples are not in blocks,

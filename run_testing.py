@@ -79,9 +79,14 @@ def get_model(data_name, method, run_id, fold_id):
     sm = {'aver_auc': 0.0}
     for re_row in ms:
         mean_auc = np.mean(re_row['auc_arr'])
-        if sm['aver_auc'] < mean_auc:
-            sm['para'] = re_row['para']
-            sm['aver_auc'] = mean_auc
+        if method == 'sht_am':
+            if sm['aver_auc'] < mean_auc:
+                sm['para'] = re_row['para']
+                sm['aver_auc'] = mean_auc
+        else:
+            if sm['aver_auc'] < mean_auc:
+                sm['para'] = re_row['para']
+                sm['aver_auc'] = mean_auc
     if method == 'spam_l1':
         para_c, para_l1 = sm['para'][5], sm['para'][6]
         return para_c, para_l1
@@ -106,8 +111,8 @@ def get_model(data_name, method, run_id, fold_id):
     return sm
 
 
-def main():
-    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
+def main(task_id):
+    # task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
     data_name = sys.argv[1]
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
@@ -182,4 +187,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for task_id in range(25):
+        main(task_id)

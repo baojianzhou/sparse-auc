@@ -8,15 +8,9 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
-
-from algo_wrapper.algo_wrapper import algo_solam
-from algo_wrapper.algo_wrapper import algo_da_solam
-from algo_wrapper.algo_wrapper import algo_sparse_solam
-from algo_wrapper.algo_wrapper import algo_solam_cv
-from algo_wrapper.algo_wrapper import algo_da_solam_cv
-from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
-
-from algo_wrapper.algo_wrapper import fpr_tpr_auc
+from itertools import product
+import os
+import pickle as pkl
 
 
 def show_ht_run_time():
@@ -358,15 +352,6 @@ def test():
         re[1] += results[i][2]
         re[2] += results[i][0]
     print(re[0] / 10., re[1] / 10., re[2] / 10.)
-
-
-def main():
-    app_sparse_cv()
-
-
-if __name__ == '__main__':
-    main()
-
 
 
 def result_summary(num_passes):
@@ -818,6 +803,17 @@ def results_09_sector():
 
 
 if __name__ == '__main__':
-    print(np.mean([0.969078979396444, 0.967962123475392,
-                   0.9691899510640349, 0.9647413228268559, 0.967910096671877]))
-    # results_09_sector()
+    data_name = '01_pcmac'
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
+    method_list = ['spam_l2', 'spam_l1', 'spam_l1l2', 'fsauc', 'solam', 'sht_am', 'opauc']
+    results = {_: [] for _ in method_list}
+    for run_id, fold_id in product(range(5), range(5)):
+        task_id = run_id * 5 + fold_id
+        passes = 20
+        f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
+                              % (data_name, task_id, passes))
+        re = pkl.load(open(f_name, 'rb'))
+        for _ in re[(run_id, fold_id)]:
+            results[_].append(re[(run_id, fold_id)][_]['auc_wt'])
+    for method in method_list:
+        print(method, np.mean(results[method]), np.std(results[method]))
