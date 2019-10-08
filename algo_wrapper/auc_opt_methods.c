@@ -2163,8 +2163,8 @@ void _algo_graph_am_sparse(const double *x_tr_vals,
     double *y_pred = malloc(sizeof(double) * data_n);
     int auc_index = 0, min_b_index = 0, max_b_index = data_n / para_b;
     for (int i = 0; i < para_num_passes; i++) {
-        for (int jj = 0;
-             jj < data_n / para_b; jj++) { // data_n/para_b is the total number of blocks.
+        // data_n/para_b is the total number of blocks.
+        for (int jj = 0; jj < data_n / para_b; jj++) {
             // rand_ind is in [min_b_index,max_b_index-1]
             int rand_ind = rand() % (max_b_index - min_b_index);
             a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1); // update a(wt)
