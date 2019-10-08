@@ -219,6 +219,57 @@ def _gen_dataset_01_pcmac(run_id, data_path):
     pkl.dump(data, open(os.path.join(data_path, 'data_run_%d.pkl' % run_id), 'wb'))
 
 
+def _gen_dataset_02_usps(data_path):
+    """
+    number of samples: 9,298
+    number of features: 256
+    :return:
+    """
+    if os.path.exists(data_path + 'processed_usps.pkl'):
+        return pkl.load(open(data_path + 'processed_usps.pkl', 'rb'))
+    data = dict()
+    data['x_tr'] = []
+    data['y_tr'] = []
+    with open(data_path + 'processed_usps.txt') as f:
+        for each_line in f.readlines():
+            items = each_line.lstrip().rstrip().split(' ')
+            data['y_tr'].append(int(items[0]) - 1)
+            cur_x = [float(_.split(':')[1]) for _ in items[1:]]
+            # normalize the data.
+            data['x_tr'].append(cur_x / np.linalg.norm(cur_x))
+    data['x_tr'] = np.asarray(data['x_tr'], dtype=float)
+    data['y_tr'] = np.asarray(data['y_tr'], dtype=float)
+    assert len(data['y_tr']) == 9298  # total samples in train
+    data['n'] = 9298
+    data['p'] = 256
+    assert len(np.unique(data['y_tr'])) == 10  # we have total 10 classes.
+    rand_ind = np.random.permutation(len(np.unique(data['y_tr'])))
+    posi_classes = rand_ind[:len(np.unique(data['y_tr'])) / 2]
+    nega_classes = rand_ind[len(np.unique(data['y_tr'])) / 2:]
+    posi_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in posi_classes]
+    nega_indices = [ind for ind, _ in enumerate(data['y_tr']) if _ in nega_classes]
+    data['y_tr'][posi_indices] = 1
+    data['y_tr'][nega_indices] = -1
+    print('number of positive: %d' % len(posi_indices))
+    print('number of negative: %d' % len(nega_indices))
+    data['num_posi'] = len(posi_indices)
+    data['num_nega'] = len(nega_indices)
+    # randomly permute the datasets 25 times for future use.
+    data['num_runs'] = 5
+    data['num_k_fold'] = 5
+    for run_index in range(data['num_runs']):
+        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
+        # just need the number of training samples
+        fake_x = np.zeros(shape=(data['n'], 1))
+        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
+            # since original data is ordered, we need to shuffle it!
+            rand_perm = np.random.permutation(data['n'])
+            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
+                                                                'te_index': rand_perm[test_index]}
+    pkl.dump(data, open(data_path + 'processed_usps.pkl', 'wb'))
+    return data
+
+
 def _gen_dataset_09_sector(run_id, data_path):
     """
     number of samples: 9,619
