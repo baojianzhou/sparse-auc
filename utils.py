@@ -1,8 +1,372 @@
 # -*- coding: utf-8 -*-
-import os
+import time
+import scipy.io
 import numpy as np
-import pickle as pkl
-from itertools import product
+import sklearn as sk
+from scipy import sparse
+from sklearn.model_selection import KFold
+from sklearn.metrics import auc
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+
+from algo_wrapper.algo_wrapper import algo_solam
+from algo_wrapper.algo_wrapper import algo_da_solam
+from algo_wrapper.algo_wrapper import algo_sparse_solam
+from algo_wrapper.algo_wrapper import algo_solam_cv
+from algo_wrapper.algo_wrapper import algo_da_solam_cv
+from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
+
+from algo_wrapper.algo_wrapper import fpr_tpr_auc
+
+
+def show_ht_run_time():
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import matplotlib
+    plt.rcParams.update({'font.size': 12})
+    names = ['QuickSelect-V1', 'QuickSelect-V2', 'MaxHeap-V1', 'Floyd-Rivest-V1', 'QuickSelect-V3',
+             'Wirth', 'QuickSelect-V4', 'Floyd-Rivest-V2', 'QuickSort']
+    colors = ['b', 'b', 'm', 'green', 'b', 'y', 'b', 'green', 'r']
+    alpha_list = [1., .8, 1., 1., .6, 1., .4, .5, 1.]
+    run_time = {1: np.asarray(
+        [621, 416, 977.0, 164, 403, 440, 549, 214, 9716]),
+        10: np.asarray([5023, 4497, 9906.0, 1279, 3939, 3641, 3854, 1895, 95396]),
+        100: np.asarray([46165, 38435, 98872.0, 12727, 38959, 36181, 38824, 19763, 956011]),
+        1000: np.asarray(
+            [462480, 387161, 990644.0, 125644, 383959, 356307, 390857, 196206, 9606209]),
+        2000: np.asarray(
+            [973674, 799438, 2076245.0, 266914, 813301, 745576, 804968, 410895, 20250160]),
+        5000: np.asarray(
+            [2496992, 2028612, 5242117.0, 684493, 2058850, 1871607, 2055310, 1049421, 51434902]),
+        8000: np.asarray(
+            [3862229, 3189205, 8228015.0, 1058340, 3214370, 2938456, 3207977, 1640777, 80098740]),
+        10000: np.asarray([4662248, 3909561, 10003924.0, 1271100, 3909567, 3583082, 3919146,
+                           1989976, 97095163]),
+        100000: np.asarray(
+            [48050835, 39885553, 102413292.0, 13181102, 40028054, 36642196, 39946229, 20375441,
+             999201785])}
+    x = [1, 10, 100, 1000, 2000, 5000, 8000, 10000]
+    fig, ax = plt.subplots(1, 2)
+    for ind, name in enumerate(names):
+        vals = np.asarray([run_time[_][ind] for _ in x],
+                          dtype=float) / 1e6
+        ax[0].plot(x, vals, linewidth=2., label=name, color=colors[ind], alpha=alpha_list[ind],
+                   marker='.')
+        ax[0].set_xlabel('iterations')
+        ax[0].set_ylabel('run time (seconds)')
+        ax[0].set_title('Total run time w.r.t iterations')
+        ax[0].grid(True)
+        ax[0].legend()
+    for ind, name in enumerate(names):
+        if name == 'QuickSort':
+            continue
+        vals = np.asarray([run_time[_][ind] for _ in x],
+                          dtype=float) / 1e6
+        ax[1].plot(x, vals, linewidth=2., label=name, color=colors[ind], alpha=alpha_list[ind],
+                   marker='.')
+        ax[1].set_xlabel('iterations')
+        ax[1].set_ylabel('run time (seconds)')
+        ax[1].set_title('Total run time w.r.t iterations')
+        ax[1].grid(True)
+        ax[1].legend()
+    plt.subplots_adjust(wspace=0.5, hspace=0.2)
+    plt.savefig('/home/baojian/ht_run_time.png', dpi=400, bbox_inches='tight', pad_inches=0,
+                format='png')
+    plt.show()
+
+
+def load_results():
+    import scipy.io
+    results = scipy.io.loadmat('baselines/nips16_solam/EP_a9a_SOLAM.mat')['data']
+    re = {'auc': np.asarray(results['AUC'])[0][0],
+          'mean_auc': np.asarray(results['meanAUC'])[0][0][0][0],
+          'std_auc': np.asarray(results['stdAUC'])[0][0][0][0],
+          'run_time': np.asarray(results['RT'])[0][0],
+          'wt': np.asarray(results['wt'])[0][0],
+          'kfold_ind': np.asarray(results['vIndices'])[0][0]}
+    k_fold_ind = re['kfold_ind']
+    for i in range(len(k_fold_ind)):
+        for j in range(len(k_fold_ind[i])):
+            k_fold_ind[i][j] -= 1
+    re['kfold_ind'] = np.asarray(k_fold_ind, dtype=int)
+    return re
+
+
+def app_compare_solam():
+    """
+    To run the MATLAB version of the SOLAM algorithm. Then we compare the results obtained
+    from MATLAB's version and C's version.
+    """
+    results = load_results()
+    g_pass = 3
+    g_iters = 5
+    g_cv = 5
+    g_data = {'data_name': 'a9a', 'data_dim': 123, 'data_num': 32561, 'g_seq_num': 1}
+    opt_solam = {'sc': 100, 'sr': 10, 'n_pass': g_pass}
+    res_solam = {'AUC': np.zeros(shape=(g_iters, g_cv)),
+                 'mean_AUC': 0.0,
+                 'std_AUC': 0.0,
+                 'run_time': np.zeros(shape=(g_iters, g_cv)),
+                 'mean_run_time': 0.0}
+
+    mat = scipy.io.loadmat('baselines/nips16_solam/a9a.mat')
+    org_feat = mat['orgFeat'].toarray()
+    org_label = np.asarray([_[0] for _ in mat['orgLabel']])
+    print(mat['orgLabel'].shape, mat['orgFeat'].shape)
+    pp_label = org_label
+    u_lab = np.unique(org_label)
+    u_num = len(u_lab)
+    if u_num > 2:
+        u_sort = np.random.permutation(u_num)
+
+    # post-processing the data
+    pp_feat = np.zeros(shape=(g_data['data_num'], g_data['data_dim']))
+    for k in range(1, g_data['data_num']):
+        t_dat = org_feat[k, :]
+        if np.linalg.norm(t_dat) > 0:
+            t_dat = t_dat / np.linalg.norm(t_dat)
+        pp_feat[k] = t_dat
+
+    # set the results to zeros
+    for m in range(g_iters):
+        kfold_ind = results['kfold_ind'][m]
+        kf_split = []
+        for i in range(g_cv):
+            train_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] != i]
+            test_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] == i]
+            kf_split.append((train_ind, test_ind))
+        for j, (train_index, test_index) in enumerate(kf_split):
+            x_tr, x_te = pp_feat[train_index], pp_feat[test_index]
+            y_tr, y_te = pp_label[train_index], pp_label[test_index]
+            wt_ = []
+            for _ in list(results['wt'][m][j]):
+                wt_.append(_[0])
+            wt_ = np.asarray(wt_)
+            wt, a, b, run_time = algo_solam(x_tr=x_tr, y_tr=y_tr, para_rand_ind=range(len(x_tr)),
+                                            para_r=opt_solam['sr'], para_xi=opt_solam['sc'],
+                                            para_n_pass=opt_solam['n_pass'], verbose=0)
+            v_fpr, v_tpr, n_auc = fpr_tpr_auc(x_te=x_te, y_te=y_te, wt=wt)
+            print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+            print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
+            print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt - wt_))),
+            print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
+
+
+def app_sparse_cv():
+    results = load_results()
+    g_pass = 1
+    g_iters = 5
+    g_cv = 5
+    g_data = {'data_name': 'a9a', 'data_dim': 123, 'data_num': 32561}
+    import scipy.io
+    mat = scipy.io.loadmat('baselines/nips16_solam/a9a.mat')
+    org_feat = mat['orgFeat'].toarray()
+    org_label = np.asarray([_[0] for _ in mat['orgLabel']])
+    print(mat['orgLabel'].shape, mat['orgFeat'].shape)
+    pp_label = org_label
+    # post-processing the data
+    pp_feat = np.zeros(shape=(g_data['data_num'], g_data['data_dim'] + 1000))
+    for k in range(1, g_data['data_num']):
+        t_dat = org_feat[k, :]
+        fake_features = np.zeros(1000)
+        nonzeros_ind = np.where(np.random.rand(1000) <= 0.05)
+        fake_features[nonzeros_ind] = 1.0
+        t_dat = np.concatenate((t_dat, fake_features))
+        if np.linalg.norm(t_dat) > 0:
+            t_dat = t_dat / np.linalg.norm(t_dat)
+        pp_feat[k] = t_dat
+
+    # set the results to zeros
+    for m in range(g_iters):
+        kfold_ind = results['kfold_ind'][m]
+        kf_split = []
+        for i in range(g_cv):
+            train_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] != i]
+            test_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] == i]
+            kf_split.append((train_ind, test_ind))
+        for j, (train_index, test_index) in enumerate(kf_split):
+            x_tr, x_te = pp_feat[train_index], pp_feat[test_index]
+            y_tr, y_te = pp_label[train_index], pp_label[test_index]
+            wt_ = []
+            for _ in list(results['wt'][m][j]):
+                wt_.append(_[0])
+            wt_ = np.asarray(wt_)
+            s_t = time.time()
+            opt_solam = algo_sparse_solam_cv(
+                x_tr=x_tr, y_tr=y_tr, para_s=500, para_n_pass=g_pass, para_n_cv=5, verbose=0)
+            print('run time for model selection: %.4f' % (time.time() - s_t))
+            wt, a, b, run_time = algo_sparse_solam(x_tr=x_tr, y_tr=y_tr,
+                                                   para_rand_ind=range(len(x_tr)),
+                                                   para_r=opt_solam['sr'],
+                                                   para_xi=opt_solam['sc'],
+                                                   para_s=opt_solam['s'],
+                                                   para_n_pass=opt_solam['n_pass'], verbose=0)
+            v_fpr, v_tpr, n_auc = fpr_tpr_auc(x_te=x_te, y_te=y_te, wt=wt)
+            print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+            print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
+            print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
+            print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
+
+
+def demo_cv():
+    results = load_results()
+    g_pass = 1
+    g_iters = 5
+    g_cv = 5
+    g_data = {'data_name': 'a9a', 'data_dim': 123, 'data_num': 32561}
+    import scipy.io
+    mat = scipy.io.loadmat('baselines/nips16_solam/a9a.mat')
+    org_feat = mat['orgFeat'].toarray()
+    org_label = np.asarray([_[0] for _ in mat['orgLabel']])
+    print(mat['orgLabel'].shape, mat['orgFeat'].shape)
+    pp_label = org_label
+    # post-processing the data
+    pp_feat = np.zeros(shape=(g_data['data_num'], g_data['data_dim'] + 1000))
+    for k in range(1, g_data['data_num']):
+        t_dat = org_feat[k, :]
+        fake_features = np.zeros(1000)
+        nonzeros_ind = np.where(np.random.rand(1000) <= 0.05)
+        fake_features[nonzeros_ind] = 1.0
+        t_dat = np.concatenate((t_dat, fake_features))
+        if np.linalg.norm(t_dat) > 0:
+            t_dat = t_dat / np.linalg.norm(t_dat)
+        pp_feat[k] = t_dat
+
+    # set the results to zeros
+    for m in range(g_iters):
+        kfold_ind = results['kfold_ind'][m]
+        kf_split = []
+        for i in range(g_cv):
+            train_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] != i]
+            test_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] == i]
+            kf_split.append((train_ind, test_ind))
+        for j, (train_index, test_index) in enumerate(kf_split):
+            x_tr, x_te = pp_feat[train_index], pp_feat[test_index]
+            y_tr, y_te = pp_label[train_index], pp_label[test_index]
+            rand_id = np.asarray(range(len(x_tr)), dtype=np.int32)
+            wt_ = []
+            for _ in list(results['wt'][m][j]):
+                wt_.append(_[0])
+            wt_ = np.asarray(wt_)
+            s_t = time.time()
+            opt_solam = algo_solam_cv(x_tr, y_tr, para_n_pass=g_pass, para_n_cv=5, verbose=0)
+
+            run_time, n_auc, n_auc_2, wt = algo_solam(x_tr, y_tr, x_te, y_te, opt_solam, rand_id)
+            # print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+            print('%.6f, %.6f ' % (n_auc, results['auc'][m][j])),
+            # print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
+            # print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
+
+
+def demo_da_cv():
+    results = load_results()
+    g_pass = 1
+    g_iters = 5
+    g_cv = 5
+    g_data = {'data_name': 'a9a', 'data_dim': 123, 'data_num': 32561}
+    import scipy.io
+    mat = scipy.io.loadmat('baselines/nips16_solam/a9a.mat')
+    org_feat = mat['orgFeat'].toarray()
+    org_label = np.asarray([_[0] for _ in mat['orgLabel']])
+    print(mat['orgLabel'].shape, mat['orgFeat'].shape)
+    pp_label = org_label
+    # post-processing the data
+    pp_feat = np.zeros(shape=(g_data['data_num'], g_data['data_dim'] + 1000))
+    for k in range(1, g_data['data_num']):
+        t_dat = org_feat[k, :]
+        fake_features = np.zeros(1000)
+        nonzeros_ind = np.where(np.random.rand(1000) <= 0.05)
+        fake_features[nonzeros_ind] = 1.0
+        t_dat = np.concatenate((t_dat, fake_features))
+        if np.linalg.norm(t_dat) > 0:
+            t_dat = t_dat / np.linalg.norm(t_dat)
+        pp_feat[k] = t_dat
+
+    # set the results to zeros
+    for m in range(g_iters):
+        kfold_ind = results['kfold_ind'][m]
+        kf_split = []
+        for i in range(g_cv):
+            train_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] != i]
+            test_ind = [_ for _ in range(len(pp_feat)) if kfold_ind[_] == i]
+            kf_split.append((train_ind, test_ind))
+        for j, (train_index, test_index) in enumerate(kf_split):
+            x_tr, x_te = pp_feat[train_index], pp_feat[test_index]
+            y_tr, y_te = pp_label[train_index], pp_label[test_index]
+            rand_id = np.asarray(range(len(x_tr)), dtype=np.int32)
+            wt_ = []
+            for _ in list(results['wt'][m][j]):
+                wt_.append(_[0])
+            wt_ = np.asarray(wt_)
+            s_t = time.time()
+            opt_solam = algo_da_solam_cv(x_tr=x_tr, y_tr=y_tr, para_s=123,
+                                         para_n_pass=g_pass, para_n_cv=5, verbose=0)
+            print('run time for model selection: %.4f' % (time.time() - s_t))
+            run_time, n_auc, n_auc_2, wt = fn_ep_da_solam(x_tr, y_tr, x_te, y_te, opt_solam,
+                                                          rand_id)
+            print('run time: (%.6f, %.6f) ' % (run_time, results['run_time'][m][j])),
+            print('auc: (%.6f, %.6f) ' % (n_auc, results['auc'][m][j])),
+            print('norm(wt-wt_): %.6f' % (np.linalg.norm(wt[:123] - wt_))),
+            print('speed up: %.2f' % (results['run_time'][m][j] / run_time))
+
+
+def fn_ep_da_solam(x_train, y_train, x_test, y_test, options, rand_id):
+    """
+    SOLAM: Stochastic Online AUC Maximization
+    :param x_train: the training instances
+    :param y_train: the vector of labels for x_train
+    :param x_test: the testing instances
+    :param y_test: the vector of labels for X_test
+    :param options: a struct containing rho, sigma, C, n_label and n_tick
+    :param rand_id:
+    :return:
+    """
+    t_start = time.time()
+    wt_c, a, b = algo_da_solam(x_tr=np.asarray(x_train, dtype=float),
+                               y_tr=np.asarray(y_train, dtype=float),
+                               para_rand_ind=np.asarray(rand_id, dtype=np.int32),
+                               para_r=options['sr'], para_xi=options['sc'], para_s=123,
+                               para_n_pass=options['n_pass'], verbose=0)
+    run_time_c = time.time() - t_start
+    v_fpr, v_tpr, n_auc, n_auc_2 = fpr_tpr_auc(x_test, y_test, wt_c)
+    return run_time_c, n_auc, n_auc_2, wt_c
+
+
+def evaluate(x_te, y_te, wt):
+    v_py = np.dot(x_te, wt)
+    v_fpr, v_tpr, _ = roc_curve(y_true=y_te, y_score=v_py)
+    n_auc = roc_auc_score(y_true=y_te, y_score=v_py)
+    n_auc_2 = auc(v_fpr, v_tpr)
+    return v_fpr, v_tpr, n_auc, n_auc_2
+
+
+def test():
+    results = []
+    with open('results.txt', 'rb') as f:
+        for each_line in f.readlines():
+            if len(each_line.lstrip().rstrip()) != 0:
+                results.append([float(_) for _ in each_line.split(', ')])
+    with open('results_2.txt', 'rb') as f:
+        for index, each_line in enumerate(f.readlines()):
+            if len(each_line.lstrip().rstrip()) != 0:
+                results[index].append(float(each_line.split(', ')[0]))
+    print(results)
+    re = [0.0, 0.0, 0.0]
+    for i in range(10):
+        print('%.4f & %.4f & %.4f & - \\\\' % (results[i][1], results[i][2], results[i][0]))
+        re[0] += results[i][1]
+        re[1] += results[i][2]
+        re[2] += results[i][0]
+    print(re[0] / 10., re[1] / 10., re[2] / 10.)
+
+
+def main():
+    app_sparse_cv()
+
+
+if __name__ == '__main__':
+    main()
+
 
 
 def result_summary(num_passes):

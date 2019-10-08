@@ -13,45 +13,6 @@ from algo_wrapper.algo_wrapper import algo_sparse_solam_cv
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/01-pcmac/'
 
 
-def load_dataset():
-    """
-    number of samples: 1,946
-    number of features: 7,511 (the last feature is useless)
-    :return:
-    """
-    if os.path.exists(data_path + 'processed_pcmac.pkl'):
-        return pkl.load(open(data_path + 'processed_pcmac.pkl', 'rb'))
-    raw_data = scipy.io.loadmat(data_path + 'pcmac.mat')
-    data = dict()
-    data['x_tr'] = np.asarray(csc_matrix(raw_data['X']).toarray(), dtype=float)
-    data['y_tr'] = np.asarray([_[0] for _ in raw_data['Y']], dtype=float)
-    print(len([_ for _ in data['y_tr'] if _ == 1]))
-    print(len([_ for _ in data['y_tr'] if _ == -1]))
-    print(len([_ for _ in data['x_tr'][:, -1] if _ == 1]))
-    print(len([_ for _ in data['x_tr'][:, 0] if _ == -1]))
-    for i in range(len(data['x_tr'][0])):
-        if np.sum(np.abs(data['x_tr'][:, i])) == 0.0:
-            print('this column is useless! ', i)
-    data['x_tr'] = data['x_tr'][:, :-1]
-    data['n'] = np.shape(data['x_tr'])[0]
-    data['p'] = np.shape(data['x_tr'])[1]
-    data['num_posi'] = len([_ for _ in data['y_tr'] if _ == 1])
-    data['num_nega'] = len([_ for _ in data['y_tr'] if _ == -1])
-    # randomly permute the datasets 100 times for future use.
-    data['num_runs'] = 5
-    data['num_k_fold'] = 5
-    for run_index in range(data['num_runs']):
-        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
-        for fold_index, (train_index, test_index) in enumerate(kf.split(data['x_tr'])):
-            # since original data is ordered, we need to shuffle it!
-            rand_perm = np.random.permutation(data['n'])
-            print(rand_perm[train_index], rand_perm[test_index])
-            data['run_%d_fold_%d' % (run_index, fold_index)] = {'tr_index': rand_perm[train_index],
-                                                                'te_index': rand_perm[test_index]}
-    pkl.dump(data, open(data_path + 'processed_pcmac.pkl', 'wb'))
-    return data
-
-
 def load_results():
     results = scipy.io.loadmat('baselines/nips16_solam/EP_a9a_SOLAM.mat')['data']
     re = {'auc': np.asarray(results['AUC'])[0][0],

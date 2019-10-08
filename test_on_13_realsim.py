@@ -9,7 +9,6 @@ from itertools import product
 from sklearn.model_selection import KFold
 from sklearn.metrics import roc_auc_score
 
-from data_preprocess import load_dataset
 
 try:
     sys.path.append(os.getcwd())
@@ -90,7 +89,7 @@ def run_single_ms_spam_l2(para):
     """
     run_id, fold_id, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
-    data = load_dataset(root_path=root_path, name='realsim')
+    data = _gen_dataset_01_pcmac(root_path=root_path, name='realsim')
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -193,7 +192,7 @@ def run_single_ms_sht_am(para):
     """
     run_id, fold_id, para_sparsity, para_xi, para_beta, num_passes, num_runs, k_fold = para
     s_time = time.time()
-    data = load_dataset(root_path=root_path, name='realsim')
+    data = _gen_dataset_01_pcmac(root_path=root_path, name='realsim')
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -328,7 +327,7 @@ def run_spam_l2_by_sm(id_=None, model='wt', num_passes=1):
     selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
-    data = load_dataset(root_path=root_path, name='realsim')
+    data = _gen_dataset_01_pcmac(root_path=root_path, name='realsim')
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
@@ -424,7 +423,7 @@ def run_sht_am_by_sm(id_=None, model='wt', num_passes=1, global_sparsity=2000):
     selected_para_xi, selected_para_beta = selected_model[(task_id / 5, task_id % 5)][3:5]
     print(selected_run_id, selected_fold_id, selected_para_xi, selected_para_beta)
     # to test it
-    data = load_dataset(root_path=root_path, name='realsim')
+    data = _gen_dataset_01_pcmac(root_path=root_path, name='realsim')
     para_spaces = {'conf_num_runs': num_runs,
                    'conf_k_fold': k_fold,
                    'para_num_passes': num_passes,
