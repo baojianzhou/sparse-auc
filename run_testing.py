@@ -177,8 +177,8 @@ def main():
     results[key][method] = pred_results(wt, wt_bar, auc, rts, para_list, te_index, data)
     print(run_id, fold_id, method, para_r, para_l1, para_l2, results[key][method]['auc_wt'])
 
-    f_name = 'results_task_%02d_passes_%02d.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % (task_id, passes)), 'wb'))
+    f_name = '%s/results_task_%02d_passes_%02d.pkl'
+    pkl.dump(results, open(os.path.join(data_path, f_name % (data_name, task_id, passes)), 'wb'))
 
 
 if __name__ == '__main__':
