@@ -5,7 +5,6 @@ import pickle as pkl
 import sys
 import time
 from itertools import product
-
 import numpy as np
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
@@ -81,6 +80,7 @@ def run_single_spam_l1(para):
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_c, para_l1, results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
@@ -102,6 +102,7 @@ def run_single_spam_l2(para):
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_c, para_l2, results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
@@ -123,6 +124,7 @@ def run_single_spam_l1l2(para):
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_c, para_l2, results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
@@ -144,6 +146,7 @@ def run_single_solam(para):
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_c, para_r, results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
@@ -165,6 +168,7 @@ def run_single_fsauc(para):
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_r, para_g, results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
@@ -186,6 +190,7 @@ def run_single_opauc(para):
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_eta, para_lam, results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
@@ -208,6 +213,7 @@ def run_single_sht_am(para):
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_s, para_b, para_c,
               results['auc_arr'][ind], time.time() - s_time)
+        sys.stdout.flush()
     return results
 
 
