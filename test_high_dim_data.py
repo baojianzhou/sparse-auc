@@ -130,6 +130,8 @@ def run_single_spam_l1l2(para):
 
 def run_single_solam(para):
     run_id, fold_id, k_fold, num_passes, step_len, para_c, para_r, data_name = para
+    print(para_c, para_r, data_name)
+    sys.stdout.flush()
     results = {'auc_arr': np.zeros(k_fold, dtype=float),
                'run_time': np.zeros(k_fold, dtype=float),
                'para': para}
