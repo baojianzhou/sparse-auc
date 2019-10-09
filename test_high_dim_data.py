@@ -306,6 +306,8 @@ def main():
                               (data_name, run_id, fold_id, method_name))
         pkl.dump(results, open(f_name, 'wb'))
     elif method_name == 'solam':
+        print('test')
+        sys.stdout.flush()
         list_c = np.arange(1, 101, 9, dtype=float)
         list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
         input_data_list = []
