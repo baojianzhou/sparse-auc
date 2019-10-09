@@ -85,7 +85,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
                           &PyArray_Type, &data_y_tr, &data_p, &para_xi, &para_r, &para_num_passes,
                           &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n * para_num_passes) / para_step_len;
+    total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -138,7 +138,7 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
                           &para_reg_opt, &para_num_passes, &para_step_len,
                           &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n * para_num_passes) / para_step_len;
+    total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -193,7 +193,7 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
                           &data_p, &para_sparsity, &para_b, &para_xi, &para_l2_reg,
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n * para_num_passes) / para_step_len;
+    total_num_eval = (data_n / para_b) * para_num_passes + 1;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -317,7 +317,7 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
 
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
+    total_num_eval = data_n / para_step_len + 1;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -365,7 +365,7 @@ static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
                           &data_p, &para_r, &para_g, &para_num_passes, &para_step_len,
                           &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n * para_num_passes) / para_step_len;
+    total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
