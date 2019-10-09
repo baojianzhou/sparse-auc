@@ -515,11 +515,10 @@ bool _algo_solam(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
-                 double *re_rts) {
-
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
+                 double *re_rts,
+                 int *re_len_auc) {
     double start_time = clock();
+    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
     double gamma, t = 1.0, p_hat = 0.; // learning rate, iteration time, positive ratio.
     double gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0;
@@ -540,7 +539,7 @@ bool _algo_solam(const double *data_x_tr,
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt, 1);
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt_bar, 1);
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_pass; i++) {
         for (int j = 0; j < data_n; j++) {
             const double *xt = data_x_tr + j * data_p; // current sample
@@ -588,9 +587,10 @@ bool _algo_solam(const double *data_x_tr,
                 double t_eval = clock();
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
                             data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-                re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
                 t_eval = clock() - t_eval;
-                re_rts[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.; // update the counts
         }
@@ -620,11 +620,11 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
-                        double *re_rts) {
+                        double *re_rts,
+                        int *re_len_auc) {
 
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
     double start_time = clock();
+    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
     double gamma, t = 1.0, p_hat = 0.; // learning rate, iteration time, positive ratio.
     double gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0;
@@ -644,7 +644,7 @@ bool _algo_solam_sparse(const double *x_tr_vals,
     memset(v_bar_prev, 0, sizeof(double) * (data_p + 2));
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt, 1);
     cblas_dcopy(data_p, v_bar_prev, 1, re_wt_bar, 1);
-    int auc_index = 1;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) {
         for (int j = 0; j < data_n; j++) {
             const int *xt_indices = x_tr_inds + x_tr_poss[j]; // current sample
@@ -700,17 +700,15 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                     for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
                     y_pred[q] = cblas_ddot(data_p, xt, 1, v_bar, 1);
                 }
-                re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
                 double eval_time = clock() - cur_t_s;
-                re_rts[auc_index] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
-                auc_index++;
+                re_rts[*re_len_auc] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             // update the counts
             t = t + 1.;
         }
     }
-    re_auc[0] = auc_index - 1;
-    re_rts[0] = auc_index - 1;
     cblas_dcopy(data_p, v_bar, 1, re_wt, 1);
     free(y_pred);
     free(xt);
@@ -735,9 +733,13 @@ void _algo_spam(const double *data_x_tr,
                 int para_verbose,
                 double *re_wt,
                 double *re_wt_bar,
-                double *re_auc) {
+                double *re_auc,
+                double *re_rts,
+                int *re_len_auc) {
 
+    double start_time = clock();
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
+
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
@@ -771,7 +773,7 @@ void _algo_spam(const double *data_x_tr,
                sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
     }
-    int auc_index = 0;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
         for (int j = 0; j < data_n; j++) { // for each training sample
             eta_t = para_xi / sqrt(t); // current learning rate
@@ -812,9 +814,13 @@ void _algo_spam(const double *data_x_tr,
             cblas_dscal(data_p, (t - 1.) / t, re_wt_bar, 1); // take average of wt
             cblas_daxpy(data_p, 1. / t, re_wt, 1, re_wt_bar, 1);
             if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
+                double t_eval = clock();
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
                             data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-                re_auc[auc_index++] = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+                t_eval = clock() - t_eval;
+                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
         }
@@ -843,10 +849,12 @@ void _algo_spam_sparse(const double *x_tr_vals,
                        double *re_wt,
                        double *re_wt_bar,
                        double *re_auc,
-                       double *re_rts) {
+                       double *re_rts,
+                       int *re_len_auc) {
 
-    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock();
+    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
+
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
@@ -886,7 +894,7 @@ void _algo_spam_sparse(const double *x_tr_vals,
                sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
     }
-    int auc_index = 1;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
         for (int j = 0; j < data_n; j++) { // for each training sample
             // receive training sample zt=(xt,yt)
@@ -940,16 +948,14 @@ void _algo_spam_sparse(const double *x_tr_vals,
                     for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
                     y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
                 }
-                re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
                 double eval_time = clock() - cur_t_s;
-                re_rts[auc_index] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
-                auc_index++;
+                re_rts[*re_len_auc] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
         }
     }
-    re_auc[0] = auc_index - 1;
-    re_rts[0] = auc_index - 1;
     free(xt);
     free(y_pred);
     free(nega_x_mean);
@@ -972,8 +978,11 @@ void _algo_sht_am(const double *data_x_tr,
                   int para_verbose,
                   double *re_wt,
                   double *re_wt_bar,
-                  double *re_auc) {
+                  double *re_auc,
+                  double *re_rts,
+                  int *re_len_auc) {
 
+    double start_time = clock();
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     srand((unsigned int) time(NULL));
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
@@ -1008,7 +1017,8 @@ void _algo_sht_am(const double *data_x_tr,
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
     }
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0, min_b_index = 0, max_b_index = data_n / para_b;
+    int min_b_index = 0, max_b_index = data_n / para_b;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
         for (int jj = 0; jj < data_n / para_b; jj++) { // n/b is the total number of blocks.
             // rand_ind is in [min_b_index,max_b_index-1]
@@ -1051,10 +1061,14 @@ void _algo_sht_am(const double *data_x_tr,
             cblas_daxpy(data_p, 1. / t, re_wt, 1, re_wt_bar, 1);
             // to calculate AUC score and run time
             if ((fmod(t, para_step_len) == 0.)) {
+                double t_eval = clock();
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
                             data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
                 double auc = _auc_score(data_y_tr, y_pred, data_n);
-                re_auc[auc_index++] = auc;
+                re_auc[*re_len_auc] = auc;
+                t_eval = clock() - t_eval;
+                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
         }
@@ -1084,7 +1098,8 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                          double *re_wt,
                          double *re_wt_bar,
                          double *re_auc,
-                         double *re_rts) {
+                         double *re_rts,
+                         int *re_len_auc) {
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock();
@@ -1125,7 +1140,8 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
     }
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 1, min_b_index = 0, max_b_index = data_n / para_b;
+    int min_b_index = 0, max_b_index = data_n / para_b;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) { // for each epoch
         for (int jj = 0; jj < data_n / para_b; jj++) { // data_n/b is the total number of blocks.
             // rand_ind is in [min_b_index,max_b_index-1]
@@ -1182,16 +1198,14 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                     for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
                     y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
                 }
-                re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
                 double eval_time = clock() - cur_t_s;
-                re_rts[auc_index] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
-                auc_index++;
+                re_rts[*re_len_auc] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.; // increase time
         }
     }
-    re_auc[0] = auc_index - 1;
-    re_rts[0] = auc_index - 1;
     free(y_pred);
     free(xt);
     free(nega_x_mean);
@@ -1217,10 +1231,12 @@ void _algo_graph_am(const double *data_x_tr,
                     int para_verbose,
                     double *re_wt,
                     double *re_wt_bar,
-                    double *re_auc) {
+                    double *re_auc,
+                    double *re_rts,
+                    int *re_len_auc) {
+    double start_time = clock();
+    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
 
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
@@ -1258,7 +1274,8 @@ void _algo_graph_am(const double *data_x_tr,
     double *proj_costs = malloc(sizeof(double) * data_m);    // projected costs.
     GraphStat *graph_stat = make_graph_stat(data_p, data_m);   // head projection paras
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0, min_b_index = 0, max_b_index = data_n / para_b;
+    int min_b_index = 0, max_b_index = data_n / para_b;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) {
         for (int jj = 0;
              jj < data_n / para_b; jj++) { // data_n/para_b is the total number of blocks.
@@ -1312,9 +1329,13 @@ void _algo_graph_am(const double *data_x_tr,
             cblas_daxpy(data_p, 1. / t, re_wt, 1, re_wt_bar, 1);
             // to calculate AUC score and run time
             if ((fmod(t, para_step_len) == 0.)) {
+                double t_eval = clock();
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
                             data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-                re_auc[auc_index++] = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+                t_eval = clock() - t_eval;
+                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
         }
@@ -1351,7 +1372,8 @@ void _algo_graph_am_sparse(const double *x_tr_vals,
                            double *re_wt,
                            double *re_wt_bar,
                            double *re_auc,
-                           double *re_rts) {
+                           double *re_rts,
+                           int *re_len_auc) {
 
     // make sure openblas uses only one cpu at a time.
     double start_time = clock();
@@ -1399,7 +1421,8 @@ void _algo_graph_am_sparse(const double *x_tr_vals,
     double *proj_costs = malloc(sizeof(double) * data_m);    // projected costs.
     GraphStat *graph_stat = make_graph_stat(data_p, data_m);   // head projection paras
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 1, min_b_index = 0, max_b_index = data_n / para_b;
+    int min_b_index = 0, max_b_index = data_n / para_b;
+    *re_len_auc = 0;
     for (int i = 0; i < para_num_passes; i++) {
         // data_n/para_b is the total number of blocks.
         for (int jj = 0; jj < data_n / para_b; jj++) {
@@ -1462,9 +1485,10 @@ void _algo_graph_am_sparse(const double *x_tr_vals,
                     for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
                     y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
                 }
-                re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
-                re_rts[auc_index] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
-                auc_index++;
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+                t_eval = clock() - t_eval;
+                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
         }
@@ -1492,7 +1516,8 @@ void _algo_opauc(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
-                 double *re_rts) {
+                 double *re_rts,
+                 int *re_len_auc) {
 
     // make sure openblas uses only one cpu at a time.
     openblas_set_num_threads(1);
@@ -1515,7 +1540,7 @@ void _algo_opauc(const double *data_x_tr,
     memset(tmp_mat, 0, sizeof(double) * data_p);
     memset(tmp_vec, 0, sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0;
+    *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n; t++) {
         const double *cur_x = data_x_tr + t * data_p;
@@ -1592,9 +1617,10 @@ void _algo_opauc(const double *data_x_tr,
             double t_eval = clock();
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-            re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+            re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
             t_eval = clock() - t_eval;
-            re_rts[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+            re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+            *re_len_auc = *re_len_auc + 1;
         }
     }
     free(tmp_vec);
@@ -1622,7 +1648,8 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
-                        double *re_rts) {
+                        double *re_rts,
+                        int *re_len_auc) {
 
     openblas_set_num_threads(1);
     srand((unsigned int) time(0));
@@ -1648,7 +1675,7 @@ void _algo_opauc_sparse(const double *x_tr_vals,
     double *y_pred = malloc(sizeof(double) * data_n);
     double *xt = malloc(sizeof(double) * data_p);
     double *gaussian = malloc(sizeof(double) * para_tau);
-    int auc_index = 1;
+    *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n; t++) {
         const int *xt_indices = x_tr_inds + x_tr_poss[t];
@@ -1722,14 +1749,12 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                 for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
                 y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
             }
-            re_auc[auc_index] = _auc_score(data_y_tr, y_pred, data_n);
+            re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
             t_eval = clock() - t_eval;
-            re_rts[auc_index] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
-            auc_index++;
+            re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+            *re_len_auc = *re_len_auc + 1;
         }
     }
-    re_auc[0] = auc_index - 1;
-    re_rts[0] = auc_index - 1;
     free(gaussian);
     free(xt);
     free(z_p);
@@ -1756,7 +1781,8 @@ void _algo_fsauc(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
-                 double *re_rts) {
+                 double *re_rts,
+                 int *re_len_auc) {
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock(), delta = 0.1, eta = para_g, R = para_r;
@@ -1785,7 +1811,7 @@ void _algo_fsauc(const double *data_x_tr,
     double *vd = malloc(sizeof(double) * (data_p + 2)), ad;
     double *tmp_proj = malloc(sizeof(double) * data_p), beta_new;
     double *y_pred = malloc(sizeof(double) * data_n);
-    int auc_index = 0;
+    *re_len_auc = 0;
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     for (int k = 0; k < m; k++) {
@@ -1836,10 +1862,10 @@ void _algo_fsauc(const double *data_x_tr,
                 double t_eval = clock();
                 cblas_dgemv(CblasRowMajor, CblasNoTrans,
                             data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-                double auc = _auc_score(data_y_tr, y_pred, data_n);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
                 t_eval = clock() - t_eval;
-                re_auc[auc_index] = auc;
-                re_rts[auc_index++] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
+                *re_len_auc = *re_len_auc + 1;
             }
         }
         para_r = para_r / 2.;
@@ -1897,7 +1923,8 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
-                        double *re_rts) {
+                        double *re_rts,
+                        int *re_len_auc) {
 
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock(), delta = 0.1, eta = para_g, R = para_r;

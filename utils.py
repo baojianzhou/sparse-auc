@@ -818,14 +818,14 @@ if __name__ == '__main__':
         plt.figure()
         for _ in re[(run_id, fold_id)]:
             results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
-            len_auc = int(re[(run_id, fold_id)][_]['rts'][0])
-            len_rts = int(re[(run_id, fold_id)][_]['auc'][0])
-            len_x = min(len_auc, len_rts) - 1
-            len_x = 76
-            print(_, max(re[(run_id, fold_id)][_]['rts'][1:len_x + 1]))
-            print(_, max(re[(run_id, fold_id)][_]['auc'][1:len_x + 1]))
-            plt.plot(re[(run_id, fold_id)][_]['rts'][1:len_x + 1],
-                     re[(run_id, fold_id)][_]['auc'][1:len_x + 1], label=_)
+            len_rts = int(re[(run_id, fold_id)][_]['rts'][0])
+            len_auc = int(re[(run_id, fold_id)][_]['auc'][0])
+            if _ != 'opauc':
+                x = [xx for xx in re[(run_id, fold_id)][_]['rts'][1:len_rts + 1] if xx < 2.0]
+                plt.plot(x, re[(run_id, fold_id)][_]['auc'][1:len(x) + 1], label=_)
+            else:
+                plt.plot(re[(run_id, fold_id)][_]['rts'][1:len_rts + 1],
+                         re[(run_id, fold_id)][_]['auc'][1:len_auc + 1], label=_)
         plt.legend()
         plt.show()
 

@@ -26,13 +26,6 @@
 #define is_nega(x) ( x < 0.0 ? 1.0 : 0.0)
 
 typedef struct {
-    Array *nodes;
-    Array *edges;
-    double prize;
-    double cost;
-} Tree;
-
-typedef struct {
     Array *re_nodes;
     Array *re_edges;
     double *prizes;
@@ -84,7 +77,8 @@ bool _algo_solam(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
-                 double *re_rts);
+                 double *re_rts,
+                 int *re_len_auc);
 
 bool _algo_solam_sparse(const double *x_tr_vals,
                         const int *x_tr_inds,
@@ -101,7 +95,8 @@ bool _algo_solam_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
-                        double *re_rts);
+                        double *re_rts,
+                        int *re_len_auc);
 
 /**
  *
@@ -135,7 +130,9 @@ void _algo_spam(const double *data_x_tr,
                 int para_verbose,
                 double *re_wt,
                 double *re_wt_bar,
-                double *re_auc);
+                double *re_auc,
+                double *re_rts,
+                int *re_len_auc);
 
 void _algo_spam_sparse(const double *x_tr_vals,
                        const int *x_tr_inds,
@@ -154,7 +151,8 @@ void _algo_spam_sparse(const double *x_tr_vals,
                        double *re_wt,
                        double *re_wt_bar,
                        double *re_auc,
-                       double *re_rts);
+                       double *re_rts,
+                       int *re_len_auc);
 
 /**
  * Stochastic Hard Thresholding for AUC maximization.
@@ -186,7 +184,9 @@ void _algo_sht_am(const double *data_x_tr,
                   int para_verbose,
                   double *re_wt,
                   double *re_wt_bar,
-                  double *re_auc);
+                  double *re_auc,
+                  double *re_rts,
+                  int *re_len_auc);
 
 /**
  *
@@ -225,7 +225,8 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                          double *re_wt,
                          double *re_wt_bar,
                          double *re_auc,
-                         double *re_rts);
+                         double *re_rts,
+                         int *re_len_auc);
 
 
 void _algo_graph_am(const double *data_x_tr,
@@ -244,7 +245,9 @@ void _algo_graph_am(const double *data_x_tr,
                     int para_verbose,
                     double *re_wt,
                     double *re_wt_bar,
-                    double *re_auc);
+                    double *re_auc,
+                    double *re_rts,
+                    int *re_len_auc);
 
 void _algo_graph_am_sparse(const double *x_values,
                            const int *x_tr_inds,
@@ -266,7 +269,8 @@ void _algo_graph_am_sparse(const double *x_values,
                            double *re_wt,
                            double *re_wt_bar,
                            double *re_auc,
-                           double *re_rts);
+                           double *re_rts,
+                           int *re_len_auc);
 
 void _algo_opauc(const double *data_x_tr,
                  const double *data_y_tr,
@@ -279,7 +283,8 @@ void _algo_opauc(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
-                 double *re_rts);
+                 double *re_rts,
+                 int *re_len_auc);
 
 
 void _algo_opauc_sparse(const double *x_tr_vals,
@@ -297,7 +302,8 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
-                        double *re_rts);
+                        double *re_rts,
+                        int *re_len_auc);
 
 /**
  *
@@ -331,7 +337,8 @@ void _algo_fsauc(const double *data_x_tr,
                  double *re_wt,
                  double *re_wt_bar,
                  double *re_auc,
-                 double *re_rts);
+                 double *re_rts,
+                 int *re_len_auc);
 
 void _algo_fsauc_sparse(const double *x_tr_vals,
                         const int *x_tr_inds,
@@ -348,6 +355,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         double *re_wt,
                         double *re_wt_bar,
                         double *re_auc,
-                        double *re_rts);
+                        double *re_rts,
+                        int *re_len_auc);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H
