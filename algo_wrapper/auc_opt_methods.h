@@ -51,43 +51,6 @@ GraphStat *make_graph_stat(int p, int m);
 
 bool free_graph_stat(GraphStat *graph_stat);
 
-bool head_proj_exact(
-        const EdgePair *edges, const double *costs, const double *prizes,
-        int g, double C, double delta, int max_iter, double err_tol, int root,
-        PruningMethod pruning, double epsilon, int n, int m, int verbose,
-        GraphStat *stat);
-
-bool head_proj_approx(
-        const EdgePair *edges, const double *costs, const double *prizes,
-        int g, double C, double delta, int max_iter, double err_tol, int root,
-        PruningMethod pruning, double epsilon, int n, int m, int verbose,
-        GraphStat *stat);
-
-bool tail_proj_exact(
-        const EdgePair *edges, const double *costs, const double *prizes,
-        int g, double C, double nu, int max_iter, double err_tol, int root,
-        PruningMethod pruning, double epsilon, int n, int m, int verbose,
-        GraphStat *stat);
-
-bool tail_proj_approx(
-        const EdgePair *edges, const double *costs, const double *prizes,
-        int g, double C, double nu, int max_iter, double err_tol, int root,
-        PruningMethod pruning, double epsilon, int n, int m, int verbose,
-        GraphStat *stat);
-
-
-bool cluster_grid_pcst(
-        const EdgePair *edges, const double *costs, const double *prizes,
-        int n, int m, int target_num_clusters, double lambda,
-        int root, PruningMethod pruning, int verbose,
-        GraphStat *stat);
-
-bool cluster_grid_pcst_binsearch(
-        const EdgePair *edges, const double *costs, const double *prizes,
-        int n, int m, int target_num_clusters, int root, int sparsity_low,
-        int sparsity_high, int max_num_iter, PruningMethod pruning,
-        int verbose, GraphStat *stat);
-
 bool head_tail_binsearch(
         const EdgePair *edges, const double *costs, const double *prizes,
         int n, int m, int target_num_clusters, int root, int sparsity_low,
@@ -124,8 +87,8 @@ bool _algo_solam(const double *data_x_tr,
                  double *re_rts);
 
 bool _algo_solam_sparse(const double *x_tr_vals,
-                        const int *x_tr_indices,
-                        const int *x_tr_posis,
+                        const int *x_tr_inds,
+                        const int *x_tr_poss,
                         const int *x_tr_lens,
                         const double *data_y_tr,
                         int data_n,
@@ -199,7 +162,7 @@ void _algo_spam_sparse(const double *x_tr_vals,
  * @param data_y_tr
  * @param data_n
  * @param data_p
- * @param para_sparsity
+ * @param para_s
  * @param para_b
  * @param para_xi
  * @param para_l2_reg
@@ -214,7 +177,7 @@ void _algo_sht_am(const double *data_x_tr,
                   const double *data_y_tr,
                   int data_n,
                   int data_p,
-                  int para_sparsity,
+                  int para_s,
                   int para_b,
                   double para_xi,
                   double para_l2_reg,
@@ -228,15 +191,15 @@ void _algo_sht_am(const double *data_x_tr,
 /**
  *
  * @param x_tr_vals
- * @param x_tr_indices
- * @param x_tr_posis
+ * @param x_tr_inds
+ * @param x_tr_poss
  * @param x_tr_lens
  * @param data_y_tr
  * @param data_n
  * @param data_p
- * @param para_sparsity
+ * @param para_s
  * @param para_b
- * @param para_xi
+ * @param para_c
  * @param para_l2_reg
  * @param para_num_passes
  * @param para_step_len
@@ -246,15 +209,15 @@ void _algo_sht_am(const double *data_x_tr,
  * @param re_auc
  */
 void _algo_sht_am_sparse(const double *x_tr_vals,
-                         const int *x_tr_indices,
-                         const int *x_tr_posis,
+                         const int *x_tr_inds,
+                         const int *x_tr_poss,
                          const int *x_tr_lens,
                          const double *data_y_tr,
                          int data_n,
                          int data_p,
-                         int para_sparsity,
+                         int para_s,
                          int para_b,
-                         double para_xi,
+                         double para_c,
                          double para_l2_reg,
                          int para_num_passes,
                          int para_step_len,
@@ -284,8 +247,8 @@ void _algo_graph_am(const double *data_x_tr,
                     double *re_auc);
 
 void _algo_graph_am_sparse(const double *x_values,
-                           const int *x_indices,
-                           const int *x_positions,
+                           const int *x_tr_inds,
+                           const int *x_tr_poss,
                            const int *x_len_list,
                            const double *data_y_tr,
                            const EdgePair *edges,
@@ -293,16 +256,17 @@ void _algo_graph_am_sparse(const double *x_values,
                            int data_m,
                            int data_n,
                            int data_p,
-                           int para_sparsity,
+                           int para_s,
                            int para_b,
-                           double para_xi,
+                           double para_c,
                            double para_l2_reg,
                            int para_num_passes,
                            int para_step_len,
                            int para_verbose,
                            double *re_wt,
                            double *re_wt_bar,
-                           double *re_auc);
+                           double *re_auc,
+                           double *re_rts);
 
 void _algo_opauc(const double *data_x_tr,
                  const double *data_y_tr,
@@ -320,7 +284,7 @@ void _algo_opauc(const double *data_x_tr,
 
 void _algo_opauc_sparse(const double *x_tr_vals,
                         const int *x_tr_inds,
-                        const int *x_tr_posis,
+                        const int *x_tr_poss,
                         const int *x_tr_lens,
                         const double *data_y_tr,
                         int data_n,
@@ -370,8 +334,8 @@ void _algo_fsauc(const double *data_x_tr,
                  double *re_rts);
 
 void _algo_fsauc_sparse(const double *x_tr_vals,
-                        const int *x_tr_indices,
-                        const int *x_tr_posis,
+                        const int *x_tr_inds,
+                        const int *x_tr_poss,
                         const int *x_tr_lens,
                         const double *data_y_tr,
                         int data_n,
