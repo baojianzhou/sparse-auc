@@ -803,6 +803,34 @@ def results_09_sector():
 
 
 if __name__ == '__main__':
+    representation = np.zeros(shape=(34, 2))
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots()
+    c1 = [21, 15, 23, 16, 19, 33, 34, 27, 24, 30, 31, 9]
+    c2 = [26, 25, 28, 29, 32, 10, 3]
+    c3 = [14, 20, 1, 22, 18, 4, 2, 8, 12, 13]
+    c4 = [5, 7, 6, 17, 11]
+    c_dict = dict()
+    for ci, __ in zip([c1, c2, c3, c4], ['c1', 'c2', 'c3', 'c4']):
+        for _ in ci:
+            c_dict[_] = __
+
+    with open('/home/baojian/git/deepwalk-c/deepwalk/karate.embeddings', 'rb') as f:
+        for each_row in f.readlines()[1:]:
+            items = each_row.lstrip().rstrip().split(' ')
+            print('%02d %.6f %.6f' % (int(items[0]), float(items[1]), float(items[2])))
+            representation[int(items[0]) - 1][0] = float(items[1])
+            representation[int(items[0]) - 1][1] = float(items[2])
+
+    for ci, __ in zip([c1, c2, c3, c4], ['c1', 'c2', 'c3', 'c4']):
+        nodes = np.zeros(shape=(len(ci), 2))
+        for i, _ in enumerate(ci):
+            nodes[i] = representation[_ - 1]
+        plt.scatter(nodes[:, 0], nodes[:, 1], label=__)
+    plt.legend()
+    plt.show()
+    exit()
     data_name = '01_pcmac'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['spam_l2', 'spam_l1', 'spam_l1l2', 'fsauc', 'solam', 'sht_am', 'opauc']
