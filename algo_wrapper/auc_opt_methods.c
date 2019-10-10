@@ -875,10 +875,6 @@ void _algo_spam_sparse(const double *x_tr_vals,
     }
     cblas_dscal(data_p, 1. / posi_t, posi_x_mean, 1);
     cblas_dscal(data_p, 1. / nega_t, nega_x_mean, 1);
-    printf("%.6f %.6f\n", sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
-           sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
-    printf("run time : %.4f\n", (clock() - start_time) * 1. / CLOCKS_PER_SEC);
-
     // the estimate of Pr(y=1), learning rate, and initialize start time.
     double prob_p = posi_t / (data_n * 1.0), eta_t, t = 1.0;
     if (para_verbose > 0) {

@@ -262,7 +262,7 @@ def reduce_para_space(data_name, run_id, fold_id):
 
 def main():
     fold_id, k_fold, passes, step_len = 0, 5, 2, 1000000
-    data_name, run_id = '13_realsim', 0
+    data_name, run_id = '14_news20b', 0
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     list_c = np.arange(1, 101, 9, dtype=float)
