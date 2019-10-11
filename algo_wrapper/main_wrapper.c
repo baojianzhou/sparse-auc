@@ -198,10 +198,10 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
     total_num_eval = (data_n / para_b) * (para_num_passes + 1);
-    re_wt = malloc(sizeof(double) * data_p);
-    re_wt_bar = malloc(sizeof(double) * data_p);
-    re_auc = malloc(sizeof(double) * total_num_eval);
-    re_rts = malloc(sizeof(double) * total_num_eval);
+    re_wt = calloc((size_t) data_p, sizeof(double));
+    re_wt_bar = calloc((size_t) data_p, sizeof(double));
+    re_auc = malloc(total_num_eval* sizeof(double));
+    re_rts = malloc(total_num_eval* sizeof(double));
     _algo_sht_am_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                         (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
                         (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_sparsity, para_b,
@@ -298,10 +298,10 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
         edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
     }
     total_num_eval = (data_n * (para_num_passes + 1)) / para_step_len;
-    re_wt = malloc(sizeof(double) * data_p);
-    re_wt_bar = malloc(sizeof(double) * data_p);
-    re_auc = malloc(sizeof(double) * total_num_eval);
-    re_rts = malloc(sizeof(double) * total_num_eval);
+    re_wt = calloc((size_t) data_p, sizeof(double));
+    re_wt_bar = calloc((size_t) data_p, sizeof(double));
+    re_auc = malloc(total_num_eval* sizeof(double));
+    re_rts = malloc(total_num_eval* sizeof(double));
     _algo_graph_am_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                           (int *) PyArray_DATA(x_tr_poss), (int *) PyArray_DATA(x_tr_lens),
                           (double *) PyArray_DATA(data_y_tr), edges,

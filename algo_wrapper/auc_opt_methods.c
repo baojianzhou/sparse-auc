@@ -1092,110 +1092,89 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
     double start_time = clock();
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
 
-    memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
-    memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
+    double a_wt, *posi_x_mean = calloc((size_t) data_p, sizeof(double)); // w^T*E[x|y=1]
+    double b_wt, *nega_x_mean = calloc((size_t) data_p, sizeof(double)); // w^T*E[x|y=-1]
+    double alpha_wt, posi_t = 0.0, nega_t = 0.0; // to determine a_wt, b_wt, and alpha_wt
+    double prob_p = posi_t / (data_n * 1.0), eta_t; // Pr(y=1), learning rate, time.
+    double *y_pred = calloc((size_t) data_n, sizeof(double));
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
-    // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=1]
-    double a_wt, *posi_x_mean = malloc(sizeof(double) * data_p);
-    memset(posi_x_mean, 0, sizeof(double) * data_p); // posi_x_mean --> 0.0
-    // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=-1]
-    double b_wt, *nega_x_mean = malloc(sizeof(double) * data_p);
-    memset(nega_x_mean, 0, sizeof(double) * data_p); // nega_x_mean --> 0.0
-    double alpha_wt; // initialize alpha_wt (initialize to zero.)
-    double *xt = malloc(sizeof(double) * data_p);
-    double posi_t = 0.0, nega_t = 0.0; // to determine a_wt, b_wt, and alpha_wt
+    int min_b_ind = 0, max_b_ind = data_n / para_b;
+    int total_blocks = para_num_passes * (data_n / para_b);
     for (int i = 0; i < data_n; i++) {
         const int *xt_indices = x_tr_inds + x_tr_poss[i];
         const double *xt_vals = x_tr_vals + x_tr_poss[i];
         if (data_y_tr[i] > 0) {
             posi_t++;
-            for (int kk = 0; kk < x_tr_lens[i]; kk++) posi_x_mean[xt_indices[kk]] += xt_vals[kk];
+            for (int kk = 0; kk < x_tr_lens[i]; kk++)
+                posi_x_mean[xt_indices[kk]] += xt_vals[kk];
         } else {
             nega_t++;
-            for (int kk = 0; kk < x_tr_lens[i]; kk++) nega_x_mean[xt_indices[kk]] += xt_vals[kk];
+            for (int kk = 0; kk < x_tr_lens[i]; kk++)
+                nega_x_mean[xt_indices[kk]] += xt_vals[kk];
         }
     }
     cblas_dscal(data_p, 1. / posi_t, posi_x_mean, 1);
     cblas_dscal(data_p, 1. / nega_t, nega_x_mean, 1);
-    printf("%.6f %.6f\n", sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
-           sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
-    // Pr(y=1), learning rate, time clock.
-    double prob_p = posi_t / (data_n * 1.0), eta_t, t = 1.0;
+
+    memset(re_wt, 0, sizeof(double) * data_p);
+    memset(re_wt_bar, 0, sizeof(double) * data_p);
+    *re_len_auc = 0;
     if (para_verbose > 1) {
         printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
         printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",
                sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
+        printf("step_len: %d\n", para_step_len);
+        printf("%.6f %.6f\n", sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
+               sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
     }
-    double *y_pred = malloc(sizeof(double) * data_n);
-    int min_b_index = 0, max_b_index = data_n / para_b;
-    *re_len_auc = 0;
-    for (int i = 0; i < para_num_passes; i++) { // for each epoch
-        for (int jj = 0; jj < data_n / para_b; jj++) { // data_n/b is the total number of blocks.
-            // rand_ind is in [min_b_index,max_b_index-1]
-            int rand_ind = rand() % (max_b_index - min_b_index);
-            // update a(wt), para_b(wt), and alpha(wt)
-            a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1);
-            b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1);
-            alpha_wt = b_wt - a_wt;
-            eta_t = para_c / sqrt(t); // current learning rate
-            // receive a block of training samples to calculate the gradient
-            memset(grad_wt, 0, sizeof(double) * data_p);
-            // notice that, there are remain samples are not in blocks,
-            // we include it into the last block.
-            int cur_b_size = (rand_ind == (max_b_index - 1) ? para_b + (data_n % para_b) : para_b);
-            for (int kk = 0; kk < cur_b_size; kk++) {
-                int ind = rand_ind * para_b + kk; // current ind:
-                const int *xt_indices = x_tr_inds + x_tr_poss[ind];
-                const double *xt_vals = x_tr_vals + x_tr_poss[ind];
-                double wt_dot = 0.0;
-                for (int tt = 0; tt < x_tr_lens[ind]; tt++)
-                    wt_dot += (re_wt[xt_indices[tt]] * xt_vals[tt]);
-                double weight = data_y_tr[ind] > 0 ? 2. * (1.0 - prob_p) * (wt_dot - a_wt) -
-                                                     2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
-                                2.0 * prob_p * (wt_dot - b_wt) + 2.0 * (1.0 + alpha_wt) * prob_p;
-                for (int tt = 0; tt < x_tr_lens[ind]; tt++) // calculate the gradient
-                    grad_wt[xt_indices[tt]] += (weight * xt_vals[tt]);
+    for (int t = 0; t < total_blocks; t++) { //for each block
+        int bi = rand() % (max_b_ind - min_b_ind); // block bi must be in [min_b_ind,max_b_ind-1]
+        a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1); // update a(wt)
+        b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1); // update b(wt)
+        alpha_wt = b_wt - a_wt; // update alpha(wt)
+        eta_t = para_c / sqrt(t); // TODO: current learning rate ?
+        memset(grad_wt, 0, sizeof(double) * data_p); // the gradient of a block training samples
+        int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data_n % para_b) : para_b);
+        for (int kk = 0; kk < cur_b_size; kk++) {
+            int ind = bi * para_b + kk; // initial position of block bi
+            const int *xt_inds = x_tr_inds + x_tr_poss[ind];
+            const double *xt_vals = x_tr_vals + x_tr_poss[ind];
+            double wt_dot = 0.0;
+            for (int tt = 0; tt < x_tr_lens[ind]; tt++)
+                wt_dot += (re_wt[xt_inds[tt]] * xt_vals[tt]);
+            double weight = data_y_tr[ind] > 0 ? 2. * (1.0 - prob_p) * (wt_dot - a_wt) -
+                                                 2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
+                            2.0 * prob_p * (wt_dot - b_wt) + 2.0 * (1.0 + alpha_wt) * prob_p;
+            for (int tt = 0; tt < x_tr_lens[ind]; tt++)
+                grad_wt[xt_inds[tt]] += (weight * xt_vals[tt]); // calculate the gradient for xi
+        }
+        cblas_dscal(data_p, 1. / cur_b_size, grad_wt, 1); // averaged gradient
+        cblas_daxpy(data_p, -eta_t, grad_wt, 1, re_wt, 1); // wt = wt - eta * grad(wt)
+        if (para_l2_reg != 0.0) // ell_2 regularization, we do not need it in our case.
+            cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
+        _hard_thresholding(re_wt, data_p, para_s); // k-sparse projection step.
+        cblas_daxpy(data_p, 1., re_wt, 1, re_wt_bar, 1);
+        if (para_verbose == 1) { // to calculate AUC score
+            double t_eval = clock();
+            for (int q = 0; q < data_n; q++) {
+                const int *xt_indices = x_tr_inds + x_tr_poss[q];
+                const double *xt_vals = x_tr_vals + x_tr_poss[q];
+                for (int tt = 0; tt < x_tr_lens[q]; tt++)
+                    y_pred[q] += (re_wt[xt_indices[tt]] * xt_vals[tt]);
             }
-            cblas_dscal(data_p, 1. / (cur_b_size * 1.0), grad_wt, 1);
-            // gradient descent: u= wt - eta * grad(wt)
-            cblas_daxpy(data_p, -eta_t, grad_wt, 1, re_wt, 1);
-            /**
-             * ell_2 regularization option proposed in the following paper:
-             *
-             * @inproceedings{singer2009efficient,
-             * title={Efficient learning using forward-backward splitting},
-             * author={Singer, Yoram and Duchi, John C},
-             * booktitle={Advances in Neural Information Processing Systems},
-             * pages={495--503},
-             * year={2009}}
-             */
-            if (para_l2_reg != 0.0) { // in our cases, do not need it!
-                cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
-            }
-            _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
-            if (para_verbose == 1) { // to calculate AUC score
-                double cur_t_s = clock();
-                for (int q = 0; q < data_n; q++) {
-                    memset(xt, 0, sizeof(double) * data_p);
-                    const int *xt_indices = x_tr_inds + x_tr_poss[q];
-                    const double *xt_vals = x_tr_vals + x_tr_poss[q];
-                    for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
-                    y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
-                }
-                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-                double eval_time = clock() - cur_t_s;
-                re_rts[*re_len_auc] = (clock() - start_time - eval_time) / CLOCKS_PER_SEC;
-                *re_len_auc = *re_len_auc + 1;
-            }
-            t = t + 1.; // increase time
-            if (jj % 50 == 0) {
-                printf("i:%d jj:%03d %.6f\n", i, jj, (clock() - start_time) / CLOCKS_PER_SEC);
-            }
+            re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+            memset(y_pred, 0, sizeof(double) * data_n);
+            re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
+        }
+        if (t % 50 == 0) {
+            printf("i:%d jj:%03d %.6f\n", t / max_b_ind, t % max_b_ind,
+                   (clock() - start_time) / CLOCKS_PER_SEC);
         }
     }
+    cblas_dscal(data_p, 1. / total_blocks, re_wt_bar, 1);
+    cblas_dscal(*re_len_auc, 1. / CLOCKS_PER_SEC, re_rts, 1);
     free(y_pred);
-    free(xt);
     free(nega_x_mean);
     free(posi_x_mean);
     free(grad_wt);
@@ -1504,7 +1483,6 @@ void _algo_graph_am_sparse(const double *x_tr_vals,
     // make sure openblas uses only one cpu at a time.
     double start_time = clock();
     openblas_set_num_threads(1);
-
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient

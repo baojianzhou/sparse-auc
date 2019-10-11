@@ -37,6 +37,12 @@ void test_mod() {
     }
 }
 
+void test_2() {
+    int t = 4;
+    double s = 1. / t;
+    printf("%.4f\n", s);
+}
+
 int main() {
-    test_mod();
+    test_2();
 }
