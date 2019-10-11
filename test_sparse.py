@@ -278,8 +278,8 @@ def test_spam_l1():
 
 
 def test_sht_am():
-    fold_id, k_fold, passes, step_len = 0, 5, 1, 1000000
-    data_name, run_id = '14_news20b', 0
+    fold_id, k_fold, passes, step_len = 0, 5, 5, 1000000
+    data_name, run_id = '13_realsim', 0
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
