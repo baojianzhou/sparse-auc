@@ -260,8 +260,8 @@ def reduce_para_space(data_name, run_id, fold_id):
     return np.sort(list(sub_list_c)), np.sort(list(sub_list_l1)), np.sort(list(sub_list_l2))
 
 
-def main():
-    fold_id, k_fold, passes, step_len = 0, 5, 2, 1000000
+def test_spam_l1():
+    fold_id, k_fold, passes, step_len = 0, 5, 1, 1000000
     data_name, run_id = '14_news20b', 0
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
@@ -275,6 +275,28 @@ def main():
     results = pool.map(run_single_spam_l1, input_data_list)
     pool.close()
     pool.join()
+
+
+def test_sht_am():
+    fold_id, k_fold, passes, step_len = 0, 5, 1, 1000000
+    data_name, run_id = '14_news20b', 0
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+    list_b = [20, 50, 100]
+    list_c = 2. ** np.arange(-10, 5, 2, dtype=float)
+    input_data_list = []
+    for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
+        para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
+        input_data_list.append(para)
+    pool = multiprocessing.Pool(processes=1)
+    pool.map(run_single_sht_am, input_data_list)
+    pool.close()
+    pool.join()
+
+
+def main():
+    test_sht_am()
 
 
 if __name__ == '__main__':

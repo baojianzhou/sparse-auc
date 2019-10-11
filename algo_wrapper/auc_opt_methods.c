@@ -899,11 +899,9 @@ void _algo_spam_sparse(const double *x_tr_vals,
             double weight = data_y_tr[j] > 0 ? 2. * (1.0 - prob_p) * (wt_dot - a_wt) -
                                                2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
                             2.0 * prob_p * (wt_dot - b_wt) + 2.0 * (1.0 + alpha_wt) * prob_p;
-            memset(grad_wt, 0, sizeof(double) * data_p);
+            memcpy(u, re_wt, sizeof(double) * data_p);
             for (int tt = 0; tt < x_tr_lens[j]; tt++)
-                grad_wt[xt_indices[tt]] = weight * xt_vals[tt];
-            cblas_dcopy(data_p, re_wt, 1, u, 1); // gradient descent: u= wt - eta * grad(wt)
-            cblas_daxpy(data_p, -eta_t, grad_wt, 1, u, 1);
+                u[xt_indices[tt]] += -eta_t * weight * xt_vals[tt];
             /**
              * Currently, u is the \hat{wt_{t+1}}, next is to use prox_operator.
              * The following part of the code is the proximal operator for
@@ -942,6 +940,9 @@ void _algo_spam_sparse(const double *x_tr_vals,
                 *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
+            if (j % 1000 == 0) {
+                printf("%.6f\n", (clock() - start_time) / CLOCKS_PER_SEC);
+            }
         }
     }
     free(y_pred);
@@ -1094,7 +1095,6 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
-    double *u = malloc(sizeof(double) * data_p); // proxy vector
     // the estimate of the expectation of positive sample x., i.e. w^T*E[x|y=1]
     double a_wt, *posi_x_mean = malloc(sizeof(double) * data_p);
     memset(posi_x_mean, 0, sizeof(double) * data_p); // posi_x_mean --> 0.0
@@ -1148,18 +1148,18 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                 int ind = rand_ind * para_b + kk; // current ind:
                 const int *xt_indices = x_tr_inds + x_tr_poss[ind];
                 const double *xt_vals = x_tr_vals + x_tr_poss[ind];
-                memset(xt, 0, sizeof(double) * data_p);
-                for (int tt = 0; tt < x_tr_lens[ind]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
-                double cur_yt = data_y_tr[ind];
-                double wt_dot = cblas_ddot(data_p, re_wt, 1, xt, 1);
-                double weight = cur_yt > 0 ? 2. * (1.0 - prob_p) * (wt_dot - a_wt) -
-                                             2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
+                double wt_dot = 0.0;
+                for (int tt = 0; tt < x_tr_lens[ind]; tt++)
+                    wt_dot += (re_wt[xt_indices[tt]] * xt_vals[tt]);
+                double weight = data_y_tr[ind] > 0 ? 2. * (1.0 - prob_p) * (wt_dot - a_wt) -
+                                                     2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
                                 2.0 * prob_p * (wt_dot - b_wt) + 2.0 * (1.0 + alpha_wt) * prob_p;
-                cblas_daxpy(data_p, weight, xt, 1, grad_wt, 1); // calculate the gradient
+                for (int tt = 0; tt < x_tr_lens[ind]; tt++) // calculate the gradient
+                    grad_wt[xt_indices[tt]] += (weight * xt_vals[tt]);
             }
             cblas_dscal(data_p, 1. / (cur_b_size * 1.0), grad_wt, 1);
-            cblas_dcopy(data_p, re_wt, 1, u, 1); //gradient descent: u= wt - eta * grad(wt)
-            cblas_daxpy(data_p, -eta_t, grad_wt, 1, u, 1);
+            // gradient descent: u= wt - eta * grad(wt)
+            cblas_daxpy(data_p, -eta_t, grad_wt, 1, re_wt, 1);
             /**
              * ell_2 regularization option proposed in the following paper:
              *
@@ -1171,12 +1171,9 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
              * year={2009}}
              */
             if (para_l2_reg != 0.0) { // in our cases, do not need it!
-                cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
+                cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
             }
-            _hard_thresholding(u, data_p, para_s); // k-sparse step.
-            cblas_dcopy(data_p, u, 1, re_wt, 1);
-            cblas_dscal(data_p, (t - 1.) / t, re_wt_bar, 1);
-            cblas_daxpy(data_p, 1. / t, re_wt, 1, re_wt_bar, 1);
+            _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
             if (para_verbose == 1) { // to calculate AUC score
                 double cur_t_s = clock();
                 for (int q = 0; q < data_n; q++) {
@@ -1192,13 +1189,15 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                 *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.; // increase time
+            if (jj % 50 == 0) {
+                printf("i:%d jj:%03d %.6f\n", i, jj, (clock() - start_time) / CLOCKS_PER_SEC);
+            }
         }
     }
     free(y_pred);
     free(xt);
     free(nega_x_mean);
     free(posi_x_mean);
-    free(u);
     free(grad_wt);
 }
 
@@ -1293,7 +1292,7 @@ void _algo_sht_am_sparse_2(const double *x_tr_vals,
                                                      2. * (1.0 + alpha_wt) * (1.0 - prob_p) :
                                 2.0 * prob_p * (wt_dot - b_wt) + 2.0 * (1.0 + alpha_wt) * prob_p;
                 for (int tt = 0; tt < x_tr_lens[ind]; tt++) // calculate the gradient
-                    grad_wt[xt_indices[tt]] += weight * xt_vals[tt];
+                    grad_wt[xt_indices[tt]] += (weight * xt_vals[tt]);
             }
             cblas_dscal(data_p, 1. / (cur_b_size * 1.0), grad_wt, 1);
             cblas_dcopy(data_p, re_wt, 1, u, 1); //gradient descent: u= wt - eta * grad(wt)
