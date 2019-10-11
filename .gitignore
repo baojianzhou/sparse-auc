@@ -108,3 +108,4 @@ cmake-build-debug
 .swp
 *.*~
 slurm_run.sh
+slurm_test.sh
