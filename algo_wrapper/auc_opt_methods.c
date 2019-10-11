@@ -1168,7 +1168,7 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
             memset(y_pred, 0, sizeof(double) * data_n);
             re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
-        if (t % 50 == 0) {
+        if (para_verbose > 1) {
             printf("i:%d jj:%03d %.6f\n", t / max_b_ind, t % max_b_ind,
                    (clock() - start_time) / CLOCKS_PER_SEC);
         }
