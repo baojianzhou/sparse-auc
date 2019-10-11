@@ -941,9 +941,6 @@ void _algo_spam_sparse(const double *x_tr_vals,
                 *re_len_auc = *re_len_auc + 1;
             }
             t = t + 1.0; // increase time
-            if (j % 1000 == 0) {
-                printf("%.6f\n", (clock() - start_time) / CLOCKS_PER_SEC);
-            }
         }
     }
     free(y_pred);
@@ -1070,25 +1067,12 @@ void _algo_sht_am(const double *data_x_tr,
 }
 
 
-void _algo_sht_am_sparse(const double *x_tr_vals,
-                         const int *x_tr_inds,
-                         const int *x_tr_poss,
-                         const int *x_tr_lens,
-                         const double *data_y_tr,
-                         int data_n,
-                         int data_p,
-                         int para_s,
-                         int para_b,
-                         double para_c,
-                         double para_l2_reg,
-                         int para_num_passes,
-                         int para_step_len,
-                         int para_verbose,
-                         double *re_wt,
-                         double *re_wt_bar,
-                         double *re_auc,
-                         double *re_rts,
-                         int *re_len_auc) {
+void _algo_sht_am_sparse(
+        const double *x_tr_vals, const int *x_tr_inds, const int *x_tr_poss,
+        const int *x_tr_lens, const double *data_y_tr, int data_n, int data_p,
+        int para_s, int para_b, double para_c, double para_l2_reg,
+        int para_num_passes, int para_step_len, int para_verbose,
+        double *re_wt, double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
 
     double start_time = clock();
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
@@ -1096,7 +1080,7 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
     double a_wt, *posi_x_mean = calloc((size_t) data_p, sizeof(double)); // w^T*E[x|y=1]
     double b_wt, *nega_x_mean = calloc((size_t) data_p, sizeof(double)); // w^T*E[x|y=-1]
     double alpha_wt, posi_t = 0.0, nega_t = 0.0; // to determine a_wt, b_wt, and alpha_wt
-    double prob_p = posi_t / (data_n * 1.0), eta_t; // Pr(y=1), learning rate, time.
+    double prob_p, eta_t; // Pr(y=1), learning rate, time.
     double *y_pred = calloc((size_t) data_n, sizeof(double));
     double *grad_wt = malloc(sizeof(double) * data_p); // gradient
     int min_b_ind = 0, max_b_ind = data_n / para_b;
@@ -1114,27 +1098,27 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                 nega_x_mean[xt_inds[kk]] += xt_vals[kk];
         }
     }
+    prob_p = posi_t / (data_n * 1.0);
     cblas_dscal(data_p, 1. / posi_t, posi_x_mean, 1);
     cblas_dscal(data_p, 1. / nega_t, nega_x_mean, 1);
 
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
-    if (para_verbose > 1) {
-        printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
-        printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",
+    if (para_verbose == 1) {
+        printf("num_posi: %.0f num_nega: %.0f prob_p: %.4f\n", posi_t, nega_t, prob_p);
+        printf("||x_posi||: %.6f ||x_nega||: %.6f\n",
                sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
         printf("step_len: %d\n", para_step_len);
-        printf("%.6f %.6f\n", sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
-               sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
+        printf("||re_wt||: %.6f\n", sqrt(cblas_ddot(data_p, re_wt, 1, re_wt, 1)));
     }
     for (int t = 0; t < total_blocks; t++) { //for each block
         int bi = rand() % (max_b_ind - min_b_ind); // block bi must be in [min_b_ind,max_b_ind-1]
         a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1); // update a(wt)
         b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1); // update b(wt)
         alpha_wt = b_wt - a_wt; // update alpha(wt)
-        eta_t = para_c / sqrt(t); // TODO: current learning rate ?
+        eta_t = para_c / sqrt(t + 1.); // TODO: current learning rate ?
         memset(grad_wt, 0, sizeof(double) * data_p); // the gradient of a block training samples
         int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data_n % para_b) : para_b);
         for (int kk = 0; kk < cur_b_size; kk++) {
@@ -1150,8 +1134,7 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
             for (int tt = 0; tt < x_tr_lens[ind]; tt++)
                 grad_wt[xt_inds[tt]] += (weight * xt_vals[tt]); // calculate the gradient for xi
         }
-        cblas_dscal(data_p, 1. / cur_b_size, grad_wt, 1); // averaged gradient
-        cblas_daxpy(data_p, -eta_t, grad_wt, 1, re_wt, 1); // wt = wt - eta * grad(wt)
+        cblas_daxpy(data_p, -eta_t / cur_b_size, grad_wt, 1, re_wt, 1); // wt = wt - eta * grad(wt)
         if (para_l2_reg != 0.0) // ell_2 regularization, we do not need it in our case.
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
         _hard_thresholding(re_wt, data_p, para_s); // k-sparse projection step.
@@ -1169,8 +1152,9 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
             re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
         if (para_verbose > 1) {
-            printf("i:%d jj:%03d %.6f\n", t / max_b_ind, t % max_b_ind,
-                   (clock() - start_time) / CLOCKS_PER_SEC);
+            printf("i:%d jj:%03d %.6f %.6f %.6f\n", t / max_b_ind, t % max_b_ind,
+                   (clock() - start_time) / CLOCKS_PER_SEC,
+                   re_auc[(*re_len_auc) - 1], cblas_ddot(data_p, re_wt, 1, re_wt, 1));
         }
     }
     cblas_dscal(data_p, 1. / total_blocks, re_wt_bar, 1);

@@ -141,8 +141,8 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
                           &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
     total_num_eval = (data_n * (para_num_passes + 1)) / para_step_len;
-    re_wt = malloc(sizeof(double) * data_p);
-    re_wt_bar = malloc(sizeof(double) * data_p);
+    re_wt = calloc((size_t) data_p, sizeof(double));
+    re_wt_bar = calloc((size_t) data_p, sizeof(double));
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
     _algo_spam_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
