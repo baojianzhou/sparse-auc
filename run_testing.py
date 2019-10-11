@@ -132,6 +132,7 @@ def main():
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index,
                                         data)
     print(run_id, fold_id, method, para_c, para_l1, results[key][method]['auc_wt'])
+    sys.stdout.flush()
     # -----------------------
     method = 'spam_l2'
     para_c, para_l2 = get_model(data_name, method, run_id, fold_id)
@@ -141,6 +142,7 @@ def main():
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l2), te_index,
                                         data)
     print(run_id, fold_id, method, para_c, para_l2, results[key][method]['auc_wt'])
+    sys.stdout.flush()
     # -----------------------
     method = 'sht_am'
     para_s, para_b, para_c = get_model(data_name, method, run_id, fold_id)
@@ -150,6 +152,7 @@ def main():
     results[key][method] = pred_results(wt, wt_bar, auc, rts,
                                         (para_s, para_b, para_c), te_index, data)
     print(run_id, fold_id, method, para_s, para_b, para_c, results[key][method]['auc_wt'])
+    sys.stdout.flush()
     # -----------------------
     method = 'fsauc'
     para_r, para_g = get_model(data_name, method, run_id, fold_id)
@@ -158,6 +161,7 @@ def main():
         data['p'], para_r, para_g, passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
     print(run_id, fold_id, method, para_r, para_g, results[key][method]['auc_wt'])
+    sys.stdout.flush()
     # -----------------------
     method = 'solam'
     para_c, para_r = get_model(data_name, method, run_id, fold_id)
@@ -166,6 +170,7 @@ def main():
         data['p'], para_c, para_r, passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, (para_c, para_r), te_index, data)
     print(run_id, fold_id, method, para_c, para_r, results[key][method]['auc_wt'])
+    sys.stdout.flush()
     # -----------------------
     method = 'opauc'
     para_tau, para_eta, para_lambda = get_model(data_name, method, run_id, fold_id)
@@ -175,6 +180,7 @@ def main():
     results[key][method] = pred_results(wt, wt_bar, auc, rts,
                                         (para_tau, para_eta, para_lambda), te_index, data)
     print(run_id, fold_id, method, para_tau, para_eta, para_lambda, results[key][method]['auc_wt'])
+    sys.stdout.flush()
     # -----------------------
     method = 'spam_l1l2'
     para_c, para_l1, para_l2 = get_model(data_name, method, run_id, fold_id)
@@ -184,6 +190,7 @@ def main():
         data['p'], para_c, para_l1, para_l2, 0, passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts, para_list, te_index, data)
     print(run_id, fold_id, method, para_r, para_l1, para_l2, results[key][method]['auc_wt'])
+    sys.stdout.flush()
 
     f_name = '%s/results_task_%02d_passes_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % (data_name, task_id, passes)), 'wb'))
