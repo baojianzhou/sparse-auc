@@ -836,6 +836,7 @@ if __name__ == '__main__':
     data_name = '09_sector'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
+    method_list = ['spam_l2', 'spam_l1', 'spam_l1l2', 'sht_am']
     results_auc = {_: [] for _ in method_list}
     import matplotlib.pyplot as plt
 
@@ -845,14 +846,12 @@ if __name__ == '__main__':
                               % (data_name, task_id, 20))
         re = pkl.load(open(f_name, 'rb'))
         plt.figure()
-        for _ in re[(run_id, fold_id)]:
+        for _ in method_list:
             results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
             x = re[(run_id, fold_id)][_]['rts']
-            print(len(x), len(re[(run_id, fold_id)][_]['auc']))
-            if _ != 'opauc':
-                plt.plot(x, re[(run_id, fold_id)][_]['auc'], label=_)
-            else:
-                plt.plot(x, re[(run_id, fold_id)][_]['auc'], label=_)
+            print(_, len(x), len(re[(run_id, fold_id)][_]['auc']))
+            plt.plot(x, re[(run_id, fold_id)][_]['auc'][:len(x)], label=_)
+        print('-----')
         plt.legend()
         plt.show()
     str_list = []

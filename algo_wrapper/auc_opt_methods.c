@@ -1539,32 +1539,28 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                         double *re_rts,
                         int *re_len_auc) {
 
+    double start_time = clock();
     openblas_set_num_threads(1);
     srand((unsigned int) time(0));
-    double start_time = clock();
-    double num_p = 0.0, num_n = 0.0;
-    double *center_p = malloc(sizeof(double) * data_p);
-    double *center_n = malloc(sizeof(double) * data_p);
-    memset(center_p, 0, sizeof(double) * data_p);
-    memset(center_n, 0, sizeof(double) * data_p);
-    double *h_center_p = malloc(sizeof(double) * para_tau);
-    double *h_center_n = malloc(sizeof(double) * para_tau);
-    memset(h_center_p, 0, sizeof(double) * para_tau);
-    memset(h_center_n, 0, sizeof(double) * para_tau);
-    double *z_p = malloc(sizeof(double) * data_p * para_tau);
-    double *z_n = malloc(sizeof(double) * data_p * para_tau);
-    memset(z_p, 0, sizeof(double) * data_p * para_tau);
-    memset(z_n, 0, sizeof(double) * data_p * para_tau);
 
+    double num_p = 0.0, num_n = 0.0;
+    double *center_p = calloc((size_t) data_p, sizeof(double));
+    double *center_n = calloc((size_t) data_p, sizeof(double));
+    double *h_center_p = calloc((size_t) para_tau, sizeof(double));
+    double *h_center_n = calloc((size_t) para_tau, sizeof(double));
+    double *z_p = calloc((size_t) (data_p * para_tau), sizeof(double));
+    double *z_n = calloc((size_t) (data_p * para_tau), sizeof(double));
     double *grad_wt = malloc(sizeof(double) * data_p);
-    memset(re_wt, 0, sizeof(double) * data_p);
-    memset(re_wt_bar, 0, sizeof(double) * data_p);
+
     double *tmp_vec = malloc(sizeof(double) * data_p);
     double *y_pred = malloc(sizeof(double) * data_n);
     double *xt = malloc(sizeof(double) * data_p);
     double *gaussian = malloc(sizeof(double) * para_tau);
-    *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
+
+    memset(re_wt, 0, sizeof(double) * data_p);
+    memset(re_wt_bar, 0, sizeof(double) * data_p);
+    *re_len_auc = 0;
     for (int t = 0; t < data_n; t++) {
         const int *xt_inds = x_tr_inds + x_tr_poss[t];
         const double *xt_vals = x_tr_vals + x_tr_poss[t];
@@ -1575,14 +1571,16 @@ void _algo_opauc_sparse(const double *x_tr_vals,
         if (data_y_tr[t] > 0) {
             num_p++;
             cblas_dscal(data_p, (num_p - 1.) / num_p, center_p, 1); // update center_p
-            cblas_daxpy(data_p, 1. / num_p, xt, 1, center_p, 1);
+            for (int tt = 0; tt < x_tr_lens[t]; tt++)
+                center_p[xt_inds[tt]] += xt_vals[tt] / num_p;
             cblas_dscal(para_tau, (num_p - 1.) / num_p, h_center_p, 1); // update h_center_p
             cblas_daxpy(para_tau, 1. / num_p, gaussian, 1, h_center_p, 1);
             cblas_dger(CblasRowMajor, data_p, para_tau, 1., xt, 1, gaussian, 1, z_p, para_tau);
             if (num_n > 0.0) {
                 // calculate the gradient part 1: \para_lambda w + x_t - c_t^+
                 cblas_dcopy(data_p, center_n, 1, grad_wt, 1);
-                cblas_daxpy(data_p, -1., xt, 1, grad_wt, 1);
+                for (int tt = 0; tt < x_tr_lens[t]; tt++)
+                    grad_wt[xt_inds[tt]] += -xt_vals[tt];
                 cblas_daxpy(data_p, para_lambda, re_wt, 1, grad_wt, 1);
                 cblas_dcopy(data_p, xt, 1, tmp_vec, 1); // xt - c_t^-
                 cblas_daxpy(data_p, -1., center_n, 1, tmp_vec, 1);
@@ -1601,7 +1599,8 @@ void _algo_opauc_sparse(const double *x_tr_vals,
         } else {
             num_n++;
             cblas_dscal(data_p, (num_n - 1.) / num_n, center_n, 1); // update center_n
-            cblas_daxpy(data_p, 1. / num_n, xt, 1, center_n, 1);
+            for (int tt = 0; tt < x_tr_lens[t]; tt++)
+                center_n[xt_inds[tt]] += xt_vals[tt] / num_n;
             cblas_dscal(para_tau, (num_n - 1.) / num_n, h_center_n, 1); // update h_center_n
             cblas_daxpy(para_tau, 1. / num_n, gaussian, 1, h_center_n, 1);
             cblas_dger(CblasRowMajor, data_p, para_tau, 1., xt, 1, gaussian, 1, z_n, para_tau);
@@ -1626,8 +1625,7 @@ void _algo_opauc_sparse(const double *x_tr_vals,
             }
         }
         cblas_daxpy(data_p, -para_eta, grad_wt, 1, re_wt, 1); // update the solution
-        cblas_dscal(data_p, (t * 1.) / (t * 1. + 1.), re_wt_bar, 1);
-        cblas_daxpy(data_p, 1. / (t + 1.), re_wt, 1, re_wt_bar, 1);
+        cblas_daxpy(data_p, 1., re_wt, 1, re_wt_bar, 1);
         if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
             double t_eval = clock();
             for (int q = 0; q < data_n; q++) {
@@ -1641,6 +1639,7 @@ void _algo_opauc_sparse(const double *x_tr_vals,
             re_rts[(*re_len_auc)++] = clock() - start_time - clock() - t_eval;
         }
     }
+    cblas_dscal(data_p, 1. / data_n, re_wt_bar, 1);
     cblas_dscal(*re_len_auc, 1. / CLOCKS_PER_SEC, re_rts, 1);
     free(gaussian);
     free(xt);
@@ -1813,8 +1812,9 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         double *re_rts,
                         int *re_len_auc) {
 
+    double start_time = clock();
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
-    double start_time = clock(), delta = 0.1, eta = para_g, R = para_r;
+    double delta = 0.1, eta = para_g, R = para_r;
     if (para_verbose > 0) { printf("eta: %.12f R: %.12f", eta, R); }
     double n_ids = para_num_passes * data_n;
     double *v_1 = malloc(sizeof(double) * (data_p + 2)), alpha_1 = 0.0, alpha;
