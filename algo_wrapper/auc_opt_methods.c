@@ -1566,10 +1566,10 @@ void _algo_opauc_sparse(const double *x_tr_vals,
     *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n; t++) {
-        const int *xt_indices = x_tr_inds + x_tr_poss[t];
+        const int *xt_inds = x_tr_inds + x_tr_poss[t];
         const double *xt_vals = x_tr_vals + x_tr_poss[t];
         memset(xt, 0, sizeof(double) * data_p);
-        for (int tt = 0; tt < x_tr_lens[t]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
+        for (int tt = 0; tt < x_tr_lens[t]; tt++) { xt[xt_inds[tt]] = xt_vals[tt]; }
         std_normal(para_tau, gaussian);
         cblas_dscal(para_tau, 1. / sqrt(para_tau * 1.), gaussian, 1);
         if (data_y_tr[t] > 0) {
@@ -1632,17 +1632,16 @@ void _algo_opauc_sparse(const double *x_tr_vals,
             double t_eval = clock();
             for (int q = 0; q < data_n; q++) {
                 memset(xt, 0, sizeof(double) * data_p);
-                xt_indices = x_tr_inds + x_tr_poss[q];
+                xt_inds = x_tr_inds + x_tr_poss[q];
                 xt_vals = x_tr_vals + x_tr_poss[q];
-                for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_indices[tt]] = xt_vals[tt]; }
+                for (int tt = 0; tt < x_tr_lens[q]; tt++) { xt[xt_inds[tt]] = xt_vals[tt]; }
                 y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
             }
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            t_eval = clock() - t_eval;
-            re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
-            *re_len_auc = *re_len_auc + 1;
+            re_rts[(*re_len_auc)++] = clock() - start_time - clock() - t_eval;
         }
     }
+    cblas_dscal(*re_len_auc, 1. / CLOCKS_PER_SEC, re_rts, 1);
     free(gaussian);
     free(xt);
     free(z_p);

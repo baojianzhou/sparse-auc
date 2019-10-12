@@ -802,8 +802,7 @@ def results_09_sector():
         print(method_name, '%.4f %.4f' % (np.mean(aucs), np.std(aucs)))
 
 
-if __name__ == '__main__':
-    representation = np.zeros(shape=(34, 2))
+def test_graph():
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()
@@ -830,33 +829,34 @@ if __name__ == '__main__':
         plt.scatter(nodes[:, 0], nodes[:, 1], label=__)
     plt.legend()
     plt.show()
-    exit()
-    data_name = '01_pcmac'
+
+
+if __name__ == '__main__':
+    representation = np.zeros(shape=(34, 2))
+    data_name = '09_sector'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
-    method_list = ['spam_l2', 'spam_l1', 'spam_l1l2', 'fsauc', 'solam', 'sht_am', 'opauc']
+    method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     results_auc = {_: [] for _ in method_list}
     import matplotlib.pyplot as plt
 
     for run_id, fold_id in product(range(5), range(5)):
         task_id = run_id * 5 + fold_id
-        passes = 20
         f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
-                              % (data_name, task_id, passes))
+                              % (data_name, task_id, 20))
         re = pkl.load(open(f_name, 'rb'))
         plt.figure()
         for _ in re[(run_id, fold_id)]:
             results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
-            len_rts = int(re[(run_id, fold_id)][_]['rts'][0])
-            len_auc = int(re[(run_id, fold_id)][_]['auc'][0])
+            x = re[(run_id, fold_id)][_]['rts']
+            print(len(x), len(re[(run_id, fold_id)][_]['auc']))
             if _ != 'opauc':
-                x = [xx for xx in re[(run_id, fold_id)][_]['rts'][1:len_rts + 1] if xx < 2.0]
-                plt.plot(x, re[(run_id, fold_id)][_]['auc'][1:len(x) + 1], label=_)
+                plt.plot(x, re[(run_id, fold_id)][_]['auc'], label=_)
             else:
-                plt.plot(re[(run_id, fold_id)][_]['rts'][1:len_rts + 1],
-                         re[(run_id, fold_id)][_]['auc'][1:len_auc + 1], label=_)
+                plt.plot(x, re[(run_id, fold_id)][_]['auc'], label=_)
         plt.legend()
         plt.show()
-
+    str_list = []
     for method in method_list:
-        print(method, '%.4f %.4f' % (float(np.mean(results_auc[method])),
-                                     float(np.std(results_auc[method]))))
+        aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
+        std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
+        print(aver_auc + '$\pm$' + std_auc + ' & '),

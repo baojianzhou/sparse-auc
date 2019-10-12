@@ -27,7 +27,7 @@ static PyObject *test(PyObject *self, PyObject *args) {
 }
 
 PyObject *get_results(int data_p, double *re_wt, double *re_wt_bar,
-                      double *re_auc, double *re_rts, int *re_len_auc) {
+                      double *re_auc, double *re_rts, const int *re_len_auc) {
     PyObject *results = PyTuple_New(4);
     PyObject *wt = PyList_New(data_p);
     PyObject *wt_bar = PyList_New(data_p);
