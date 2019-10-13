@@ -29,7 +29,7 @@ data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
 
 
 def get_data_by_ind(data, tr_ind, sub_tr_ind):
-    sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens = [], [], [], []
+    sub_x_vals, sub_x_inds, sub_x_poss, sub_x_lens = [], [], [], []
     prev_posi = 0
     for index in tr_ind[sub_tr_ind]:
         cur_len = data['x_tr_lens'][index]
@@ -37,14 +37,14 @@ def get_data_by_ind(data, tr_ind, sub_tr_ind):
         sub_x_vals.extend(data['x_tr_vals'][cur_posi:cur_posi + cur_len])
         sub_x_inds.extend(data['x_tr_inds'][cur_posi:cur_posi + cur_len])
         sub_x_lens.append(cur_len)
-        sub_x_posis.append(prev_posi)
+        sub_x_poss.append(prev_posi)
         prev_posi += cur_len
     sub_x_vals = np.asarray(sub_x_vals, dtype=float)
     sub_x_inds = np.asarray(sub_x_inds, dtype=np.int32)
-    sub_x_posis = np.asarray(sub_x_posis, dtype=np.int32)
+    sub_x_poss = np.asarray(sub_x_poss, dtype=np.int32)
     sub_x_lens = np.asarray(sub_x_lens, dtype=np.int32)
     sub_y_tr = np.asarray(data['y_tr'][tr_ind[sub_tr_ind]], dtype=float)
-    return sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens, sub_y_tr
+    return sub_x_vals, sub_x_inds, sub_x_poss, sub_x_lens, sub_y_tr
 
 
 def pred_auc(data, tr_index, sub_te_ind, wt):
