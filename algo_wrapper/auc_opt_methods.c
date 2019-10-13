@@ -431,14 +431,8 @@ int _hard_thresholding(double *arr, int n, int k) {
     return 0;
 }
 
-/**
- * This code is implemented by Laurent Condat, PhD, CNRS research fellow in France.
- * @param y
- * @param x
- * @param length
- * @param a
- */
 static void _l1ballproj_condat(double *y, double *x, int length, const double a) {
+    // This code is implemented by Laurent Condat, PhD, CNRS research fellow in France.
     if (a <= 0.0) {
         if (a == 0.0) memset(x, 0, length * sizeof(double));
         return;
