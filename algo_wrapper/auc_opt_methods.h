@@ -71,7 +71,7 @@ bool _algo_solam(const double *data_x_tr,
                  int data_p,
                  double para_xi,
                  double para_r,
-                 int para_num_pass,
+                 int para_num_passes,
                  int para_step_len,
                  int para_verbose,
                  double *re_wt,
@@ -162,7 +162,7 @@ void _algo_spam_sparse(const double *x_tr_vals,
  * @param data_p
  * @param para_s
  * @param para_b
- * @param para_xi
+ * @param para_c
  * @param para_l2_reg
  * @param para_num_passes
  * @param para_step_len
@@ -177,7 +177,7 @@ void _algo_sht_am(const double *data_x_tr,
                   int data_p,
                   int para_s,
                   int para_b,
-                  double para_xi,
+                  double para_c,
                   double para_l2_reg,
                   int para_num_passes,
                   int para_step_len,
