@@ -360,7 +360,7 @@ def main():
         data = pkl.load(open(f_name, 'rb'))
         list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
         list_b = [20, 50]
-        list_c = 2. ** np.arange(-5, 10, 2, dtype=float)
+        list_c = np.arange(1., 101., 9)
         input_data_list = []
         for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)

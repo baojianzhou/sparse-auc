@@ -941,7 +941,7 @@ void _algo_sht_am_sparse(
     prob_p = posi_t / (data_n * 1.0);
     cblas_dscal(data_p, 1. / posi_t, posi_x_mean, 1);
     cblas_dscal(data_p, 1. / nega_t, nega_x_mean, 1);
-    if (para_verbose == 1) {
+    if (para_verbose > 1) {
         printf("num_posi: %.0f num_nega: %.0f prob_p: %.4f\n", posi_t, nega_t, prob_p);
         printf("||x_posi||: %.6f ||x_nega||: %.6f\n",
                sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),

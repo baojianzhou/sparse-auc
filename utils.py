@@ -833,7 +833,7 @@ def test_graph():
 
 if __name__ == '__main__':
     representation = np.zeros(shape=(34, 2))
-    data_name = '09_sector'
+    data_name = '01_pcmac'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     # method_list = ['spam_l2', 'spam_l1', 'spam_l1l2', 'sht_am']

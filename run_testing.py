@@ -113,7 +113,7 @@ def get_model(data_name, method, run_id, fold_id):
 
 
 def run_all_methods():
-    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
+    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 20
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 50
     data_name = sys.argv[1]
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
@@ -197,7 +197,7 @@ def run_all_methods():
 
 
 def main(data_name, task_id):
-    run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 1, 50
+    run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 50
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
@@ -208,17 +208,22 @@ def main(data_name, task_id):
     # -----------------------
     method = 'sht_am'
     para_s, para_b, para_c = get_model(data_name, method, run_id, fold_id)
+    para_c = 55.
     wt, wt_bar, auc, rts = c_algo_sht_am_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_s, para_b, para_c, 0.0, passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts,
                                         (para_s, para_b, para_c), te_index, data)
     print(run_id, fold_id, method, para_s, para_b, para_c, results[key][method]['auc_wt'])
-    sys.stdout.flush()
-    f_name = '%s/results_task_%02d_passes_%02d.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % (data_name, task_id, passes)), 'wb'))
+    return results[key][method]['auc_wt']
+
+
+def test_1():
+    x = []
+    for _ in range(25):
+        x.append(main(data_name='01_pcmac', task_id=_))
+    print(np.mean(x))
 
 
 if __name__ == '__main__':
-    for _ in range(8):
-        main(data_name='14_news20b', task_id=_)
+    run_all_methods()
