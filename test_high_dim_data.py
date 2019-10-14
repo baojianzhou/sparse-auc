@@ -359,8 +359,8 @@ def main():
         f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
         data = pkl.load(open(f_name, 'rb'))
         list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
-        list_b = [20, 50, 100]
-        list_c = 2. ** np.arange(-10, 5, 2, dtype=float)
+        list_b = [20, 50]
+        list_c = 2. ** np.arange(-5, 10, 2, dtype=float)
         input_data_list = []
         for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
