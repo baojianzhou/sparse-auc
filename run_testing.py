@@ -113,7 +113,7 @@ def get_model(data_name, method, run_id, fold_id):
 
 
 def run_all_methods():
-    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 24
+    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 50
     data_name = sys.argv[1]
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
@@ -220,8 +220,8 @@ def main(data_name, task_id):
 
 def test_1():
     x = []
-    for _ in range(25):
-        x.append(main(data_name='01_pcmac', task_id=_))
+    for _ in range(1):
+        x.append(main(data_name='02_pcmacs', task_id=_))
     print(np.mean(x))
 
 
