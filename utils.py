@@ -831,7 +831,7 @@ def test_graph():
     plt.show()
 
 
-if __name__ == '__main__':
+def test_2():
     representation = np.zeros(shape=(34, 2))
     data_name = '01_pcmac'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
@@ -859,3 +859,34 @@ if __name__ == '__main__':
         aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
         std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
         print(aver_auc + '$\pm$' + std_auc + ' & '),
+
+
+if __name__ == '__main__':
+    data_name = '01_pcmac'
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
+    method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
+    results_auc = {_: [] for _ in method_list}
+    for run_id, fold_id in product(range(5), range(5)):
+        task_id = run_id * 5 + fold_id
+        f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
+                              % (data_name, task_id, 20))
+        re = pkl.load(open(f_name, 'rb'))
+        for _ in method_list:
+            results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
+            x = re[(run_id, fold_id)][_]['rts']
+            print(_, len(x), len(re[(run_id, fold_id)][_]['auc']))
+    str_list = []
+    for method in method_list:
+        aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
+        std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
+        print(aver_auc + '$\pm$' + std_auc + ' & '),
+    print('')
+    from scipy.stats import ttest_ind
+
+    for method in method_list:
+        if method == 'sht_am':
+            continue
+        x1 = results_auc[method]
+        x2 = results_auc['sht_am']
+        _, pvalue = ttest_ind(a=x1, b=x2)
+        print(method, '%.4f' % np.mean(x1), '%.4f' % np.mean(x2), '%.4f' % pvalue)
