@@ -798,10 +798,10 @@ void _algo_spam_sparse(
         for (int tt = 0; tt < x_tr_lens[(t - 1) % data_n]; tt++) // gradient descent
             re_wt[xt_inds[tt]] += -eta_t * weight * xt_vals[tt];
         if (para_reg_opt == 0) { // elastic-net
-            double tmp_l2 = (eta_t * para_l2_reg + 1.);
+            double tmp_demon = (eta_t * para_l2_reg + 1.);
             for (int k = 0; k < data_p; k++) {
-                double sign_uk = (double) (sign(re_wt[k]));
-                re_wt[k] = (sign_uk / tmp_l2) * fmax(0.0, fabs(re_wt[k]) - eta_t * para_l1_reg);
+                double tmp_sign = (double) sign(re_wt[k]) / tmp_demon;
+                re_wt[k] = tmp_sign * fmax(0.0, fabs(re_wt[k]) - eta_t * para_l1_reg);
             }
         } else { // l2-regularization
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
@@ -1646,7 +1646,7 @@ void _algo_fsauc_sparse(
     double *v = malloc(sizeof(double) * (data_p + 2));
     double *vd = malloc(sizeof(double) * (data_p + 2)), ad;
     double *tmp_proj = malloc(sizeof(double) * data_p), beta_new;
-    double *y_pred = malloc(sizeof(double) * data_n);
+    double *y_pred = calloc((size_t) data_n, sizeof(double));
 
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
