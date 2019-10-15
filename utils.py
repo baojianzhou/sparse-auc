@@ -854,7 +854,7 @@ def test_2():
 
 
 def average_scores():
-    data_name = '12_news20'
+    data_name = '13_realsim'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     results_auc = {_: [] for _ in method_list}
