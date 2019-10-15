@@ -858,7 +858,7 @@ def average_scores():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     results_auc = {_: [] for _ in method_list}
-    for run_id, fold_id in product(range(1), range(5)):
+    for run_id, fold_id in product(range(2), range(5)):
         task_id = run_id * 5 + fold_id
         f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
                               % (data_name, task_id, 20))
