@@ -654,7 +654,7 @@ bool _algo_solam_sparse(
                 }
             }
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            re_rts[(*re_len_auc)++] = clock() - start_time - clock() - t_eval;
+            re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
     }
     memcpy(re_wt, v_bar, sizeof(double) * data_p);
@@ -817,7 +817,7 @@ void _algo_spam_sparse(
                     y_pred[q] += re_wt[xt_inds[tt]] * xt_vals[tt];
             }
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            re_rts[(*re_len_auc)++] = clock() - start_time - clock() - t_eval;
+            re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
     }
     cblas_dscal(data_p, 1. / (para_num_passes * data_n), re_wt_bar, 1);
@@ -1473,7 +1473,7 @@ void _algo_opauc_sparse(const double *x_tr_vals,
                 y_pred[q] = cblas_ddot(data_p, xt, 1, re_wt, 1);
             }
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            re_rts[(*re_len_auc)++] = clock() - start_time - clock() - t_eval;
+            re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
     }
     cblas_dscal(data_p, 1. / data_n, re_wt_bar, 1);
@@ -1738,9 +1738,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                     y_pred[q] = cblas_ddot(data_p, xt, 1, v_ave, 1);
                 }
                 re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-                t_eval = clock() - t_eval;
-                re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
-                *re_len_auc = *re_len_auc + 1;
+                re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
             }
         }
         para_r = para_r / 2.;
@@ -1769,6 +1767,7 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
         cblas_daxpy(data_p, 1. / (k + 1.), v_ave, 1, re_wt_bar, 1);
     }
     cblas_dcopy(data_p, v_ave, 1, re_wt, 1);
+    cblas_dscal(*re_len_auc, 1. / CLOCKS_PER_SEC, re_rts, 1);
     free(xt);
     free(y_pred);
     free(tmp_proj);
