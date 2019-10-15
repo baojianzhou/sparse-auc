@@ -710,6 +710,13 @@ def _gen_dataset_14_news20b(run_id, data_path):
 
 
 def _gen_dataset_15_rcv1b(run_id, data_path):
+    """
+    n: 20,242
+    p: 47,236
+    :param run_id:
+    :param data_path:
+    :return:
+    """
     np.random.seed(int(time.time()))
     data = dict()
     # sparse data to make it linear
