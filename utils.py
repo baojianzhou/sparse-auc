@@ -854,11 +854,11 @@ def test_2():
 
 
 def average_scores():
-    data_name = '01_pcmac'
+    data_name = '12_news20'
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     results_auc = {_: [] for _ in method_list}
-    for run_id, fold_id in product(range(5), range(5)):
+    for run_id, fold_id in product(range(1), range(5)):
         task_id = run_id * 5 + fold_id
         f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
                               % (data_name, task_id, 20))
@@ -867,7 +867,6 @@ def average_scores():
             results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
             x = re[(run_id, fold_id)][_]['rts']
             print(_, len(x), len(re[(run_id, fold_id)][_]['auc']))
-    str_list = []
     for method in method_list:
         aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
         std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
@@ -891,4 +890,4 @@ def average_scores():
 
 
 if __name__ == '__main__':
-    test_2()
+    average_scores()
