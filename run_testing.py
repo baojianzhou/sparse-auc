@@ -114,7 +114,7 @@ def get_model(data_name, method, run_id, fold_id):
 
 def run_all_methods():
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
-    run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 50
+    run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 50000000
     data_name = sys.argv[1]
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
@@ -148,7 +148,7 @@ def run_all_methods():
     para_s, para_b, para_c = get_model(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_sht_am_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
-        data['p'], para_s, para_b, para_c, 0.0, passes, step_len, 1)
+        data['p'], para_s, para_b, para_c, 0.0, passes, step_len, 0)
     results[key][method] = pred_results(wt, wt_bar, auc, rts,
                                         (para_s, para_b, para_c), te_index, data)
     print(run_id, fold_id, method, para_s, para_b, para_c, results[key][method]['auc_wt'])
@@ -192,7 +192,7 @@ def run_all_methods():
     print(run_id, fold_id, method, para_r, para_l1, para_l2, results[key][method]['auc_wt'])
     sys.stdout.flush()
 
-    f_name = '%s/results_task_%02d_passes_%02d_curve.pkl'
+    f_name = '%s/results_task_%02d_passes_%02d.pkl'
     pkl.dump(results, open(os.path.join(data_path, f_name % (data_name, task_id, passes)), 'wb'))
 
 
