@@ -1358,23 +1358,11 @@ void _algo_opauc(const double *data_x_tr,
 }
 
 
-void _algo_opauc_sparse(const double *x_tr_vals,
-                        const int *x_tr_inds,
-                        const int *x_tr_poss,
-                        const int *x_tr_lens,
-                        const double *data_y_tr,
-                        int data_n,
-                        int data_p,
-                        int para_tau,
-                        double para_eta,
-                        double para_lambda,
-                        double para_step_len,
-                        double para_verbose,
-                        double *re_wt,
-                        double *re_wt_bar,
-                        double *re_auc,
-                        double *re_rts,
-                        int *re_len_auc) {
+void _algo_opauc_sparse(
+        const double *x_tr_vals, const int *x_tr_inds, const int *x_tr_poss, const int *x_tr_lens,
+        const double *data_y_tr, int data_n, int data_p, int para_tau, double para_eta,
+        double para_lambda, int para_step_len, int para_verbose, double *re_wt,
+        double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
 
     double start_time = clock();
     openblas_set_num_threads(1);
@@ -1463,7 +1451,7 @@ void _algo_opauc_sparse(const double *x_tr_vals,
         }
         cblas_daxpy(data_p, -para_eta, grad_wt, 1, re_wt, 1); // update the solution
         cblas_daxpy(data_p, 1., re_wt, 1, re_wt_bar, 1);
-        if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
+        if ((fmod(t + 1, para_step_len) == 1.)) { // to calculate AUC score
             double t_eval = clock();
             for (int q = 0; q < data_n; q++) {
                 memset(xt, 0, sizeof(double) * data_p);

@@ -323,7 +323,7 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
 
     data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = data_n * 2 / para_step_len;
+    total_num_eval = data_n;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
