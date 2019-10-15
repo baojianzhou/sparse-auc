@@ -865,8 +865,6 @@ def average_scores():
         re = pkl.load(open(f_name, 'rb'))
         for _ in method_list:
             results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
-            x = re[(run_id, fold_id)][_]['rts']
-            print(_, len(x), len(re[(run_id, fold_id)][_]['auc']))
     for method in method_list:
         aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
         std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
