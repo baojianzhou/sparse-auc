@@ -832,7 +832,7 @@ def test_graph():
 
 
 def test_2():
-    data_name, fold_id, run_id = '01_pcmac', 0, 0
+    data_name, fold_id, run_id = '12_news20', 1, 0
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     import matplotlib.pyplot as plt
@@ -843,9 +843,7 @@ def test_2():
     color_list = ['b', 'b', 'g', 'y', 'purple', 'brown', 'r']
     plt.figure()
     for ind, _ in enumerate(method_list):
-        if _ == 'opauc':
-            continue
-        len_x = len([x for x in re[(run_id, fold_id)][_]['rts'] if x < .1])
+        len_x = len([x for x in re[(run_id, fold_id)][_]['rts'] if x < 100.])
         plt.plot(re[(run_id, fold_id)][_]['rts'][:len_x],
                  re[(run_id, fold_id)][_]['auc'][:len_x],
                  label=_, color=color_list[ind], linewidth=2.5)
@@ -858,8 +856,8 @@ def average_scores():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     results_auc = {_: [] for _ in method_list}
-    for run_id, fold_id in product(range(2), range(5)):
-        task_id = run_id * 5 + fold_id
+    for task_id in range(7):
+        run_id, fold_id = task_id / 5, task_id % 5
         f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
                               % (data_name, task_id, 20))
         re = pkl.load(open(f_name, 'rb'))
@@ -888,4 +886,4 @@ def average_scores():
 
 
 if __name__ == '__main__':
-    average_scores()
+    test_2()
