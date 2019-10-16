@@ -263,45 +263,6 @@ def reduce_para_space(data_name, run_id, fold_id):
     return np.sort(list(sub_list_c)), np.sort(list(sub_list_l1)), np.sort(list(sub_list_l2))
 
 
-def get_model_para(data_name, method, run_id, fold_id):
-    f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                          (data_name, run_id, fold_id, method))
-    ms = pkl.load(open(f_name, 'rb'))
-    sm = {'aver_auc': 0.0}
-    for re_row in ms:
-        mean_auc = np.mean(re_row['auc_arr'])
-        if method == 'sht_am':
-            if sm['aver_auc'] < mean_auc:
-                sm['para'] = re_row['para']
-                sm['aver_auc'] = mean_auc
-        else:
-            if sm['aver_auc'] < mean_auc:
-                sm['para'] = re_row['para']
-                sm['aver_auc'] = mean_auc
-    if method == 'spam_l1':
-        para_c, para_l1 = sm['para'][5], sm['para'][6]
-        return para_c, para_l1
-    elif method == 'spam_l2':
-        para_c, para_l2 = sm['para'][5], sm['para'][6]
-        return para_c, para_l2
-    elif method == 'spam_l1l2':
-        para_c, para_l1, para_l2 = sm['para'][5], sm['para'][6], sm['para'][7]
-        return para_c, para_l1, para_l2
-    elif method == 'solam':
-        para_c, para_r = sm['para'][5], sm['para'][6]
-        return para_c, para_r
-    elif method == 'fsauc':
-        para_r, para_g = sm['para'][5], sm['para'][6]
-        return para_r, para_g
-    elif method == 'opauc':
-        para_tau, para_eta, para_lambda = sm['para'][5], sm['para'][6], sm['para'][7]
-        return para_tau, para_eta, para_lambda
-    elif method == 'sht_am':
-        para_s, para_b, para_c = sm['para'][5], sm['para'][6], sm['para'][7]
-        return para_s, para_b, para_c
-    return sm
-
-
 def main():
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
