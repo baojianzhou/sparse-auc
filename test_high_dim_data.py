@@ -314,9 +314,8 @@ def main():
         # by adding this step, we can reduce some redundant model space.
         if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
-            prev_ms = pkl.load(open(f, 'rb'))
             re_list_c, re_list_l1 = set(), set()
-            for item in prev_ms:
+            for item in pkl.load(open(f, 'rb')):
                 if np.mean(item['auc_arr']) >= good_auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l1.add(item['para_l1'])
