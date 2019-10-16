@@ -1361,8 +1361,8 @@ void _algo_opauc(const double *data_x_tr,
 void _algo_opauc_sparse(
         const double *x_tr_vals, const int *x_tr_inds, const int *x_tr_poss, const int *x_tr_lens,
         const double *data_y_tr, int data_n, int data_p, int para_tau, double para_eta,
-        double para_lambda, int para_step_len, int para_verbose, double *re_wt,
-        double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
+        double para_lambda, int para_num_passes, int para_step_len, int para_verbose,
+        double *re_wt, double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
 
     double start_time = clock();
     openblas_set_num_threads(1);
@@ -1386,17 +1386,18 @@ void _algo_opauc_sparse(
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
-    for (int t = 0; t < data_n; t++) {
-        const int *xt_inds = x_tr_inds + x_tr_poss[t];
-        const double *xt_vals = x_tr_vals + x_tr_poss[t];
+    for (int t = 0; t < data_n * para_num_passes; t++) {
+        int cur_ind =  t % data_n;
+        const int *xt_inds = x_tr_inds + x_tr_poss[cur_ind];
+        const double *xt_vals = x_tr_vals + x_tr_poss[cur_ind];
         memset(xt, 0, sizeof(double) * data_p);
-        for (int tt = 0; tt < x_tr_lens[t]; tt++) { xt[xt_inds[tt]] = xt_vals[tt]; }
+        for (int tt = 0; tt < x_tr_lens[cur_ind]; tt++) { xt[xt_inds[tt]] = xt_vals[tt]; }
         std_normal(para_tau, gaussian);
         cblas_dscal(para_tau, 1. / sqrt(para_tau * 1.), gaussian, 1);
-        if (data_y_tr[t] > 0) {
+        if (data_y_tr[cur_ind] > 0) {
             num_p++;
             cblas_dscal(data_p, (num_p - 1.) / num_p, center_p, 1); // update center_p
-            for (int tt = 0; tt < x_tr_lens[t]; tt++)
+            for (int tt = 0; tt < x_tr_lens[cur_ind]; tt++)
                 center_p[xt_inds[tt]] += xt_vals[tt] / num_p;
             cblas_dscal(para_tau, (num_p - 1.) / num_p, h_center_p, 1); // update h_center_p
             cblas_daxpy(para_tau, 1. / num_p, gaussian, 1, h_center_p, 1);
@@ -1404,7 +1405,7 @@ void _algo_opauc_sparse(
             if (num_n > 0.0) {
                 // calculate the gradient part 1: \para_lambda w + x_t - c_t^+
                 cblas_dcopy(data_p, center_n, 1, grad_wt, 1);
-                for (int tt = 0; tt < x_tr_lens[t]; tt++)
+                for (int tt = 0; tt < x_tr_lens[cur_ind]; tt++)
                     grad_wt[xt_inds[tt]] += -xt_vals[tt];
                 cblas_daxpy(data_p, para_lambda, re_wt, 1, grad_wt, 1);
                 cblas_dcopy(data_p, xt, 1, tmp_vec, 1); // xt - c_t^-
@@ -1424,7 +1425,7 @@ void _algo_opauc_sparse(
         } else {
             num_n++;
             cblas_dscal(data_p, (num_n - 1.) / num_n, center_n, 1); // update center_n
-            for (int tt = 0; tt < x_tr_lens[t]; tt++)
+            for (int tt = 0; tt < x_tr_lens[cur_ind]; tt++)
                 center_n[xt_inds[tt]] += xt_vals[tt] / num_n;
             cblas_dscal(para_tau, (num_n - 1.) / num_n, h_center_n, 1); // update h_center_n
             cblas_daxpy(para_tau, 1. / num_n, gaussian, 1, h_center_n, 1);
