@@ -5,12 +5,14 @@ import numpy as np
 import sklearn as sk
 from scipy import sparse
 from sklearn.model_selection import KFold
+from os.path import join
 from sklearn.metrics import auc
 from sklearn.metrics import roc_curve
 from sklearn.metrics import roc_auc_score
 from itertools import product
 import os
 import pickle as pkl
+from scipy.stats import ttest_ind
 
 
 def show_ht_run_time():
@@ -856,39 +858,37 @@ def test_2():
     plt.show()
 
 
-def average_scores():
-    data_name = '13_realsim'
+def average_scores(method_list, data_name, passes):
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
-    method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
-    results_auc = {_: [] for _ in method_list}
-    for task_id in range(7):
-        run_id, fold_id = task_id / 5, task_id % 5
-        f_name = os.path.join(data_path, '%s/results_task_%02d_passes_%02d.pkl'
-                              % (data_name, task_id, 20))
-        re = pkl.load(open(f_name, 'rb'))
-        for _ in method_list:
-            results_auc[_].append(re[(run_id, fold_id)][_]['auc_wt'])
-    for method in method_list:
-        aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
-        std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
-        print(aver_auc + '$\pm$' + std_auc + ' & '),
-    print('')
-    from scipy.stats import ttest_ind
-
-    for method in method_list:
-        if method == 'sht_am':
-            continue
-        x1 = results_auc[method]
-        x2 = results_auc['sht_am']
-        _, pvalue = ttest_ind(a=x1, b=x2)
-        color = 'none'
-        if np.mean(x1) > np.mean(x2) and pvalue <= 0.05:
-            color = 'white'
-        if np.mean(x1) < np.mean(x2) and pvalue <= 0.05:
-            color = 'black'
-        ll = ['%10s' % method, '%.4f' % np.mean(x1), '%.4f' % np.mean(x2), '%.4f' % pvalue, color]
-        print(' '.join(ll))
+    if method_list is None:
+        method_list = ['opauc', 'spam_l2', 'solam', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
+    for metric in ['auc_wt', 'nonzero_wt']:
+        results_auc = {_: [] for _ in method_list}
+        for method in method_list:
+            f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, method, passes))
+            re = [_.values()[0] for _ in pkl.load(open(f_name, 'rb'))]
+            results_auc[method] = [_[metric] for _ in re]
+        for method in method_list:
+            aver_auc = '{:.4f}'.format(float(np.mean(results_auc[method]))).lstrip('0')
+            std_auc = '{:.4f}'.format(float(np.std(results_auc[method]))).lstrip('0')
+            print(aver_auc + '$\pm$' + std_auc + ' & '),
+        print('')
+        if metric == 'auc_wt':
+            for method in method_list:
+                if method == 'sht_am':
+                    continue
+                x1, x2 = results_auc[method], results_auc['sht_am']
+                t_score, p_value = ttest_ind(a=x1, b=x2)
+                color = 'none'  # comparable
+                if np.mean(x1) > np.mean(x2) and p_value <= 0.05:
+                    color = 'white'  # worse
+                if np.mean(x1) < np.mean(x2) and p_value <= 0.05:
+                    color = 'black'  # better
+                ll = ['%10s' % method, '%.4f' % np.mean(x1), '%.4f' % np.mean(x2),
+                      '%.4f' % p_value, color]
+                print(' '.join(ll))
 
 
 if __name__ == '__main__':
-    test_2()
+    average_scores(method_list=['spam_l1', 'spam_l2', 'sht_am'],
+                   data_name='10_farmads', passes=20)

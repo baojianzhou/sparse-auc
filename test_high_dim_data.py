@@ -5,7 +5,6 @@ import time
 import pickle as pkl
 import multiprocessing
 from os.path import join
-from os.path import exists
 from itertools import product
 
 import numpy as np
