@@ -73,7 +73,7 @@ def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
             'rts': rts}
 
 
-def get_model(data_name, method, run_id, fold_id):
+def get_model_para(data_name, method, run_id, fold_id):
     f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
                           (data_name, run_id, fold_id, method))
     ms = pkl.load(open(f_name, 'rb'))
@@ -127,7 +127,7 @@ def run_all_methods():
     # -----------------------
     method = 'spam_l1'
     s_time = time.time()
-    para_c, para_l1 = get_model(data_name, method, run_id, fold_id)
+    para_c, para_l1 = get_model_para(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_spam_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_c, para_l1, 0.0, 0, passes, step_len, 0)
@@ -138,7 +138,7 @@ def run_all_methods():
     # -----------------------
     method = 'spam_l2'
     s_time = time.time()
-    para_c, para_l2 = get_model(data_name, method, run_id, fold_id)
+    para_c, para_l2 = get_model_para(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_spam_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_c, 0.0, para_l2, 1, passes, step_len, 0)
@@ -149,7 +149,7 @@ def run_all_methods():
     # -----------------------
     method = 'sht_am'
     s_time = time.time()
-    para_s, para_b, para_c = get_model(data_name, method, run_id, fold_id)
+    para_s, para_b, para_c = get_model_para(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_sht_am_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_s, para_b, para_c, 0.0, passes, step_len, 1)
@@ -161,7 +161,7 @@ def run_all_methods():
     # -----------------------
     method = 'fsauc'
     s_time = time.time()
-    para_r, para_g = get_model(data_name, method, run_id, fold_id)
+    para_r, para_g = get_model_para(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_fsauc_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_r, para_g, passes, step_len, 0)
@@ -172,7 +172,7 @@ def run_all_methods():
     # -----------------------
     method = 'solam'
     s_time = time.time()
-    para_c, para_r = get_model(data_name, method, run_id, fold_id)
+    para_c, para_r = get_model_para(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_solam_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_c, para_r, passes, step_len, 0)
@@ -183,7 +183,7 @@ def run_all_methods():
     # -----------------------
     method = 'opauc'
     s_time = time.time()
-    para_tau, para_eta, para_lambda = get_model(data_name, method, run_id, fold_id)
+    para_tau, para_eta, para_lambda = get_model_para(data_name, method, run_id, fold_id)
     wt, wt_bar, auc, rts = c_algo_opauc_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
         data['p'], para_tau, para_eta, para_lambda, passes, step_len, 0)
@@ -195,7 +195,7 @@ def run_all_methods():
     # -----------------------
     method = 'spam_l1l2'
     s_time = time.time()
-    para_c, para_l1, para_l2 = get_model(data_name, method, run_id, fold_id)
+    para_c, para_l1, para_l2 = get_model_para(data_name, method, run_id, fold_id)
     para_list = (para_c, para_l1, para_l2)
     wt, wt_bar, auc, rts = c_algo_spam_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
@@ -219,7 +219,7 @@ def main(data_name, task_id):
     results[key] = dict()
     # -----------------------
     method = 'sht_am'
-    para_s, para_b, para_c = get_model(data_name, method, run_id, fold_id)
+    para_s, para_b, para_c = get_model_para(data_name, method, run_id, fold_id)
     para_c = 32.
     wt, wt_bar, auc, rts = c_algo_sht_am_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
