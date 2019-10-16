@@ -304,7 +304,7 @@ def main():
                 if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l2.add(item['para_l2'])
-            list_c, list_l2 = np.sort(list(re_list_c)), np.sort(list(re_list_l2))
+            list_c, list_l2 = list(re_list_c), list(re_list_l2)
         print('space size: %d' % (len(list_c) * len(list_l2)))
         for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
             print(index, para_c, para_l2)
