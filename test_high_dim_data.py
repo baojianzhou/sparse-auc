@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
-
 import os
-import pickle as pkl
 import sys
 import time
+import pickle as pkl
 import multiprocessing
+from os.path import join
+from os.path import exists
 from itertools import product
 
 import numpy as np
 from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import KFold
 
 try:
     sys.path.append(os.getcwd())
@@ -75,8 +75,7 @@ def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
 
 
 def get_model_para(data_name, method, run_id, fold_id):
-    f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                          (data_name, run_id, fold_id, method))
+    f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
     ms = pkl.load(open(f_name, 'rb'))
     sm = {'aver_auc': 0.0}
     for re_row in ms:
@@ -113,7 +112,60 @@ def get_model_para(data_name, method, run_id, fold_id):
     return sm
 
 
+def run_single_spam_l1(para):
+    run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, data_name, method = para
+    s_time = time.time()
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    te_index = data['fold_%d' % fold_id]['te_index']
+    x_vals, x_inds, x_poss, x_lens, y_tr = get_data_by_ind(data, tr_index, range(len(tr_index)))
+    wt, wt_bar, auc, rts = c_algo_spam_sparse(
+        x_vals, x_inds, x_poss, x_lens, y_tr,
+        data['p'], para_c, para_l1, 0.0, 0, passes, step_len, 0)
+    res = pred_results(wt, wt_bar, auc, rts, (para_c, para_l1), te_index, data)
+    auc, run_time = res['auc_wt'], time.time() - s_time
+    print(run_id, fold_id, method, para_c, para_l1, auc, run_time)
+    sys.stdout.flush()
+    return {(run_id, fold_id): res}
+
+
+def test_spam_l1(data_name, method, k_fold, passes, step_len, cpus):
+    para_space = []
+    for index, (run_id, fold_id) in enumerate(product(range(5), range(5))):
+        para_c, para_l1 = get_model_para(data_name, method, run_id, fold_id)
+        para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, data_name, method)
+        para_space.append(para)
+    pool = multiprocessing.Pool(processes=cpus)
+    test_res = pool.map(run_single_spam_l1, para_space)
+    pool.close()
+    pool.join()
+    f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, method, passes))
+    pkl.dump(test_res, open(f_name, 'wb'))
+
+
 def main():
+    k_fold, passes, step = 5, 20, 20
+    data_name, method, cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
+    if method == 'spam_l1':
+        test_spam_l1(data_name, method, k_fold, passes, step, cpus)
+    elif method == 'spam_l2':
+        cv_spam_l2(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
+    elif method == 'spam_l1l2':
+        cv_spam_l1l2(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
+    elif method == 'solam':
+        cv_solam(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
+    elif method == 'fsauc':
+        cv_fsauc(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
+    elif method == 'opauc':
+        cv_opauc(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
+    elif method == 'sht_am':
+        cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
+    else:
+        print('other method ?')
+
+
+def main_2():
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) \
         if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     data_name, method, num_cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
