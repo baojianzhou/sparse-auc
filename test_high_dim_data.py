@@ -307,6 +307,7 @@ def main():
             list_c, list_l2 = np.sort(list(re_list_c)), np.sort(list(re_list_l2))
         print('space size: %d' % (len(list_c) * len(list_l2)))
         for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
+            print(index, para_c, para_l2)
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
             para_space.append(para)
         pool = multiprocessing.Pool(processes=num_cpus)
