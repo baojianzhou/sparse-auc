@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-import multiprocessing
+
 import os
-import pickle as pkl
 import sys
 import time
-from itertools import product
 import numpy as np
+import pickle as pkl
+import multiprocessing
 from os.path import join
+from itertools import product
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
 
@@ -224,44 +225,6 @@ def run_single_sht_am(para):
               results['auc_arr'][ind], time.time() - s_time)
         sys.stdout.flush()
     return results
-
-
-def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
-    return {'auc_wt': pred_auc(data, te_index, range(len(te_index)), wt),
-            'nonzero_wt': np.count_nonzero(wt),
-            'algo_para': para_list,
-            'auc': auc,
-            'rts': rts,
-            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
-
-
-def get_model(method, task_id, run_id, fold_id):
-    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-    selected_model = {'aver_auc': 0.0}
-    for index in ms[(run_id, fold_id)][method]:
-        mean_auc = np.mean(ms[(run_id, fold_id)][method]['auc_arr'])
-        if selected_model['aver_auc'] < mean_auc:
-            selected_model['model'] = ms[(run_id, fold_id)][method][index]
-            selected_model['aver_auc'] = mean_auc
-    return selected_model
-
-
-def reduce_para_space(data_name, run_id, fold_id):
-    """ Reduce parameter space by using the model selection of spam_l1 and spam_l2. """
-    sub_list_c, sub_list_l1, sub_list_l2 = set(), set(), set()
-    re_spam_l1 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                                            (data_name, run_id, fold_id, 'spam_l1')), 'rb'))
-    re_spam_l2 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                                            (data_name, run_id, fold_id, 'spam_l2')), 'rb'))
-    for item in re_spam_l1:
-        if np.mean(item['auc_arr']) >= 0.7:
-            sub_list_c.add(item['para'][5])
-            sub_list_l1.add(item['para'][6])
-    for item in re_spam_l2:
-        if np.mean(item['auc_arr']) >= 0.7:
-            sub_list_c.add(item['para'][5])
-            sub_list_l2.add(item['para'][6])
-    return np.sort(list(sub_list_c)), np.sort(list(sub_list_l1)), np.sort(list(sub_list_l2))
 
 
 def main():
