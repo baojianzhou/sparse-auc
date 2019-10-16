@@ -341,7 +341,7 @@ def main():
                 if np.mean(item['auc_arr']) >= good_auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l2.add(item['para_l2'])
-            list_c, list_l2 = list(np.sort(re_list_c)), list(np.sort(re_list_l2))
+            list_c, list_l2 = np.sort(list(re_list_c)), np.sort(list(re_list_l2))
         print('space size: %d' % (len(list_c) * len(list_l2)))
         for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
@@ -370,8 +370,8 @@ def main():
                 if np.mean(item['auc_arr']) >= good_auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l2.add(item['para_l2'])
-            list_c = list(np.sort(re_list_c))
-            list_l1, list_l2 = list(np.sort(re_list_l1)), list(np.sort(re_list_l2))
+            list_c = np.sort(list(re_list_c))
+            list_l1, list_l2 = np.sort(list(re_list_l1)), np.sort(list(re_list_l2))
         print('space size: %d' % (len(list_c) * len(list_l1) * len(list_l2)))
         for index, (para_c, para_l1, para_l2) in enumerate(product(list_c, list_l1, list_l2)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, para_l2, data_name)
@@ -392,7 +392,7 @@ def main():
                 if np.mean(item['auc_arr']) >= good_auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_r.add(item['para_r'])
-            list_c, list_r = list(np.sort(re_list_c)), list(np.sort(re_list_r))
+            list_c, list_r = np.sort(list(re_list_c)), np.sort(list(re_list_r))
         print('space size: %d' % (len(list_c) * len(list_r)))
         for index, (para_c, para_r) in enumerate(product(list_c, list_r)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_r, data_name)
@@ -413,7 +413,7 @@ def main():
                 if np.mean(item['auc_arr']) >= good_auc_threshold:
                     re_list_r.add(item['para_r'])
                     re_list_g.add(item['para_g'])
-            list_r, list_g = list(np.sort(re_list_r)), list(np.sort(re_list_g))
+            list_r, list_g = np.sort(list(re_list_r)), np.sort(list(re_list_g))
         print('space size: %d' % (len(list_r) * len(list_g)))
         for index, (para_r, para_g) in enumerate(product(list_r, list_g)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_r, para_g, data_name)
@@ -434,7 +434,7 @@ def main():
                 if np.mean(item['auc_arr']) >= good_auc_threshold:
                     re_list_eta.add(item['para_eta'])
                     re_list_lambda.add(item['para_lambda'])
-            list_eta, list_lambda = list(np.sort(re_list_eta)), list(np.sort(re_list_lambda))
+            list_eta, list_lambda = np.sort(list(re_list_eta)), np.sort(list(re_list_lambda))
         print('space size: %d' % (len(list_eta) * len(list_lambda)))
         for index, (para_tau, para_eta, para_lam) in enumerate(
                 product([50], list_eta, list_lambda)):
@@ -461,8 +461,8 @@ def main():
                     re_list_s.add(item['para_s'])
                     re_list_b.add(item['para_b'])
                     re_list_c.add(item['para_c'])
-            list_s, list_b = list(np.sort(re_list_s)), list(np.sort(re_list_b))
-            list_c = list(np.sort(re_list_c))
+            list_s, list_b = np.sort(list(re_list_s)), np.sort(list(re_list_b))
+            list_c = np.sort(list(re_list_c))
         print('space size: %d' % (len(list_s) * len(list_b) * len(list_c)))
         for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
