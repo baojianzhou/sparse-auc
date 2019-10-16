@@ -332,6 +332,16 @@ def main():
     elif method == 'spam_l2':
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+        # by adding this step, we can reduce some redundant model space.
+        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+            f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
+            re_list_c, re_list_l2 = set(), set()
+            for item in pkl.load(open(f, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_c.add(item['para_c'])
+                    re_list_l2.add(item['para_l2'])
+            list_c, list_l2 = list(np.sort(re_list_c)), list(np.sort(re_list_l2))
+        print('space size: %d' % (len(list_c) * len(list_l2)))
         for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
             para_space.append(para)
@@ -346,8 +356,22 @@ def main():
         list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
         list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
         # pre-select parameters that have AUC=0.7+
-        list_c, list_l1, list_l2 = reduce_para_space(data_name, run_id, fold_id)
-        para_space = []
+        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)) and \
+                os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)):
+            f1 = os.path.join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)
+            f2 = os.path.join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)
+            re_list_c, re_list_l1, re_list_l2 = set(), set(), set()
+            for item in pkl.load(open(f1, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_c.add(item['para_c'])
+                    re_list_l1.add(item['para_l1'])
+            for item in pkl.load(open(f2, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_c.add(item['para_c'])
+                    re_list_l2.add(item['para_l2'])
+            list_c = list(np.sort(re_list_c))
+            list_l1, list_l2 = list(np.sort(re_list_l1)), list(np.sort(re_list_l2))
+        print('space size: %d' % (len(list_c) * len(list_l1) * len(list_l2)))
         for index, (para_c, para_l1, para_l2) in enumerate(product(list_c, list_l1, list_l2)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, para_l2, data_name)
             para_space.append(para)
@@ -357,11 +381,18 @@ def main():
         pool.join()
         pkl.dump(ms_res, open(f_name, 'wb'))
     elif method == 'solam':
-        print('test')
-        sys.stdout.flush()
         list_c = np.arange(1, 101, 9, dtype=float)
         list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-        para_space = []
+        # by adding this step, we can reduce some redundant model space.
+        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+            f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
+            re_list_c, re_list_r = set(), set()
+            for item in pkl.load(open(f, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_c.add(item['para_c'])
+                    re_list_r.add(item['para_r'])
+            list_c, list_r = list(np.sort(re_list_c)), list(np.sort(re_list_r))
+        print('space size: %d' % (len(list_c) * len(list_r)))
         for index, (para_c, para_r) in enumerate(product(list_c, list_r)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_r, data_name)
             para_space.append(para)
@@ -373,7 +404,16 @@ def main():
     elif method == 'fsauc':
         list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
         list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
-        para_space = []
+        # by adding this step, we can reduce some redundant model space.
+        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+            f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
+            re_list_r, re_list_g = set(), set()
+            for item in pkl.load(open(f, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_r.add(item['para_r'])
+                    re_list_g.add(item['para_g'])
+            list_r, list_g = list(np.sort(re_list_r)), list(np.sort(re_list_g))
+        print('space size: %d' % (len(list_r) * len(list_g)))
         for index, (para_r, para_g) in enumerate(product(list_r, list_g)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_r, para_g, data_name)
             para_space.append(para)
@@ -385,7 +425,16 @@ def main():
     elif method == 'opauc':
         list_eta = 2. ** np.arange(-12, -4, 1, dtype=float)
         list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
-        para_space = []
+        # by adding this step, we can reduce some redundant model space.
+        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+            f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
+            re_list_eta, re_list_lambda = set(), set()
+            for item in pkl.load(open(f, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_eta.add(item['para_eta'])
+                    re_list_lambda.add(item['para_lambda'])
+            list_eta, list_lambda = list(np.sort(re_list_eta)), list(np.sort(re_list_lambda))
+        print('space size: %d' % (len(list_eta) * len(list_lambda)))
         for index, (para_tau, para_eta, para_lam) in enumerate(
                 product([50], list_eta, list_lambda)):
             para = (run_id, fold_id, k_fold, passes, step_len,
@@ -402,7 +451,18 @@ def main():
         list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
         list_b = [20, 50]
         list_c = np.arange(1., 101., 9)
-        para_space = []
+        # by adding this step, we can reduce some redundant model space.
+        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+            f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
+            re_list_s, re_list_b, re_list_c = set(), set(), set()
+            for item in pkl.load(open(f, 'rb')):
+                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                    re_list_s.add(item['para_s'])
+                    re_list_b.add(item['para_b'])
+                    re_list_c.add(item['para_c'])
+            list_s, list_b = list(np.sort(re_list_s)), list(np.sort(re_list_b))
+            list_c = list(np.sort(re_list_c))
+        print('space size: %d' % (len(list_s) * len(list_b) * len(list_c)))
         for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
             para_space.append(para)
@@ -410,10 +470,11 @@ def main():
         ms_res = pool.map(run_single_sht_am, para_space)
         pool.close()
         pool.join()
+        pkl.dump(ms_res, open(f_name, 'wb'))
     else:
         print('other method ?')
         ms_res = None
-    pkl.dump(ms_res, open(f_name, 'wb'))
+        pkl.dump(ms_res, open(f_name, 'wb'))
 
 
 if __name__ == '__main__':
