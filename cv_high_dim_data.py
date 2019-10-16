@@ -143,7 +143,7 @@ def cv_spam_l2(data_name, method, task_id, k_fold, passes, step_len, cpus, auc_t
     run_id, fold_id = task_id / 5, task_id % 5
     f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
     list_c = np.arange(1, 101, 9, dtype=float)
-    list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_l2 = 10. ** np.arange(-8, 3, 1, dtype=float)
     # by adding this step, we can reduce some redundant model space.
     if exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
@@ -193,8 +193,8 @@ def cv_spam_l1l2(data_name, method, task_id, k_fold, passes, step, cpus, auc_thr
     f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
     # original para space is too large, we can reduce them based on spam_l1, spam_l2
     list_c = np.arange(1, 101, 9, dtype=float)
-    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
-    list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_l1 = 10. ** np.arange(-8, 3, 1, dtype=float)
+    list_l2 = 10. ** np.arange(-8, 3, 1, dtype=float)
     # pre-select parameters that have AUC=0.8+
     if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)) and \
             os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)):
@@ -371,12 +371,11 @@ def cv_opauc(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
 
 
 def run_single_sht_am(para):
-    run_id, fold_id, k_fold, num_passes, step_len, \
-    para_s, para_b, para_c, para_l2, data_name = para
+    run_id, fold_id, k_fold, num_passes, step, para_s, para_b, para_c, para_l2, data_name = para
     results = {'auc_arr': np.zeros(k_fold, dtype=float), 'run_time': np.zeros(k_fold, dtype=float),
                'para': para, 'para_s': para_s, 'para_b': para_b, 'para_c': para_c,
                'para_l2': para_l2, 'run_id': run_id, 'fold_id': fold_id, 'k_fold': k_fold,
-               'num_passes': num_passes, 'step_len': step_len, 'data_name': data_name}
+               'num_passes': num_passes, 'step_len': step, 'data_name': data_name}
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
@@ -386,7 +385,7 @@ def run_single_sht_am(para):
         x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
         wt, wt_bar, aucs, rts = c_algo_sht_am_sparse(
             x_vals, x_inds, x_posis, x_lens, y_tr,
-            data['p'], para_s, para_b, para_c, para_l2, num_passes, step_len, 0)
+            data['p'], para_s, para_b, para_c, para_l2, num_passes, step, 0)
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_s, para_b, para_c,
