@@ -230,149 +230,20 @@ def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
 
-def get_model(method, task_id, run_id, fold_id):
-    ms = pkl.load(open(data_path + 'ms_task_%02d_%s.pkl' % (task_id, method), 'rb'))
-    selected_model = {'aver_auc': 0.0}
-    for index in ms[(run_id, fold_id)][method]:
-        mean_auc = np.mean(ms[(run_id, fold_id)][method]['auc_arr'])
-        if selected_model['aver_auc'] < mean_auc:
-            selected_model['model'] = ms[(run_id, fold_id)][method][index]
-            selected_model['aver_auc'] = mean_auc
-    return selected_model
-
-
-def reduce_para_space(data_name, run_id, fold_id):
-    """ Reduce parameter space by using the model selection of spam_l1 and spam_l2. """
-    sub_list_c, sub_list_l1, sub_list_l2 = set(), set(), set()
-    re_spam_l1 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                                            (data_name, run_id, fold_id, 'spam_l1')), 'rb'))
-    re_spam_l2 = pkl.load(open(os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                                            (data_name, run_id, fold_id, 'spam_l2')), 'rb'))
-    for item in re_spam_l1:
-        if np.mean(item['auc_arr']) >= 0.7:
-            sub_list_c.add(item['para'][5])
-            sub_list_l1.add(item['para'][6])
-    for item in re_spam_l2:
-        if np.mean(item['auc_arr']) >= 0.7:
-            sub_list_c.add(item['para'][5])
-            sub_list_l2.add(item['para'][6])
-    return np.sort(list(sub_list_c)), np.sort(list(sub_list_l1)), np.sort(list(sub_list_l2))
-
-
-def main():
+if __name__ == '__main__':
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
     data_name, method_name, num_cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
-    if method_name == 'spam_l1':
-        list_c = np.arange(1, 101, 9, dtype=float)
-        list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
-        input_data_list = []
-        for index, (para_c, para_l1) in enumerate(product(list_c, list_l1)):
-            para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_spam_l1, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-    elif method_name == 'spam_l2':
-        list_c = np.arange(1, 101, 9, dtype=float)
-        list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
-        input_data_list = []
-        for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
-            para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_spam_l2, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-    elif method_name == 'spam_l1l2':
-        # original para space is too large, we can reduce them based on spam_l1, spam_l2
-        list_c = np.arange(1, 101, 9, dtype=float)
-        list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
-        list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
-        # pre-select parameters that have AUC=0.7+
-        list_c, list_l1, list_l2 = reduce_para_space('09_sector', 0, 0)
-        input_data_list = []
-        for index, (para_c, para_l1, para_l2) in enumerate(product(list_c, list_l1, list_l2)):
-            para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, para_l2, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_spam_l1l2, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-    elif method_name == 'solam':
-        print('test')
-        sys.stdout.flush()
-        list_c = np.arange(1, 101, 9, dtype=float)
-        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-        input_data_list = []
-        for index, (para_c, para_r) in enumerate(product(list_c, list_r)):
-            para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_r, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_solam, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-    elif method_name == 'fsauc':
-        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-        list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
-        input_data_list = []
-        for index, (para_r, para_g) in enumerate(product(list_r, list_g)):
-            para = (run_id, fold_id, k_fold, passes, step_len, para_r, para_g, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_fsauc, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-    elif method_name == 'opauc':
-        list_eta = 2. ** np.arange(-12, -4, 1, dtype=float)
-        list_lambda = 2. ** np.arange(-10, -2, 1, dtype=float)
-        input_data_list = []
-        for index, (para_tau, para_eta, para_lam) in enumerate(
-                product([50], list_eta, list_lambda)):
-            para = (run_id, fold_id, k_fold, passes, step_len,
-                    para_tau, para_eta, para_lam, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_opauc, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-    elif method_name == 'sht_am':
-        f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
-        data = pkl.load(open(f_name, 'rb'))
-        list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
-        list_b = [20, 50]
-        list_c = np.arange(1., 101., 9)
-        input_data_list = []
-        for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
-            para = (run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name)
-            input_data_list.append(para)
-        pool = multiprocessing.Pool(processes=num_cpus)
-        results = pool.map(run_single_sht_am, input_data_list)
-        pool.close()
-        pool.join()
-        f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
-                              (data_name, run_id, fold_id, method_name))
-        pkl.dump(results, open(f_name, 'wb'))
-
-
-if __name__ == '__main__':
-    main()
+    list_c = np.arange(1, 101, 9, dtype=float)
+    list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    input_data_list = []
+    for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
+        para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
+        input_data_list.append(para)
+    pool = multiprocessing.Pool(processes=num_cpus)
+    results = pool.map(run_single_spam_l2, input_data_list)
+    pool.close()
+    pool.join()
+    f_name = os.path.join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                          (data_name, run_id, fold_id, method_name))
+    pkl.dump(results, open(f_name, 'wb'))
