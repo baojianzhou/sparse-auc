@@ -371,10 +371,11 @@ def cv_opauc(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
 
 
 def run_single_sht_am(para):
-    run_id, fold_id, k_fold, num_passes, step_len, para_s, para_b, para_c, data_name = para
+    run_id, fold_id, k_fold, num_passes, step_len, \
+    para_s, para_b, para_c, para_l2, data_name = para
     results = {'auc_arr': np.zeros(k_fold, dtype=float), 'run_time': np.zeros(k_fold, dtype=float),
                'para': para, 'para_s': para_s, 'para_b': para_b, 'para_c': para_c,
-               'run_id': run_id, 'fold_id': fold_id, 'k_fold': k_fold,
+               'para_l2': para_l2, 'run_id': run_id, 'fold_id': fold_id, 'k_fold': k_fold,
                'num_passes': num_passes, 'step_len': step_len, 'data_name': data_name}
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
@@ -385,7 +386,7 @@ def run_single_sht_am(para):
         x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
         wt, wt_bar, aucs, rts = c_algo_sht_am_sparse(
             x_vals, x_inds, x_posis, x_lens, y_tr,
-            data['p'], para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
+            data['p'], para_s, para_b, para_c, para_l2, num_passes, step_len, 0)
         results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
         results['run_time'][ind] = time.time() - s_time
         print(run_id, fold_id, para_s, para_b, para_c,
@@ -398,9 +399,10 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
     run_id, fold_id = task_id / 5, task_id % 5
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
-    list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+    list_s = [int(_ * data['p']) for _ in [0.2, 0.4, 0.6, 0.8, 1.0]]
     list_b = [10, 20, 40]
     list_c = np.arange(1., 101., 9)
+    list_l2 = [1e-6, 1e-5, 1e0]
     # by adding this step, we can reduce some redundant model space.
     if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
@@ -414,8 +416,9 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
         list_c = np.sort(list(re_list_c))
     print('space size: %d' % (len(list_s) * len(list_b) * len(list_c)))
     para_space = []
-    for index, (para_s, para_b, para_c) in enumerate(product(list_s, list_b, list_c)):
-        para = (run_id, fold_id, k_fold, passes, step, para_s, para_b, para_c, data_name)
+    for index, (para_s, para_b, para_c, para_l2) in enumerate(
+            product(list_s, list_b, list_c, list_l2)):
+        para = (run_id, fold_id, k_fold, passes, step, para_s, para_b, para_c, para_l2, data_name)
         para_space.append(para)
     pool = multiprocessing.Pool(processes=cpus)
     ms_res = pool.map(run_single_sht_am, para_space)
