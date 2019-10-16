@@ -421,6 +421,7 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
     ms_res = pool.map(run_single_sht_am, para_space)
     pool.close()
     pool.join()
+    f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
     pkl.dump(ms_res, open(f_name, 'wb'))
 
 
