@@ -959,4 +959,4 @@ def main(dataset):
 
 
 if __name__ == '__main__':
-    main(dataset='15_rcv1b')
+    main(dataset='10_farmads')
