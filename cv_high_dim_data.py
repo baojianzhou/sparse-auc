@@ -92,7 +92,7 @@ def cv_spam_l1(data_name, method, task_id, k_fold, passes, step_len, cpus, auc_t
     run_id, fold_id = task_id / 5, task_id % 5
     f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
     list_c = np.arange(1, 101, 9, dtype=float)
-    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
+    list_l1 = 10. ** np.arange(-8, 3, 1, dtype=float)
     # by adding this step, we can reduce some redundant model space.
     if exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
