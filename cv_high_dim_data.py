@@ -402,7 +402,7 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
     list_s = [int(_ * data['p']) for _ in [0.2, 0.4, 0.6, 0.8, 1.0]]
     list_b = [10, 20, 40]
     list_c = np.arange(1., 101., 9)
-    list_l2 = [1e-6, 1e-5, 1e0]
+    list_l2 = [1e-6, 1e-5, 0.0]
     # by adding this step, we can reduce some redundant model space.
     if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
@@ -414,7 +414,7 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
                 re_list_c.add(item['para_c'])
         list_s, list_b = np.sort(list(re_list_s)), np.sort(list(re_list_b))
         list_c = np.sort(list(re_list_c))
-    print('space size: %d' % (len(list_s) * len(list_b) * len(list_c)))
+    print('space size: %d' % (len(list_s) * len(list_b) * len(list_c) * len(list_l2)))
     para_space = []
     for index, (para_s, para_b, para_c, para_l2) in enumerate(
             product(list_s, list_b, list_c, list_l2)):
