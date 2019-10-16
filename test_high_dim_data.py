@@ -240,6 +240,7 @@ if __name__ == '__main__':
     for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
         para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
         input_data_list.append(para)
+    run_single_spam_l2(input_data_list[-1])
     pool = multiprocessing.Pool(processes=num_cpus)
     results = pool.map(run_single_spam_l2, input_data_list)
     pool.close()
