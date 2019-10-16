@@ -264,11 +264,12 @@ def reduce_para_space(data_name, run_id, fold_id):
 
 
 def main():
-    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
+    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) \
+        if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 10000000
     data_name, method, num_cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
     f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
-    para_space, good_auc_threshold = [], 0.8
+    para_space, auc_threshold = [], 0.8
     if method == 'spam_l1':
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
@@ -277,7 +278,7 @@ def main():
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_c, re_list_l1 = set(), set()
             for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l1.add(item['para_l1'])
             list_c, list_l1 = np.sort(list(re_list_c)), np.sort(list(re_list_l1))
@@ -299,7 +300,7 @@ def main():
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_c, re_list_l2 = set(), set()
             for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l2.add(item['para_l2'])
             list_c, list_l2 = np.sort(list(re_list_c)), np.sort(list(re_list_l2))
@@ -324,11 +325,11 @@ def main():
             f2 = os.path.join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)
             re_list_c, re_list_l1, re_list_l2 = set(), set(), set()
             for item in pkl.load(open(f1, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l1.add(item['para_l1'])
             for item in pkl.load(open(f2, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_l2.add(item['para_l2'])
             list_c = np.sort(list(re_list_c))
@@ -350,7 +351,7 @@ def main():
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_c, re_list_r = set(), set()
             for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_c.add(item['para_c'])
                     re_list_r.add(item['para_r'])
             list_c, list_r = np.sort(list(re_list_c)), np.sort(list(re_list_r))
@@ -371,7 +372,7 @@ def main():
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_r, re_list_g = set(), set()
             for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_r.add(item['para_r'])
                     re_list_g.add(item['para_g'])
             list_r, list_g = np.sort(list(re_list_r)), np.sort(list(re_list_g))
@@ -392,7 +393,7 @@ def main():
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_eta, re_list_lambda = set(), set()
             for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_eta.add(item['para_eta'])
                     re_list_lambda.add(item['para_lambda'])
             list_eta, list_lambda = np.sort(list(re_list_eta)), np.sort(list(re_list_lambda))
@@ -418,7 +419,7 @@ def main():
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_s, re_list_b, re_list_c = set(), set(), set()
             for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= good_auc_threshold:
+                if np.mean(item['auc_arr']) >= auc_threshold:
                     re_list_s.add(item['para_s'])
                     re_list_b.add(item['para_b'])
                     re_list_c.add(item['para_c'])
