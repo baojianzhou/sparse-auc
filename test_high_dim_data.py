@@ -320,7 +320,7 @@ def main():
                     re_list_c.add(item['para_c'])
                     re_list_l1.add(item['para_l1'])
             list_c, list_l1 = list(np.sort(re_list_c)), list(np.sort(re_list_l1))
-        print('space size: %d' % len(list_c) * len(list_l1))
+        print('space size: %d' % (len(list_c) * len(list_l1)))
         for index, (para_c, para_l1) in enumerate(product(list_c, list_l1)):
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l1, data_name)
             para_space.append(para)
