@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import multiprocessing
+
 import os
 import pickle as pkl
 import sys
 import time
+import multiprocessing
 from itertools import product
 
 import numpy as np
@@ -113,7 +114,8 @@ def get_model_para(data_name, method, run_id, fold_id):
 
 
 def main():
-    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
+    task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) \
+        if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     data_name, method, num_cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
     run_id, fold_id, k_fold, passes, step_len = task_id / 5, task_id % 5, 5, 20, 100000000
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))

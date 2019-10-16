@@ -278,7 +278,7 @@ def run_single_fsauc(para):
                'para': para, 'para_r': para_r, 'para_g': para_g,
                'run_id': run_id, 'fold_id': fold_id, 'k_fold': k_fold,
                'num_passes': num_passes, 'step_len': step_len, 'data_name': data_name}
-    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    f_name = join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
     fold = KFold(n_splits=k_fold, shuffle=False)
@@ -301,7 +301,7 @@ def cv_fsauc(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
     list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
     list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
     # by adding this step, we can reduce some redundant model space.
-    if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+    if exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
         re_list_r, re_list_g = set(), set()
         for item in pkl.load(open(f, 'rb')):
