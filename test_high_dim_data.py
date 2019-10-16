@@ -317,7 +317,7 @@ def main():
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
         list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
-        # pre-select parameters that have AUC=0.7+
+        # pre-select parameters that have AUC=0.8+
         if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)) and \
                 os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)):
             f1 = os.path.join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)
