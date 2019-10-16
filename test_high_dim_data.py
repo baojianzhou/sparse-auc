@@ -92,10 +92,11 @@ def run_single_spam_l2(para):
                'para': para, 'para_c': para_c, 'para_l2': para_l2,
                'run_id': run_id, 'fold_id': fold_id, 'k_fold': k_fold,
                'num_passes': num_passes, 'step_len': step_len, 'data_name': data_name}
-    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
-    data = pkl.load(open(f_name, 'rb'))
+    data = pkl.load(open(join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id)), 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
     fold = KFold(n_splits=k_fold, shuffle=False)
+    print(len(tr_index), len(results))
+    sys.stdout.flush()
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
         s_time = time.time()
         x_vals, x_inds, x_posis, x_lens, y_tr = get_data_by_ind(data, tr_index, sub_tr_ind)
@@ -115,7 +116,7 @@ def run_single_spam_l1l2(para):
                'para': para, 'para_c': para_c, 'para_l1': para_l1, 'para_l2': para_l2,
                'run_id': run_id, 'fold_id': fold_id, 'k_fold': k_fold,
                'num_passes': num_passes, 'step_len': step_len, 'data_name': data_name}
-    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    f_name = join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
     fold = KFold(n_splits=k_fold, shuffle=False)
