@@ -426,10 +426,10 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
 
 
 def main():
+    data_name, method, cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
     task_id = int(os.environ['SLURM_ARRAY_TASK_ID']) \
         if 'SLURM_ARRAY_TASK_ID' in os.environ else 0
     k_fold, passes, step, auc_thresh = 5, 20, 10000000, 0.8
-    data_name, method, cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
     if method == 'spam_l1':
         cv_spam_l1(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
     elif method == 'spam_l2':
