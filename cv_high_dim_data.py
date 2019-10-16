@@ -399,8 +399,7 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
     list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
-    list_s = [int(0.8 * data['p'])]
-    list_b = [20, 50]
+    list_b = [10, 20, 40]
     list_c = np.arange(1., 101., 9)
     # by adding this step, we can reduce some redundant model space.
     if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
