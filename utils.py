@@ -13,6 +13,7 @@ from itertools import product
 import os
 import pickle as pkl
 from scipy.stats import ttest_ind
+from test_high_dim_data import get_model_para
 
 
 def show_ht_run_time():
@@ -889,6 +890,14 @@ def average_scores(method_list, data_name, passes):
                 print(' '.join(ll))
 
 
+def get_selected_paras(data_name, method_list):
+    for method in method_list:
+        for run_id, fold_id in product(range(5), range(5)):
+            print(method, get_model_para(data_name, method, run_id, fold_id))
+
+
 if __name__ == '__main__':
+    get_selected_paras(data_name='10_farmads', method_list=['spam_l1', 'spam_l2', 'sht_am'])
+    exit()
     average_scores(method_list=['spam_l1', 'spam_l2', 'sht_am'],
                    data_name='10_farmads', passes=20)
