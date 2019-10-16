@@ -7,6 +7,7 @@ import numpy as np
 import pickle as pkl
 import multiprocessing
 from os.path import join
+from os.path import exists
 from itertools import product
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import KFold
@@ -238,7 +239,7 @@ def main():
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
         # by adding this step, we can reduce some redundant model space.
-        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+        if exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
             f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
             re_list_c, re_list_l1 = set(), set()
             for item in pkl.load(open(f, 'rb')):
@@ -259,26 +260,17 @@ def main():
     elif method == 'spam_l2':
         list_c = np.arange(1, 101, 9, dtype=float)
         list_l2 = 10. ** np.arange(-5, 6, 1, dtype=float)
-        # by adding this step, we can reduce some redundant model space.
-        if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
-            f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
-            re_list_c, re_list_l2 = set(), set()
-            for item in pkl.load(open(f, 'rb')):
-                if np.mean(item['auc_arr']) >= auc_threshold:
-                    re_list_c.add(item['para_c'])
-                    re_list_l2.add(item['para_l2'])
-            list_c, list_l2 = list(re_list_c), list(re_list_l2)
-        print('space size: %d' % (len(list_c) * len(list_l2)))
-        para_space = []
+        input_data_list = []
         for index, (para_c, para_l2) in enumerate(product(list_c, list_l2)):
-            print(index, para_c, para_l2)
             para = (run_id, fold_id, k_fold, passes, step_len, para_c, para_l2, data_name)
-            para_space.append(para)
+            input_data_list.append(para)
         pool = multiprocessing.Pool(processes=num_cpus)
-        ms_res = pool.map(run_single_spam_l2, para_space)
+        results = pool.map(run_single_spam_l2, input_data_list)
         pool.close()
         pool.join()
-        pkl.dump(ms_res, open(f_name, 'wb'))
+        f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' %
+                      (data_name, run_id, fold_id, method))
+        pkl.dump(results, open(f_name, 'wb'))
     elif method == 'spam_l1l2':
         # original para space is too large, we can reduce them based on spam_l1, spam_l2
         list_c = np.arange(1, 101, 9, dtype=float)
@@ -287,8 +279,8 @@ def main():
         # pre-select parameters that have AUC=0.8+
         if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)) and \
                 os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)):
-            f1 = os.path.join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)
-            f2 = os.path.join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)
+            f1 = join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)
+            f2 = join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)
             re_list_c, re_list_l1, re_list_l2 = set(), set(), set()
             for item in pkl.load(open(f1, 'rb')):
                 if np.mean(item['auc_arr']) >= auc_threshold:
