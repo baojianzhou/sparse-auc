@@ -79,14 +79,9 @@ def get_model_para(data_name, method, run_id, fold_id):
     sm = {'aver_auc': 0.0}
     for re_row in ms:
         mean_auc = np.mean(re_row['auc_arr'])
-        if method == 'sht_am':
-            if sm['aver_auc'] < mean_auc:
-                sm['para'] = re_row['para']
-                sm['aver_auc'] = mean_auc
-        else:
-            if sm['aver_auc'] < mean_auc:
-                sm['para'] = re_row['para']
-                sm['aver_auc'] = mean_auc
+        if sm['aver_auc'] < mean_auc:
+            sm['para'] = re_row['para']
+            sm['aver_auc'] = mean_auc
     if method == 'spam_l1':
         para_c, para_l1 = sm['para'][5], sm['para'][6]
         return para_c, para_l1
@@ -108,6 +103,19 @@ def get_model_para(data_name, method, run_id, fold_id):
     elif method == 'sht_am':
         para_s, para_b, para_c, para_l2 = sm['para'][5:9]
         return para_s, para_b, para_c, para_l2
+    elif method == 'sht_am_k':
+        list_paras = []
+        for para_s in list([re_row[5] for re_row in ms]):
+            sm = {'aver_auc': 0.0}
+            for re_row in ms:
+                if re_row['para_s'] == para_s:
+                    mean_auc = np.mean(re_row['auc_arr'])
+                    if sm['aver_auc'] < mean_auc:
+                        sm['para'] = re_row['para']
+                        sm['aver_auc'] = mean_auc
+            para_s, para_b, para_c, para_l2 = sm['para'][5:9]
+            list_paras.append((para_s, para_b, para_c, para_l2))
+        return list_paras
     return sm
 
 
@@ -305,6 +313,41 @@ def test_sht_am(data_name, method, k_fold, passes, step_len, cpus):
     pkl.dump(test_res, open(f_name, 'wb'))
 
 
+def run_single_sht_am_k(para):
+    run_id, fold_id, k_fold, passes, step, \
+    para_s, para_b, para_c, para_l2, data_name, method = para
+    s_time = time.time()
+    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
+    data = pkl.load(open(f_name, 'rb'))
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    te_index = data['fold_%d' % fold_id]['te_index']
+    x_vals, x_inds, x_poss, x_lens, y_tr = get_data_by_ind(data, tr_index, range(len(tr_index)))
+    wt, wt_bar, auc, rts = c_algo_sht_am_sparse(
+        x_vals, x_inds, x_poss, x_lens, y_tr,
+        data['p'], para_s, para_b, para_c, 0.0, passes, step, 1)
+    res = pred_results(wt, wt_bar, auc, rts, (para_s, para_b, para_c), te_index, data)
+    auc, run_time = res['auc_wt'], time.time() - s_time
+    print(run_id, fold_id, method, para_s, para_b, para_c, auc, run_time)
+    sys.stdout.flush()
+    return {(run_id, fold_id, para_s): res}
+
+
+def test_sht_am_k(data_name, method, k_fold, passes, step_len, cpus):
+    para_space = []
+    for index, (run_id, fold_id) in enumerate(product(range(5), range(5))):
+        list_paras = get_model_para(data_name, method, run_id, fold_id)
+        for para_s, para_b, para_c, para_l2 in list_paras:
+            para = (run_id, fold_id, k_fold, passes, step_len,
+                    para_s, para_b, para_c, para_l2, data_name, method)
+            para_space.append(para)
+    pool = multiprocessing.Pool(processes=cpus)
+    test_res = pool.map(run_single_sht_am_k, para_space)
+    pool.close()
+    pool.join()
+    f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, method, passes))
+    pkl.dump(test_res, open(f_name, 'wb'))
+
+
 def run_single_opauc(para):
     run_id, fold_id, k_fold, passes, step, para_tau, para_eta, para_lam, data_name, method = para
     s_time = time.time()
@@ -355,6 +398,8 @@ def main():
         test_opauc(data_name, method, k_fold, passes, step, cpus)
     elif method == 'sht_am':
         test_sht_am(data_name, method, k_fold, passes, step, cpus)
+    elif method == 'sht_am_k':
+        test_sht_am_k(data_name, method, k_fold, passes, step, cpus)
     else:
         print('other method ?')
 
