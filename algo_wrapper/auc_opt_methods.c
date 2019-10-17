@@ -580,7 +580,7 @@ bool _algo_solam_sparse(
         const double *data_y_tr, int data_n, int data_p, double para_c, double para_r,
         int para_num_passes, int para_step_len, int para_verbose, double *re_wt, double *re_wt_bar,
         double *re_auc, double *re_rts, int *re_len_auc) {
-
+    // TODO there is a bug, fix it!
     double start_time = clock();
     openblas_set_num_threads(1);
     double gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0, gamma, p_hat = 0.;
