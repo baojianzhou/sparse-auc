@@ -261,10 +261,8 @@ def cv_solam(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
                 re_list_r.add(item['para_r'])
         list_c, list_r = np.sort(list(re_list_c)), np.sort(list(re_list_r))
     print('space size: %d' % (len(list_c) * len(list_r)))
-    para_space = []
-    for index, (para_c, para_r) in enumerate(product(list_c, list_r)):
-        para = (run_id, fold_id, k_fold, passes, step, para_c, para_r, data_name)
-        para_space.append(para)
+    para_space = [(run_id, fold_id, k_fold, passes, step, para_c, para_r, data_name)
+                  for (para_c, para_r) in product(list_c, list_r)]
     pool = multiprocessing.Pool(processes=cpus)
     ms_res = pool.map(run_single_solam, para_space)
     pool.close()

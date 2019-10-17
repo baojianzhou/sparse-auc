@@ -106,8 +106,8 @@ def get_model_para(data_name, method, run_id, fold_id):
         para_tau, para_eta, para_lambda = sm['para'][5], sm['para'][6], sm['para'][7]
         return para_tau, para_eta, para_lambda
     elif method == 'sht_am':
-        para_s, para_b, para_c = sm['para'][5], sm['para'][6], sm['para'][7]
-        return para_s, para_b, para_c
+        para_s, para_b, para_c, para_l2 = sm['para'][5:9]
+        return para_s, para_b, para_c, para_l2
     return sm
 
 
@@ -273,7 +273,8 @@ def test_fsauc(data_name, method, k_fold, passes, step_len, cpus):
 
 
 def run_single_sht_am(para):
-    run_id, fold_id, k_fold, passes, step_len, para_s, para_b, para_c, data_name, method = para
+    run_id, fold_id, k_fold, passes, step, \
+    para_s, para_b, para_c, para_l2, data_name, method = para
     s_time = time.time()
     f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
     data = pkl.load(open(f_name, 'rb'))
@@ -282,7 +283,7 @@ def run_single_sht_am(para):
     x_vals, x_inds, x_poss, x_lens, y_tr = get_data_by_ind(data, tr_index, range(len(tr_index)))
     wt, wt_bar, auc, rts = c_algo_sht_am_sparse(
         x_vals, x_inds, x_poss, x_lens, y_tr,
-        data['p'], para_s, para_b, para_c, 0.0, passes, step_len, 1)
+        data['p'], para_s, para_b, para_c, 0.0, passes, step, 1)
     res = pred_results(wt, wt_bar, auc, rts, (para_s, para_b, para_c), te_index, data)
     auc, run_time = res['auc_wt'], time.time() - s_time
     print(run_id, fold_id, method, para_s, para_b, para_c, auc, run_time)
@@ -293,9 +294,9 @@ def run_single_sht_am(para):
 def test_sht_am(data_name, method, k_fold, passes, step_len, cpus):
     para_space = []
     for index, (run_id, fold_id) in enumerate(product(range(5), range(5))):
-        para_s, para_b, para_c = get_model_para(data_name, method, run_id, fold_id)
+        para_s, para_b, para_c, para_l2, = get_model_para(data_name, method, run_id, fold_id)
         para = (run_id, fold_id, k_fold, passes, step_len,
-                para_s, para_b, para_c, data_name, method)
+                para_s, para_b, para_c, para_l2, data_name, method)
         para_space.append(para)
     pool = multiprocessing.Pool(processes=cpus)
     test_res = pool.map(run_single_sht_am, para_space)
