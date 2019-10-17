@@ -577,7 +577,7 @@ bool _algo_solam(
 
 bool _algo_solam_sparse(
         const double *x_tr_vals, const int *x_tr_inds, const int *x_tr_poss, const int *x_tr_lens,
-        const double *data_y_tr, int data_n, int data_p, double para_xi, double para_r,
+        const double *data_y_tr, int data_n, int data_p, double para_c, double para_r,
         int para_num_passes, int para_step_len, int para_verbose, double *re_wt, double *re_wt_bar,
         double *re_auc, double *re_rts, int *re_len_auc) {
 
@@ -590,6 +590,7 @@ bool _algo_solam_sparse(
     v_prev = malloc(sizeof(double) * (data_p + 2));
     for (int i = 0; i < data_p; i++) { v_prev[i] = sqrt((para_r * para_r) / data_p); }
     v_prev[data_p] = para_r, v_prev[data_p + 1] = para_r;
+    printf("%.6f\n", sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
     alpha_prev = 2. * para_r;
     grad_v = malloc(sizeof(double) * (data_p + 2));
     v_bar = malloc(sizeof(double) * (data_p + 2));
@@ -599,30 +600,38 @@ bool _algo_solam_sparse(
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
 
-    if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
+    if (para_verbose == 0) {
+        printf("n: %d p: %d %.6f\n", data_n, data_p,
+               sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
+    }
 
     for (int t = 1; t <= (para_num_passes * data_n); t++) {
-        const int *xt_inds = x_tr_inds + x_tr_poss[(t - 1) % data_n]; // current sample
-        const double *xt_vals = x_tr_vals + x_tr_poss[(t - 1) % data_n];
-        is_p_yt = is_posi(data_y_tr[(t - 1) % data_n]);
-        is_n_yt = is_nega(data_y_tr[(t - 1) % data_n]);
+        int cur_ind = (t - 1) % data_n;
+        const int *xt_inds = x_tr_inds + x_tr_poss[cur_ind]; // current sample
+        const double *xt_vals = x_tr_vals + x_tr_poss[cur_ind];
+        is_p_yt = data_y_tr[cur_ind] > 0.0 ? 1.0 : 0.0;
+        is_n_yt = data_y_tr[cur_ind] < 0.0 ? 1.0 : 0.0;
         p_hat = ((t - 1.) * p_hat + is_p_yt) / t; // update p_hat
-        gamma = para_xi / sqrt(t); // current learning rate
+        gamma = para_c / sqrt(t * 1.); // current learning rate
         vt_dot = 0.0;
-        memset(grad_v, 0, sizeof(double) * data_p); // calculate the gradient w
-        for (int kk = 0; kk < x_tr_lens[(t - 1) % data_n]; kk++) {
+        memset(grad_v, 0, sizeof(double) * (data_p + 2)); // calculate the gradient w
+        for (int kk = 0; kk < x_tr_lens[cur_ind]; kk++) {
             grad_v[xt_inds[kk]] = xt_vals[kk];
             vt_dot += (v_prev[xt_inds[kk]] * xt_vals[kk]);
         }
         wei_posi = 2. * (1. - p_hat) * (vt_dot - v_prev[data_p] - (1. + alpha_prev));
         wei_nega = 2. * p_hat * ((vt_dot - v_prev[data_p + 1]) + (1. + alpha_prev));
         weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
+        if (t <= 10) {
+            printf("weight: %.6f %.6f %.6f\n", wei_posi, wei_nega, weight);
+        }
         cblas_dscal(data_p, weight, grad_v, 1);
         grad_v[data_p] = -2. * (1. - p_hat) * (vt_dot - v_prev[data_p]) * is_p_yt; //grad of a
         grad_v[data_p + 1] = -2. * p_hat * (vt_dot - v_prev[data_p + 1]) * is_n_yt; //grad of b
         cblas_dscal(data_p + 2, -gamma, grad_v, 1); // gradient descent step of vt
         cblas_daxpy(data_p + 2, 1.0, v_prev, 1, grad_v, 1);
-        memcpy(v, grad_v, sizeof(double) * data_p);
+        // memcpy(v, grad_v, sizeof(double) * data_p);
+        cblas_dcopy(data_p, grad_v, 1, v, 1);
         wei_posi = -2. * (1. - p_hat) * vt_dot; // calculate the gradient of dual alpha
         wei_nega = 2. * p_hat * vt_dot;
         grad_alpha = wei_posi * is_p_yt + wei_nega * is_n_yt;
@@ -635,17 +644,20 @@ bool _algo_solam_sparse(
         // projection alpha
         alpha = (fabs(alpha) > 2. * para_r) ? (2. * alpha * para_r) / fabs(alpha) : alpha;
         gamma_bar = gamma_bar_prev + gamma; // update gamma_
-        memcpy(v_bar, v_prev, sizeof(double) * (data_p + 2)); // update v_bar
+        //memcpy(v_bar, v_prev, sizeof(double) * (data_p + 2)); // update v_bar
+        cblas_dcopy((data_p + 2), v_prev, 1, v_bar, 1); // update v_bar
         cblas_dscal(data_p + 2, gamma / gamma_bar, v_bar, 1);
         cblas_daxpy(data_p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
         // update alpha_bar
         alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
         cblas_daxpy(data_p, 1., v_bar, 1, re_wt_bar, 1);
         alpha_prev = alpha, alpha_bar_prev = alpha_bar, gamma_bar_prev = gamma_bar;
-        memcpy(v_bar_prev, v_bar, sizeof(double) * (data_p + 2));
-        memcpy(v_prev, v, sizeof(double) * (data_p + 2));
+        // memcpy(v_bar_prev, v_bar, sizeof(double) * (data_p + 2));
+        cblas_dcopy(data_p + 2, v_bar, 1, v_bar_prev, 1);
+        //memcpy(v_prev, v, sizeof(double) * (data_p + 2));
+        cblas_dcopy(data_p + 2, v, 1, v_prev, 1);
         if ((fmod(t, para_step_len) == 1.)) { // to calculate AUC score
-            t_eval = clock(), memset(y_pred, 0, sizeof(double) * data_n);
+            t_eval = clock();
             for (int q = 0; q < data_n; q++) {
                 xt_inds = x_tr_inds + x_tr_poss[q];
                 xt_vals = x_tr_vals + x_tr_poss[q];
@@ -654,8 +666,18 @@ bool _algo_solam_sparse(
                 }
             }
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+            memset(y_pred, 0, sizeof(double) * data_n);
             re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
+        if (t <= 10) {
+            printf("%d %.6f %.6f %.6f %.6f ", t, alpha, alpha_bar,
+                   sqrt(cblas_ddot(data_p + 2, v_bar, 1, v_bar, 1)),
+                   sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
+            printf("norm_v: %.6f ", norm_v);
+            printf("norm_grad_ v: %.6f\n", sqrt(cblas_ddot(data_p + 2, grad_v, 1, grad_v, 1)));
+        }
+        if (t == 1000)
+            break;
     }
     memcpy(re_wt, v_bar, sizeof(double) * data_p);
     cblas_dscal(data_p, 1. / (para_num_passes * data_n), re_wt_bar, 1);
@@ -1387,7 +1409,7 @@ void _algo_opauc_sparse(
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
     for (int t = 0; t < data_n * para_num_passes; t++) {
-        int cur_ind =  t % data_n;
+        int cur_ind = t % data_n;
         const int *xt_inds = x_tr_inds + x_tr_poss[cur_ind];
         const double *xt_vals = x_tr_vals + x_tr_poss[cur_ind];
         memset(xt, 0, sizeof(double) * data_p);

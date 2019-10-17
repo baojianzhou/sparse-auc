@@ -260,6 +260,9 @@ def cv_solam(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
                 re_list_c.add(item['para_c'])
                 re_list_r.add(item['para_r'])
         list_c, list_r = np.sort(list(re_list_c)), np.sort(list(re_list_r))
+    if task_id == 0:
+        list_c = np.arange(1, 101, 9, dtype=float)
+        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
     print('space size: %d' % (len(list_c) * len(list_r)))
     para_space = [(run_id, fold_id, k_fold, passes, step, para_c, para_r, data_name)
                   for (para_c, para_r) in product(list_c, list_r)]

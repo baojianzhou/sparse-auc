@@ -211,8 +211,9 @@ def test_spam_l1l2(data_name, method, k_fold, passes, step_len, cpus):
 def run_single_solam(para):
     run_id, fold_id, k_fold, passes, step_len, para_c, para_r, data_name, method = para
     s_time = time.time()
-    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
-    data = pkl.load(open(f_name, 'rb'))
+    if fold_id != 1 or run_id != 0:
+        return
+    data = pkl.load(open(join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id)), 'rb'))
     tr_index = data['fold_%d' % fold_id]['tr_index']
     te_index = data['fold_%d' % fold_id]['te_index']
     x_vals, x_inds, x_poss, x_lens, y_tr = get_data_by_ind(data, tr_index, range(len(tr_index)))
@@ -341,7 +342,7 @@ def test_opauc(data_name, method, k_fold, passes, step_len, cpus):
 
 def main():
     data_name, method, cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
-    k_fold, passes, step = 5, 20, 20
+    k_fold, passes, step = 5, 1, 2
     if method == 'spam_l1':
         test_spam_l1(data_name, method, k_fold, passes, step, cpus)
     elif method == 'spam_l2':
