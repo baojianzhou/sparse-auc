@@ -74,6 +74,21 @@ def pred_results(wt, wt_bar, auc, rts, para_list, te_index, data):
 
 
 def get_model_para(data_name, method, run_id, fold_id):
+    if method == 'sht_am_k':
+        f_name = join(data_path, '%s/ms_run_%d_fold_%d_sht_am.pkl' % (data_name, run_id, fold_id))
+        ms = pkl.load(open(f_name, 'rb'))
+        list_paras = []
+        for para_s in list([re_row[5] for re_row in ms]):
+            sm = {'aver_auc': 0.0}
+            for re_row in ms:
+                if re_row['para_s'] == para_s:
+                    mean_auc = np.mean(re_row['auc_arr'])
+                    if sm['aver_auc'] < mean_auc:
+                        sm['para'] = re_row['para']
+                        sm['aver_auc'] = mean_auc
+            para_s, para_b, para_c, para_l2 = sm['para'][5:9]
+            list_paras.append((para_s, para_b, para_c, para_l2))
+        return list_paras
     f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
     ms = pkl.load(open(f_name, 'rb'))
     sm = {'aver_auc': 0.0}
@@ -103,19 +118,6 @@ def get_model_para(data_name, method, run_id, fold_id):
     elif method == 'sht_am':
         para_s, para_b, para_c, para_l2 = sm['para'][5:9]
         return para_s, para_b, para_c, para_l2
-    elif method == 'sht_am_k':
-        list_paras = []
-        for para_s in list([re_row[5] for re_row in ms]):
-            sm = {'aver_auc': 0.0}
-            for re_row in ms:
-                if re_row['para_s'] == para_s:
-                    mean_auc = np.mean(re_row['auc_arr'])
-                    if sm['aver_auc'] < mean_auc:
-                        sm['para'] = re_row['para']
-                        sm['aver_auc'] = mean_auc
-            para_s, para_b, para_c, para_l2 = sm['para'][5:9]
-            list_paras.append((para_s, para_b, para_c, para_l2))
-        return list_paras
     return sm
 
 
