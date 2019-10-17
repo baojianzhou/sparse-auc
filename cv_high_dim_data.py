@@ -397,14 +397,13 @@ def run_single_sht_am(para):
 
 def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh):
     run_id, fold_id = task_id / 5, task_id % 5
-    f_name = os.path.join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id))
-    data = pkl.load(open(f_name, 'rb'))
-    list_s = [int(_ * data['p']) for _ in [0.2, 0.4, 0.6, 0.8, 1.0]]
-    list_b = [10, 20, 40]
+    data = pkl.load(open(join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id)), 'rb'))
+    list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+    list_b = [20, 40]
     list_c = np.arange(1., 101., 9)
-    list_l2 = [1e-6, 1e-5, 0.0]
+    list_l2 = [0.0]  # in our experiment, there is regularization.
     # by adding this step, we can reduce some redundant model space.
-    if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+    if exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
         re_list_s, re_list_b, re_list_c = set(), set(), set()
         for item in pkl.load(open(f, 'rb')):
@@ -415,11 +414,10 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
         list_s, list_b = np.sort(list(re_list_s)), np.sort(list(re_list_b))
         list_c = np.sort(list(re_list_c))
     print('space size: %d' % (len(list_s) * len(list_b) * len(list_c) * len(list_l2)))
-    para_space = []
-    for index, (para_s, para_b, para_c, para_l2) in enumerate(
-            product(list_s, list_b, list_c, list_l2)):
-        para = (run_id, fold_id, k_fold, passes, step, para_s, para_b, para_c, para_l2, data_name)
-        para_space.append(para)
+    para_space = [(run_id, fold_id, k_fold, passes,
+                   step, para_s, para_b, para_c, para_l2, data_name)
+                  for (para_s, para_b, para_c, para_l2) in
+                  product(list_s, list_b, list_c, list_l2)]
     pool = multiprocessing.Pool(processes=cpus)
     ms_res = pool.map(run_single_sht_am, para_space)
     pool.close()
