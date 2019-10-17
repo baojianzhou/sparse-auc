@@ -195,6 +195,7 @@ def cv_spam_l1l2(data_name, method, task_id, k_fold, passes, step, cpus, auc_thr
     list_c = np.arange(1, 101, 9, dtype=float)
     list_l1 = 10. ** np.arange(-8, 3, 1, dtype=float)
     list_l2 = 10. ** np.arange(-8, 3, 1, dtype=float)
+    print('space size: %d' % (len(list_c) * len(list_l1) * len(list_l2)))
     # pre-select parameters that have AUC=0.8+
     if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l1.pkl' % data_name)) and \
             os.path.exists(join(data_path, '%s/ms_run_0_fold_0_spam_l2.pkl' % data_name)):
@@ -211,7 +212,8 @@ def cv_spam_l1l2(data_name, method, task_id, k_fold, passes, step, cpus, auc_thr
                 re_list_l2.add(item['para_l2'])
         list_c = np.sort(list(re_list_c))
         list_l1, list_l2 = np.sort(list(re_list_l1)), np.sort(list(re_list_l2))
-    print('space size: %d' % (len(list_c) * len(list_l1) * len(list_l2)))
+    print('reduced space size: %d' % (len(list_c) * len(list_l1) * len(list_l2)))
+    sys.stdout.flush()
     para_space = []
     for index, (para_c, para_l1, para_l2) in enumerate(product(list_c, list_l1, list_l2)):
         para = (run_id, fold_id, k_fold, passes, step, para_c, para_l1, para_l2, data_name)
