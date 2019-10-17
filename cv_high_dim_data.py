@@ -249,10 +249,13 @@ def run_single_solam(para):
 def cv_solam(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh):
     run_id, fold_id = task_id / 5, task_id % 5
     f_name = join(data_path, '%s/ms_run_%d_fold_%d_%s.pkl' % (data_name, run_id, fold_id, method))
+    # by adding this step, we can reduce some redundant model space.
     list_c = np.arange(1, 101, 9, dtype=float)
     list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-    # by adding this step, we can reduce some redundant model space.
-    if os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+    if task_id == 0:
+        list_c = np.arange(1, 101, 9, dtype=float)
+        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
+    elif os.path.exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
         re_list_c, re_list_r = set(), set()
         for item in pkl.load(open(f, 'rb')):
@@ -260,9 +263,6 @@ def cv_solam(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh)
                 re_list_c.add(item['para_c'])
                 re_list_r.add(item['para_r'])
         list_c, list_r = np.sort(list(re_list_c)), np.sort(list(re_list_r))
-    if task_id == 0:
-        list_c = np.arange(1, 101, 9, dtype=float)
-        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
     print('space size: %d' % (len(list_c) * len(list_r)))
     para_space = [(run_id, fold_id, k_fold, passes, step, para_c, para_r, data_name)
                   for (para_c, para_r) in product(list_c, list_r)]

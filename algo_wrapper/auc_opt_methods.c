@@ -532,7 +532,7 @@ bool _algo_solam(
             grad_v[data_p + 1] = -2. * p_hat * (vt_dot - v_prev[data_p + 1]) * is_n_yt; //grad b
             cblas_dscal(data_p + 2, -gamma, grad_v, 1); // gradient descent step of vt
             cblas_daxpy(data_p + 2, 1.0, v_prev, 1, grad_v, 1);
-            memcpy(v, grad_v, sizeof(double) * data_p);
+            memcpy(v, grad_v, sizeof(double) * (data_p + 2));
             wei_posi = -2. * (1. - p_hat) * vt_dot; // calculate the gradient of dual alpha
             wei_nega = 2. * p_hat * vt_dot;
             grad_alpha = wei_posi * is_p_yt + wei_nega * is_n_yt;
@@ -580,9 +580,10 @@ bool _algo_solam_sparse(
         const double *data_y_tr, int data_n, int data_p, double para_c, double para_r,
         int para_num_passes, int para_step_len, int para_verbose, double *re_wt, double *re_wt_bar,
         double *re_auc, double *re_rts, int *re_len_auc) {
-    // TODO there is a bug, fix it!
+
     double start_time = clock();
     openblas_set_num_threads(1);
+
     double gamma_bar, gamma_bar_prev = 0.0, alpha_bar, alpha_bar_prev = 0.0, gamma, p_hat = 0.;
     double *v, *v_prev, *v_bar, *v_bar_prev, *y_pred, *grad_v, alpha, alpha_prev;
     double is_p_yt, is_n_yt, vt_dot, wei_posi, wei_nega, weight, t_eval, grad_alpha, norm_v;
@@ -590,7 +591,6 @@ bool _algo_solam_sparse(
     v_prev = malloc(sizeof(double) * (data_p + 2));
     for (int i = 0; i < data_p; i++) { v_prev[i] = sqrt((para_r * para_r) / data_p); }
     v_prev[data_p] = para_r, v_prev[data_p + 1] = para_r;
-    printf("%.6f\n", sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
     alpha_prev = 2. * para_r;
     grad_v = malloc(sizeof(double) * (data_p + 2));
     v_bar = malloc(sizeof(double) * (data_p + 2));
@@ -600,7 +600,7 @@ bool _algo_solam_sparse(
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
 
-    if (para_verbose == 0) {
+    if (para_verbose > 0) {
         printf("n: %d p: %d %.6f\n", data_n, data_p,
                sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
     }
@@ -622,16 +622,12 @@ bool _algo_solam_sparse(
         wei_posi = 2. * (1. - p_hat) * (vt_dot - v_prev[data_p] - (1. + alpha_prev));
         wei_nega = 2. * p_hat * ((vt_dot - v_prev[data_p + 1]) + (1. + alpha_prev));
         weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
-        if (t <= 10) {
-            printf("weight: %.6f %.6f %.6f\n", wei_posi, wei_nega, weight);
-        }
         cblas_dscal(data_p, weight, grad_v, 1);
         grad_v[data_p] = -2. * (1. - p_hat) * (vt_dot - v_prev[data_p]) * is_p_yt; //grad of a
         grad_v[data_p + 1] = -2. * p_hat * (vt_dot - v_prev[data_p + 1]) * is_n_yt; //grad of b
         cblas_dscal(data_p + 2, -gamma, grad_v, 1); // gradient descent step of vt
         cblas_daxpy(data_p + 2, 1.0, v_prev, 1, grad_v, 1);
-        // memcpy(v, grad_v, sizeof(double) * data_p);
-        cblas_dcopy(data_p, grad_v, 1, v, 1);
+        memcpy(v, grad_v, sizeof(double) * (data_p + 2));
         wei_posi = -2. * (1. - p_hat) * vt_dot; // calculate the gradient of dual alpha
         wei_nega = 2. * p_hat * vt_dot;
         grad_alpha = wei_posi * is_p_yt + wei_nega * is_n_yt;
@@ -644,18 +640,15 @@ bool _algo_solam_sparse(
         // projection alpha
         alpha = (fabs(alpha) > 2. * para_r) ? (2. * alpha * para_r) / fabs(alpha) : alpha;
         gamma_bar = gamma_bar_prev + gamma; // update gamma_
-        //memcpy(v_bar, v_prev, sizeof(double) * (data_p + 2)); // update v_bar
-        cblas_dcopy((data_p + 2), v_prev, 1, v_bar, 1); // update v_bar
+        memcpy(v_bar, v_prev, sizeof(double) * (data_p + 2)); // update v_bar
         cblas_dscal(data_p + 2, gamma / gamma_bar, v_bar, 1);
         cblas_daxpy(data_p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
         // update alpha_bar
         alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
         cblas_daxpy(data_p, 1., v_bar, 1, re_wt_bar, 1);
         alpha_prev = alpha, alpha_bar_prev = alpha_bar, gamma_bar_prev = gamma_bar;
-        // memcpy(v_bar_prev, v_bar, sizeof(double) * (data_p + 2));
-        cblas_dcopy(data_p + 2, v_bar, 1, v_bar_prev, 1);
-        //memcpy(v_prev, v, sizeof(double) * (data_p + 2));
-        cblas_dcopy(data_p + 2, v, 1, v_prev, 1);
+        memcpy(v_bar_prev, v_bar, sizeof(double) * (data_p + 2));
+        memcpy(v_prev, v, sizeof(double) * (data_p + 2));
         if ((fmod(t, para_step_len) == 1.)) { // to calculate AUC score
             t_eval = clock();
             for (int q = 0; q < data_n; q++) {
@@ -669,15 +662,6 @@ bool _algo_solam_sparse(
             memset(y_pred, 0, sizeof(double) * data_n);
             re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
-        if (t <= 10) {
-            printf("%d %.6f %.6f %.6f %.6f ", t, alpha, alpha_bar,
-                   sqrt(cblas_ddot(data_p + 2, v_bar, 1, v_bar, 1)),
-                   sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
-            printf("norm_v: %.6f ", norm_v);
-            printf("norm_grad_ v: %.6f\n", sqrt(cblas_ddot(data_p + 2, grad_v, 1, grad_v, 1)));
-        }
-        if (t == 1000)
-            break;
     }
     memcpy(re_wt, v_bar, sizeof(double) * data_p);
     cblas_dscal(data_p, 1. / (para_num_passes * data_n), re_wt_bar, 1);
