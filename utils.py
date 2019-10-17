@@ -77,6 +77,6 @@ def get_selected_paras(data_name, method_list):
 
 if __name__ == '__main__':
     get_selected_paras(data_name='10_farmads',
-                       method_list=['spam_l1', 'solam', 'sht_am'])
-    average_scores(method_list=['spam_l1', 'solam', 'sht_am'],
+                       method_list=['spam_l1', 'spam_l2', 'solam', 'sht_am'])
+    average_scores(method_list=['spam_l1', 'spam_l2', 'solam', 'sht_am'],
                    data_name='10_farmads', passes=20)
