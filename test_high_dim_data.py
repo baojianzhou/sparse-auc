@@ -78,7 +78,7 @@ def get_model_para(data_name, method, run_id, fold_id):
         f_name = join(data_path, '%s/ms_run_%d_fold_%d_sht_am.pkl' % (data_name, run_id, fold_id))
         ms = pkl.load(open(f_name, 'rb'))
         list_paras = []
-        for para_s in list([re_row[5] for re_row in ms]):
+        for para_s in list(set([re_row['para_s'] for re_row in ms])):
             sm = {'aver_auc': 0.0}
             for re_row in ms:
                 if re_row['para_s'] == para_s:
