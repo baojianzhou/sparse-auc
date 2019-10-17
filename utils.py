@@ -119,6 +119,34 @@ def get_selected_paras(data_name, method_list):
 
 
 if __name__ == '__main__':
+    data_name, passes = '10_farmads', 20
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
+    method_list = ['sht_am', 'sht_am_k']
+    f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, 'sht_am', passes))
+    re = [_.values()[0]['auc_wt'] for _ in pkl.load(open(f_name, 'rb'))]
+    aver_auc = '{:.4f}'.format(float(np.mean(re))).lstrip('0')
+    print(aver_auc)
+    re = dict()
+    f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, 'sht_am_k', passes))
+    s_list = []
+    for _ in pkl.load(open(f_name, 'rb')):
+        for key in _:
+            if key[2] not in re:
+                re[key[2]] = []
+            re[key[2]].append(_[key]['auc_wt'])
+            s_list.append(key[2])
+    for _ in re:
+        print(_, np.mean(re[_]))
+    plt.plot(np.sort(s_list), [np.mean(re[_]) for _ in np.sort(s_list)], marker='D',
+             color='green', label='SHT-AM(k)')
+    plt.plot(np.sort(s_list), [float(aver_auc) for _ in np.sort(s_list)], marker='o',
+             color='red', linestyle='--', label='SHT-AM')
+    plt.plot(np.sort(s_list), [float(aver_auc) - 0.001 for _ in np.sort(s_list)], marker='s',
+             color='gray', linestyle='--', label='SHT-AM -0.1%')
+    plt.ylim([0.96, 0.97])
+    plt.legend()
+    plt.show()
+    exit()
     converge_curve(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
                    data_name='10_farmads', passes=20)
     get_selected_paras(data_name='10_farmads',
