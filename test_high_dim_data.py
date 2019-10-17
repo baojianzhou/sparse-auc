@@ -340,7 +340,7 @@ def test_opauc(data_name, method, k_fold, passes, step_len, cpus):
 
 def main():
     data_name, method, cpus = sys.argv[1], sys.argv[2], int(sys.argv[3])
-    k_fold, passes, step = 5, 1, 2
+    k_fold, passes, step = 5, 20, 20
     if method == 'spam_l1':
         test_spam_l1(data_name, method, k_fold, passes, step, cpus)
     elif method == 'spam_l2':
