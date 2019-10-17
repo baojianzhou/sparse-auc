@@ -332,7 +332,8 @@ def get_processed_data():
                   'n': 295,
                   'p': 3243,
                   'num_runs': 25,
-                  'num_k_fold': 5}
+                  'k_fold': 5,
+                  'data_name': '16_bc'}
     for run_index in range(input_data['num_runs']):
         kf = KFold(n_splits=input_data['num_k_fold'], shuffle=False)
         # just need the number of training samples
@@ -342,8 +343,7 @@ def get_processed_data():
             rand_perm = np.random.permutation(input_data['n'])
             print(rand_perm[:10], len(rand_perm[train_index]), len(rand_perm[test_index]))
             input_data['run_%d_fold_%d' % (run_index, fold_index)] = {
-                'tr_index': rand_perm[train_index],
-                'te_index': rand_perm[test_index]}
+                'tr_index': rand_perm[train_index], 'te_index': rand_perm[test_index]}
     pkl.dump(input_data, open(os.path.join(root_input, 'input_bc.pkl'), 'wb'))
 
 
