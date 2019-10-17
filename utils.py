@@ -118,10 +118,9 @@ def get_selected_paras(data_name, method_list):
             print(method, get_model_para(data_name, method, run_id, fold_id))
 
 
-if __name__ == '__main__':
+def test_3():
     data_name, passes = '10_farmads', 20
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
-    method_list = ['sht_am', 'sht_am_k']
     f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, 'sht_am', passes))
     re = [_.values()[0]['auc_wt'] for _ in pkl.load(open(f_name, 'rb'))]
     aver_auc = '{:.4f}'.format(float(np.mean(re))).lstrip('0')
@@ -146,10 +145,23 @@ if __name__ == '__main__':
     plt.ylim([0.96, 0.97])
     plt.legend()
     plt.show()
-    exit()
-    converge_curve(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
-                   data_name='10_farmads', passes=20)
-    get_selected_paras(data_name='10_farmads',
-                       method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'])
-    average_scores(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
-                   data_name='10_farmads', passes=20)
+
+
+def results_show(data_name):
+    if data_name == '15_rcv1b':
+        method_list = ['spam_l1', 'spam_l2', 'sht_am']
+        passes = 20
+        converge_curve(method_list=method_list, data_name=data_name, passes=passes)
+        get_selected_paras(data_name=data_name, method_list=method_list)
+        average_scores(method_list=method_list, data_name=data_name, passes=passes)
+    elif data_name == '10_farmads':
+        converge_curve(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
+                       data_name='10_farmads', passes=20)
+        get_selected_paras(data_name='10_farmads',
+                           method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'])
+        average_scores(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
+                       data_name='10_farmads', passes=20)
+
+
+if __name__ == '__main__':
+    results_show(data_name='15_rcv1b')
