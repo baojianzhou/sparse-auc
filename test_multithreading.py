@@ -35,9 +35,5 @@ def test_multi_process(cpus):
     return np.sum(ms_res)
 
 
-def main():
-    print(test_multi_process(cpus=5))
-
-
 if __name__ == '__main__':
-    main()
+    print(test_multi_process(cpus=int(sys.argv[1])))
