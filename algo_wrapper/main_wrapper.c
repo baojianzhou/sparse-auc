@@ -8,19 +8,24 @@ static PyObject *test(PyObject *self, PyObject *args) {
         printf("error: unknown error !!\n");
         return NULL;
     }
+    int verbose = 0;
     double sum = 0.0;
     PyArrayObject *x_tr_;
     if (!PyArg_ParseTuple(args, "O!", &PyArray_Type, &x_tr_)) { return NULL; }
     int n = (int) (x_tr_->dimensions[0]);     // number of samples
     int p = (int) (x_tr_->dimensions[1]);     // number of features
-    printf("%d %d\n", n, p);
     double *x_tr = PyArray_DATA(x_tr_);
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < p; j++) {
-            printf("%.2f ", x_tr[i * p + j]);
+            if (verbose > 0) {
+                printf("%.2f ", x_tr[i * p + j]);
+            }
+
             sum += x_tr[i * p + j];
         }
-        printf("\n");
+        if (verbose > 0) {
+            printf("\n");
+        }
     }
     PyObject *results = PyFloat_FromDouble(sum);
     return results;
