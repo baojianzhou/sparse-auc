@@ -19,15 +19,15 @@ except ImportError:
 
 def test_single_thread(para):
     n = para
-    x = np.reshape(np.random.rand(n), (10, 10))
+    x = np.reshape(np.random.rand(n), (1000, 1000))
     print('test')
     return c_test(x)
 
 
 def test_multi_process(cpus):
     para_space = []
-    for i in range(1000):
-        para_space.append(100)
+    for i in range(100000):
+        para_space.append(1000000)
     pool = multiprocessing.Pool(processes=cpus)
     ms_res = pool.map(test_single_thread, para_space)
     pool.close()
