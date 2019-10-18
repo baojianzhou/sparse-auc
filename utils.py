@@ -119,6 +119,7 @@ def get_selected_paras(data_name, method_list):
 
 
 def test_3():
+    rcParams['figure.figsize'] = 7.5, 6
     data_name, passes = '10_farmads', 20
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
     f_name = join(data_path, '%s/results_%s_%02d.pkl' % (data_name, 'sht_am', passes))
@@ -137,19 +138,23 @@ def test_3():
     for _ in re:
         print(_, np.mean(re[_]))
     plt.plot(np.sort(s_list), [np.mean(re[_]) for _ in np.sort(s_list)], marker='D',
-             color='green', label='SHT-AM(k)')
+             color='green', label='SHT-AM(k)', linewidth=2.5)
     plt.plot(np.sort(s_list), [float(aver_auc) for _ in np.sort(s_list)], marker='o',
-             color='red', linestyle='--', label='SHT-AM')
+             color='red', linestyle='--', label='SHT-AM', linewidth=2.5)
     plt.plot(np.sort(s_list), [float(aver_auc) - 0.001 for _ in np.sort(s_list)], marker='s',
-             color='gray', linestyle='--', label='SHT-AM -0.1%')
-    plt.ylim([0.96, 0.97])
-    plt.legend()
-    plt.show()
+             color='gray', linestyle='--', label='SHT-AM -0.1%', linewidth=2.5)
+    plt.ylim([0.992, 0.995])
+    plt.xlabel('sparsity (k)')
+    plt.ylabel('AUC')
+    plt.legend(loc='lower right')
+    plt.subplots_adjust(wspace=0.0, hspace=0.0)
+    plt.savefig('/home/baojian/10_parameter_sensity.pdf', dpi=600, bbox_inches='tight',
+                pad_inches=0, format='pdf')
 
 
 def results_show(data_name):
     if data_name == '15_rcv1b':
-        method_list = ['spam_l1', 'spam_l2', 'sht_am']
+        method_list = ['spam_l1', 'sht_am']
         passes = 20
         converge_curve(method_list=method_list, data_name=data_name, passes=passes)
         get_selected_paras(data_name=data_name, method_list=method_list)
@@ -164,4 +169,6 @@ def results_show(data_name):
 
 
 if __name__ == '__main__':
+    test_3()
+    exit()
     results_show(data_name='15_rcv1b')
