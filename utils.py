@@ -154,21 +154,18 @@ def test_3():
 
 def results_show(data_name):
     if data_name == '15_rcv1b':
-        method_list = ['spam_l1', 'sht_am']
+        method_list = ['spam_l1', 'spam_l2', 'solam', 'sht_am']
         passes = 20
         converge_curve(method_list=method_list, data_name=data_name, passes=passes)
         get_selected_paras(data_name=data_name, method_list=method_list)
         average_scores(method_list=method_list, data_name=data_name, passes=passes)
     elif data_name == '10_farmads':
-        converge_curve(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
-                       data_name='10_farmads', passes=20)
-        get_selected_paras(data_name='10_farmads',
-                           method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'])
-        average_scores(method_list=['spam_l1', 'spam_l2', 'solam', 'fsauc', 'sht_am'],
-                       data_name='10_farmads', passes=20)
+        method_list = ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam', 'fsauc', 'sht_am']
+        passes = 20
+        converge_curve(method_list=method_list, data_name=data_name, passes=passes)
+        get_selected_paras(data_name=data_name, method_list=method_list)
+        average_scores(method_list=method_list, data_name=data_name, passes=passes)
 
 
 if __name__ == '__main__':
-    test_3()
-    exit()
-    results_show(data_name='15_rcv1b')
+    results_show(data_name='10_farmads')
