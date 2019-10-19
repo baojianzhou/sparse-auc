@@ -389,23 +389,26 @@ def run_single_sht_am(para):
         wt, wt_bar, aucs, rts = c_algo_sht_am_sparse(
             x_vals, x_inds, x_posis, x_lens, y_tr,
             data['p'], para_s, para_b, para_c, para_l2, num_passes, step, 0)
-        results['auc_arr'][ind] = pred_auc(data, tr_index, sub_te_ind, wt)
-        results['run_time'][ind] = time.time() - s_time
-        print(run_id, fold_id, para_s, para_b, para_c,
-              results['auc_arr'][ind], time.time() - s_time)
+        cur_auc, cur_time = pred_auc(data, tr_index, sub_te_ind, wt), time.time() - s_time
+        results['auc_arr'][ind] = cur_auc
+        results['run_time'][ind] = cur_time
+        # print(run_id, fold_id, para_s, para_b, para_c, cur_auc, time.time() - s_time)
         sys.stdout.flush()
+    print('run_id: %d fold_id: %d para_s: %d para_b: %d para_c: %f mean-AUC: %.6f' %
+          (run_id, fold_id, para_s, para_b, para_c, float(np.mean(results['auc_arr']))))
     return results
 
 
 def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh):
     run_id, fold_id = task_id / 5, task_id % 5
     data = pkl.load(open(join(data_path, '%s/data_run_%d.pkl' % (data_name, run_id)), 'rb'))
-    list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
-    list_b = [20, 40]
-    list_c = np.arange(1., 101., 9)
     list_l2 = [0.0]  # in our experiment, there is regularization.
     # by adding this step, we can reduce some redundant model space.
-    if exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
+    if task_id == 0:
+        list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+        list_b = [20, 40]
+        list_c = 2. ** np.arange(-2., 1., 0.2)
+    elif exists(join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))):
         f = join(data_path, '%s/ms_run_0_fold_0_%s.pkl' % (data_name, method))
         re_list_s, re_list_b, re_list_c = set(), set(), set()
         for item in pkl.load(open(f, 'rb')):
@@ -415,6 +418,10 @@ def cv_sht_am(data_name, method, task_id, k_fold, passes, step, cpus, auc_thresh
                 re_list_c.add(item['para_c'])
         list_s, list_b = np.sort(list(re_list_s)), np.sort(list(re_list_b))
         list_c = np.sort(list(re_list_c))
+    else:
+        list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+        list_b = [20, 40]
+        list_c = 2. * np.arange(-2., 1., 0.2)
     print('space size: %d' % (len(list_s) * len(list_b) * len(list_c) * len(list_l2)))
     para_space = [(run_id, fold_id, k_fold, passes,
                    step, para_s, para_b, para_c, para_l2, data_name)
