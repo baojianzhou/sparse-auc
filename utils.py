@@ -168,4 +168,6 @@ def results_show(data_name):
 
 
 if __name__ == '__main__':
+    test_3()
+    exit()
     results_show(data_name='10_farmads')
