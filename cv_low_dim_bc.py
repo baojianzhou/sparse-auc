@@ -486,8 +486,8 @@ def cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data):
             auc_arr = np.zeros(k_fold)
             for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
                 wt, wt_bar, auc, rts = c_algo_sht_am(
-                    np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                    np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
                     para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
                 auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
                 auc_arr[ind] = auc_wt
@@ -523,8 +523,8 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
             auc_arr = np.zeros(k_fold)
             for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
                 wt, wt_bar, auc, rts = c_algo_graph_am(
-                    np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                    np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
                     np.asarray(data['data_edges'], dtype=np.int32),
                     np.asarray(data['data_weights'], dtype=float),
                     para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
@@ -563,8 +563,8 @@ def cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data):
             auc_arr = np.zeros(k_fold)
             for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
                 wt, wt_bar, auc, rts = c_algo_fsauc(
-                    np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                    np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
                     para_r, para_g, num_passes, step_len, 0)
                 auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
                 auc_arr[ind] = auc_wt
@@ -597,8 +597,8 @@ def cv_solam(method_name, k_fold, task_id, num_passes, step_len, data):
             auc_arr = np.zeros(k_fold)
             for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
                 wt, wt_bar, auc, rts = c_algo_solam(
-                    np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                    np.asarray(data['data_y_tr'][tr_index], dtype=float),
+                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
                     para_c, para_r, num_passes, step_len, 0)
                 auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
                 auc_arr[ind] = auc_wt
@@ -618,25 +618,36 @@ def cv_solam(method_name, k_fold, task_id, num_passes, step_len, data):
 
 def cv_opauc(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
-    list_eta = 2. ** np.arange(-12, -3, 1, dtype=float)
-    list_lambda = 2. ** np.arange(-10, 1, 1, dtype=float)
     for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
         best_auc = None
+        fold = KFold(n_splits=k_fold, shuffle=False)
+        list_eta = 2. ** np.arange(-12, -3, 1, dtype=float)
+        list_lambda = 2. ** np.arange(-10, 1, 1, dtype=float)
         for para_eta, para_lambda in product(list_eta, list_lambda):
-            wt, wt_bar, auc, rts = c_algo_opauc(
-                np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                np.asarray(data['data_y_tr'][tr_index], dtype=float),
-                para_eta, para_lambda, num_passes, step_len, 0)
-            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(fold_id, para_eta, para_lambda, auc_wt, auc_wt_bar)
-            if best_auc is None or best_auc['auc_wt'] < auc_wt:
-                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar, 'auc': auc, 'rts': rts,
+            s_time = time.time()
+            auc_arr = np.zeros(k_fold)
+            for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+                wt, wt_bar, auc, rts = c_algo_opauc(
+                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    para_eta, para_lambda, num_passes, step_len, 0)
+                auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
+                auc_arr[ind] = auc_wt
+            print(fold_id, para_eta, para_lambda, 'auc: %.5f run_time: %.5f' %
+                  (float(np.mean(auc_arr)), time.time() - s_time))
+            if best_auc is None or best_auc['auc'] < np.mean(auc_arr):
+                best_auc = {'auc': np.mean(auc_arr),
                             'para_eta': para_eta, 'para_lambda': para_lambda}
-        print(best_auc['auc_wt'], best_auc['auc_wt_bar'])
-        results[(task_id, fold_id)][method_name] = best_auc
+        wt, wt_bar, auc, rts = c_algo_opauc(
+            np.asarray(data['data_x_tr'][tr_index], dtype=float),
+            np.asarray(data['data_y_tr'][tr_index], dtype=float),
+            best_auc['para_eta'], best_auc['para_lambda'], num_passes, step_len, 0)
+        auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+        results[(task_id, fold_id)][method_name] = {
+            'auc': auc_wt, 'rts': rts, 'ms': best_auc, 'wt': wt}
     return results
 
 
