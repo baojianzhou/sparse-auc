@@ -595,7 +595,7 @@ def run_ms(method_name):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    k_fold, num_passes, step_len = 5, 50, 20
+    k_fold, num_passes, step_len = 5, 20, 200000000
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
     data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
     results = dict()
