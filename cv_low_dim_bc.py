@@ -2,6 +2,7 @@
 import os
 import csv
 import sys
+import time
 import numpy as np
 import pickle as pkl
 from sklearn.model_selection import KFold
@@ -322,12 +323,14 @@ def get_processed_data():
         normalized_data.append(row / np.linalg.norm(row))
     input_data = {'all_x_tr': np.asarray(data['data_X'], dtype=float),
                   'all_y_tr': np.asarray(data['data_Y'], dtype=float),
-                  'all_edges': data['data_edges'], 'all_entrez': data['data_entrez'],
+                  'all_edges': data['data_edges'],
+                  'all_entrez': data['data_entrez'],
                   'cancer_related_genes': data['cancer_related_genes'],
                   'data_x_tr': np.asarray(normalized_data, dtype=float),
                   'data_y_tr': np.asarray(data['y'], dtype=float),
                   'data_weights': np.asarray(data['costs'], dtype=float),
-                  'data_edges': data['edges'], 'data_nodes': data['nodes'],
+                  'data_edges': data['edges'],
+                  'data_nodes': data['nodes'],
                   'map_entrez': data['map_entrez'],
                   'n': 295,
                   'p': 3243,
@@ -364,24 +367,35 @@ def pred(wt, wt_bar, te_index, data):
 
 def cv_spam_l1(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
-    list_c = 10. ** np.arange(-5, 6, 1, dtype=float)
-    list_l1 = 10. ** np.arange(-5, 6, 1, dtype=float)
     for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
         best_auc = None
+        fold = KFold(n_splits=k_fold, shuffle=False)
+        list_c = np.arange(1, 101, 9, dtype=float)
+        list_l1 = 10. ** np.arange(-8, 3, 1, dtype=float)
         for para_c, para_l1 in product(list_c, list_l1):
-            wt, wt_bar, auc, rts = c_algo_spam(
-                np.asarray(data['data_x_tr'][tr_index], dtype=float),
-                np.asarray(data['data_y_tr'][tr_index], dtype=float),
-                para_c, para_l1, 0.0, 0, num_passes, step_len, 0)
-            auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
-            print(fold_id, para_c, para_l1, auc_wt, auc_wt_bar)
-            if best_auc is None or best_auc['auc_wt'] < auc_wt:
-                best_auc = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar,
-                            'auc': auc, 'rts': rts, 'para_c': para_c, 'para_l1': para_l1}
-        results[(task_id, fold_id)][method_name] = best_auc
+            s_time = time.time()
+            auc_arr = np.zeros(k_fold)
+            for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+                wt, wt_bar, auc, rts = c_algo_spam(
+                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                    para_c, para_l1, 0.0, 0, num_passes, step_len, 0)
+                auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
+                auc_arr[ind] = auc_wt
+            print(fold_id, para_c, para_l1, 'auc: %.5f run_time: %.5f' %
+                  (float(np.mean(auc_arr)), time.time() - s_time))
+            if best_auc is None or best_auc['auc'] < np.mean(auc_arr):
+                best_auc = {'auc': np.mean(auc_arr), 'para_c': para_c, 'para_l1': para_l1}
+        wt, wt_bar, auc, rts = c_algo_spam(
+            np.asarray(data['data_x_tr'][tr_index], dtype=float),
+            np.asarray(data['data_y_tr'][tr_index], dtype=float),
+            best_auc['para_c'], best_auc['para_l1'], 0.0, 0, num_passes, step_len, 0)
+        auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
+        results[(task_id, fold_id)][method_name] = {
+            'auc': auc_wt, 'rts': rts, 'ms': best_auc, 'wt': wt}
     return results
 
 
