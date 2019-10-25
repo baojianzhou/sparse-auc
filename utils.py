@@ -63,8 +63,8 @@ def converge_curve(method_list, data_name, passes):
             averaged[method]['y'].append(re[method]['auc'])
             min_len = min(min_len, len(re[method]['rts']))
     plt.subplots_adjust(wspace=0.0, hspace=0.0)
-    plt.savefig('/home/baojian/10_farmads.pdf', dpi=600, bbox_inches='tight',
-                pad_inches=0, format='pdf')
+    plt.savefig(os.path.join(data_path, data_name, '%s.pdf' % data_name), dpi=600,
+                bbox_inches='tight', pad_inches=0, format='pdf')
     rcParams['figure.figsize'] = 8, 8
     fig, ax = plt.subplots(1, 1)
     for method in method_list:
@@ -77,8 +77,8 @@ def converge_curve(method_list, data_name, passes):
         ax.set_xlabel('Run time (seconds)')
     ax.legend(loc='lower right', fontsize=18.)
     plt.subplots_adjust(wspace=0.0, hspace=0.0)
-    plt.savefig('/home/baojian/10_averaged.pdf', dpi=600, bbox_inches='tight',
-                pad_inches=0, format='pdf')
+    plt.savefig(os.path.join(data_path, data_name, '%s-averaged.pdf' % data_name), dpi=600,
+                bbox_inches='tight', pad_inches=0, format='pdf')
 
 
 def average_scores(method_list, data_name, passes):
@@ -154,13 +154,13 @@ def test_3():
 
 def results_show(data_name):
     if data_name == '15_rcv1b':
-        method_list = ['spam_l1', 'spam_l2', 'solam', 'sht_am']
+        method_list = ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam', 'fsauc', 'sht_am']
         passes = 20
         converge_curve(method_list=method_list, data_name=data_name, passes=passes)
         get_selected_paras(data_name=data_name, method_list=method_list)
         average_scores(method_list=method_list, data_name=data_name, passes=passes)
     elif data_name == '10_farmads':
-        method_list = ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam', 'fsauc', 'sht_am']
+        method_list = ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam', 'fsauc', 'sht_am', 'opauc']
         passes = 20
         converge_curve(method_list=method_list, data_name=data_name, passes=passes)
         get_selected_paras(data_name=data_name, method_list=method_list)
@@ -168,4 +168,4 @@ def results_show(data_name):
 
 
 if __name__ == '__main__':
-    results_show(data_name='10_farmads')
+    results_show(data_name='15_rcv1b')
