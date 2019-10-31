@@ -532,6 +532,7 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
                 auc_arr[ind] = auc_wt
             print(fold_id, para_b, para_c, para_s, 'auc: %.5f run_time: %.5f' %
                   (float(np.mean(auc_arr)), time.time() - s_time))
+            sys.stdout.flush()
             if best_auc is None or best_auc['auc'] < np.mean(auc_arr):
                 best_auc = {'auc': np.mean(auc_arr),
                             'para_c': para_c, 'para_b': para_b, 'para_s': para_s}
