@@ -167,23 +167,31 @@ def results_show(data_name):
         average_scores(method_list=method_list, data_name=data_name, passes=passes)
 
 
-if __name__ == '__main__':
+def results_analysis_bc():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc'
-    method_list = ['spam_l2', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
-    results = dict()
-    for i in range(25):
-        results_auc = {_: [] for _ in method_list}
+    method_list = ['spam_l2', 'fsauc', 'solam', 'spam_l1', 'spam_l1l2', 'sht_am']
+    results = {(task_id, fold_id): dict()
+               for task_id, fold_id in product(range(25), range(5))}
+    for task_id, method in product(range(25), method_list):
+        re = pkl.load(open(join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method)), 'rb'))
+        for key in re:
+            for _ in re[key]:
+                results[key][_] = re[key][_]
+    print('\t'.join(method_list))
+    all_aucs = {method: np.zeros((25, 5)) for method in method_list}
+    for task_id in range(25):
         for method in method_list:
-            f_name = join(data_path, 'ms_task_%02d_%s.pkl' % (i, method))
-            re = pkl.load(open(f_name, 'rb'))
-            for key in re:
-                if key not in results:
-                    results[key] = dict()
-                results[key][re[key].keys()[0]] = re[key].values()[0]
+            auc_list = np.zeros(5)
+            for fold_id in range(5):
+                print(method, results[(task_id, fold_id)][method]['auc'])
+                auc_list[fold_id] = results[(task_id, fold_id)][method]['auc']
 
+            # print('%.4f\t' % np.mean(np.asarray(auc_list))),
+            all_aucs[method][task_id] = auc_list
+        print()
     for method in method_list:
-        x = []
-        for key in results:
-            x.append(results[key][method]['auc'])
-        print(method, '%.5f %.5f' % (float(np.mean(np.asarray(x))),
-                                     float(np.std(np.asarray(x)))))
+        print('\t'.join(np.mean(all_aucs[method], axis=0)))
+
+
+if __name__ == '__main__':
+    results_analysis_bc()
