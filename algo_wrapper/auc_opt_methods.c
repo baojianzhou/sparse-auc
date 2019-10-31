@@ -133,33 +133,23 @@ bool head_tail_binsearch(
         }
         if (verbose >= 1) {
             for (int ii = 0; ii < m; ii++) {
-                printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second,
-                       cur_costs[ii]);
+                printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
             }
-            for (int ii = 0; ii < n; ii++) {
-                printf("N %d %.15f\n", ii, prizes[ii]);
-            }
+            for (int ii = 0; ii < n; ii++) printf("N %d %.15f\n", ii, prizes[ii]);
             printf("\n");
             printf("lambda_high: %f\n", lambda_high);
             printf("target_num_clusters: %d\n", target_num_clusters);
         }
-        PCST *pcst = make_pcst(
-                edges, prizes, cur_costs, root, target_num_clusters,
-                1e-10, pruning, n, m, verbose);
+        PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
+                               1e-10, pruning, n, m, verbose);
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
         free_pcst(pcst);
         cur_k = stat->re_nodes->size;
-
-        if (verbose >= 1) {
-            printf("increase:   l_high: %e  k: %d\n", lambda_high, cur_k);
-        }
+        if (verbose >= 1) printf("increase:   l_high: %e  k: %d\n", lambda_high, cur_k);
     } while (cur_k > sparsity_high && stat->num_iter < max_num_iter);
 
     if (stat->num_iter < max_num_iter && cur_k >= sparsity_low) {
-        if (verbose >= 1) {
-            printf("Found good lambda in exponential "
-                   "increase phase, returning.\n");
-        }
+        if (verbose >= 1) printf("Found good lambda in exponential increase phase, returning.\n");
         free(cur_costs);
         free(sorted_prizes);
         free(sorted_indices);
@@ -169,26 +159,18 @@ bool head_tail_binsearch(
     while (stat->num_iter < max_num_iter) {
         stat->num_iter += 1;
         lambda_mid = (lambda_low + lambda_high) / 2.0;
-        for (int ii = 0; ii < m; ii++) {
-            cur_costs[ii] = lambda_mid * costs[ii];
-        }
-        PCST *pcst = make_pcst(
-                edges, prizes, cur_costs, root, target_num_clusters, 1e-10,
-                pruning, n, m, verbose);
+        for (int ii = 0; ii < m; ii++) { cur_costs[ii] = lambda_mid * costs[ii]; }
+        PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters, 1e-10,
+                               pruning, n, m, verbose);
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
         free_pcst(pcst);
         cur_k = stat->re_nodes->size;
         if (verbose >= 1) {
-            for (int ii = 0; ii < m; ii++) {
-                printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second,
-                       cur_costs[ii]);
-            }
-            for (int ii = 0; ii < n; ii++) {
-                printf("N %d %.15f\n", ii, prizes[ii]);
-            }
-            printf("bin_search: l_mid:  %e  k: %d  "
-                   "(lambda_low: %e  lambda_high: %e)\n", lambda_mid, cur_k,
-                   lambda_low, lambda_high);
+            for (int ii = 0; ii < m; ii++)
+                printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
+            for (int ii = 0; ii < n; ii++) printf("N %d %.15f\n", ii, prizes[ii]);
+            printf("bin_search: l_mid:  %e  k: %d  (lambda_low: %e  lambda_high: %e)\n",
+                   lambda_mid, cur_k, lambda_low, lambda_high);
         }
         if (sparsity_low <= cur_k && cur_k <= sparsity_high) {
             if (verbose >= 1) {
@@ -206,22 +188,17 @@ bool head_tail_binsearch(
             lambda_high = lambda_mid;
         }
     }
-    for (int ii = 0; ii < m; ++ii) {
-        cur_costs[ii] = lambda_high * costs[ii];
-    }
+    for (int ii = 0; ii < m; ++ii) { cur_costs[ii] = lambda_high * costs[ii]; }
     PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
                            1e-10, pruning, n, m, verbose);
     run_pcst(pcst, stat->re_nodes, stat->re_edges);
     free_pcst(pcst);
     if (verbose >= 1) {
         for (int ii = 0; ii < m; ii++) {
-            printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second,
-                   cur_costs[ii]);
+            printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
         }
         printf("\n");
-        for (int ii = 0; ii < n; ii++) {
-            printf("N %d %.15f\n", ii, prizes[ii]);
-        }
+        for (int ii = 0; ii < n; ii++) { printf("N %d %.15f\n", ii, prizes[ii]); }
         printf("\n");
         printf("Reached the maximum number of "
                "iterations, using the last l_high: %e  k: %d\n",
