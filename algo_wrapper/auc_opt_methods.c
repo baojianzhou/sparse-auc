@@ -140,6 +140,7 @@ bool head_tail_binsearch(
             printf("lambda_high: %f\n", lambda_high);
             printf("target_num_clusters: %d\n", target_num_clusters);
         }
+        printf("lambda_high: %f\n", lambda_high);
         PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
                                1e-10, pruning, n, m, verbose);
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
@@ -160,6 +161,7 @@ bool head_tail_binsearch(
         stat->num_iter += 1;
         lambda_mid = (lambda_low + lambda_high) / 2.0;
         for (int ii = 0; ii < m; ii++) { cur_costs[ii] = lambda_mid * costs[ii]; }
+        printf("lambda_mid: %f\n", lambda_mid);
         PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters, 1e-10,
                                pruning, n, m, verbose);
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
@@ -189,6 +191,7 @@ bool head_tail_binsearch(
         }
     }
     for (int ii = 0; ii < m; ++ii) { cur_costs[ii] = lambda_high * costs[ii]; }
+    printf("lambda_high: %f\n", lambda_high);
     PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
                            1e-10, pruning, n, m, verbose);
     run_pcst(pcst, stat->re_nodes, stat->re_edges);
@@ -198,10 +201,8 @@ bool head_tail_binsearch(
             printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
         }
         printf("\n");
-        for (int ii = 0; ii < n; ii++) { printf("N %d %.15f\n", ii, prizes[ii]); }
-        printf("\n");
-        printf("Reached the maximum number of "
-               "iterations, using the last l_high: %e  k: %d\n",
+        for (int ii = 0; ii < n; ii++) printf("N %d %.15f\n", ii, prizes[ii]);
+        printf("\nReached the maximum number of iterations, using the last l_high: %e  k: %d\n",
                lambda_high, stat->re_nodes->size);
     }
     free(cur_costs);
