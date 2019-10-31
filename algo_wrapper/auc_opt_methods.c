@@ -1274,8 +1274,9 @@ void _algo_opauc(const double *data_x_tr,
     *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n* para_num_passes; t++) {
-        const double *cur_x = data_x_tr + t * data_p;
-        double cur_y = data_y_tr[t];
+        int cur_ind = t % data_n;
+        const double *cur_x = data_x_tr + cur_ind * data_p;
+        double cur_y = data_y_tr[cur_ind];
         if (cur_y > 0) {
             num_p++;
             cblas_dcopy(data_p, center_p, 1, tmp_vec, 1); // copy previous center
@@ -1342,9 +1343,9 @@ void _algo_opauc(const double *data_x_tr,
             }
         }
         cblas_daxpy(data_p, -para_eta, grad_wt, 1, re_wt, 1); // update the solution
-        cblas_dscal(data_p, (t * 1.) / (t * 1. + 1.), re_wt_bar, 1);
-        cblas_daxpy(data_p, 1. / (t + 1.), re_wt, 1, re_wt_bar, 1);
-        if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
+        cblas_dscal(data_p, (cur_ind * 1.) / (cur_ind * 1. + 1.), re_wt_bar, 1);
+        cblas_daxpy(data_p, 1. / (cur_ind + 1.), re_wt, 1, re_wt_bar, 1);
+        if ((fmod(cur_ind, para_step_len) == 0.)) { // to calculate AUC score
             double t_eval = clock();
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
