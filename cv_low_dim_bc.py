@@ -671,12 +671,12 @@ def cv_opauc(method_name, k_fold, task_id, num_passes, step_len, data):
     return results
 
 
-def run_ms(method_name):
+def run_ms(method_name, cpus):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    k_fold, num_passes, step_len, cpus = 5, 20, 200000000, 24
+    k_fold, num_passes, step_len = 5, 20, 200000000
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
     data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
     results = dict()
@@ -701,7 +701,7 @@ def run_ms(method_name):
 
 
 def main():
-    run_ms(method_name=sys.argv[1])
+    run_ms(method_name=sys.argv[1], cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
