@@ -522,8 +522,8 @@ def run_single_graph_am(para):
             para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
         auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
         auc_arr[ind] = auc_wt
-    print(fold_id, para_b, para_c, para_s, 'auc: %.5f run_time: %.5f' %
-          (float(np.mean(auc_arr)), time.time() - s_time))
+    print('fold_id: %02d para_b: %02d para_c: %.4f para_s: %d auc: %.5f run_time: %.5f' %
+          (fold_id, para_b, para_c, para_s, float(np.mean(auc_arr)), time.time() - s_time))
     sys.stdout.flush()
     return {'auc': np.mean(auc_arr),
             'para_c': para_c, 'para_b': para_b, 'para_s': para_s}
@@ -566,7 +566,8 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, cpus, data):
         auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
         results[(task_id, fold_id)][method_name] = {
             'auc': auc_wt, 'rts': rts, 'ms': (para_s, para_b, para_c), 'wt': wt}
-        print(task_id, fold_id, auc_wt)
+        print('test result -- task_id: %02d fold_id: %02d auc_wt: %0.4f' %
+              (task_id, fold_id, auc_wt))
         sys.stdout.flush()
     return results
 
