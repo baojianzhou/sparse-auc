@@ -169,7 +169,14 @@ def results_show(data_name):
 
 def results_analysis_bc():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc'
-    method_list = ['spam_l2', 'fsauc', 'solam', 'spam_l1', 'spam_l1l2', 'sht_am']
+    data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
+    set_related_genes = set()
+    gene_dict = dict()
+    for entrez_id in data['cancer_related_genes']:
+        feature_id = list(data['map_entrez']).index(entrez_id)
+        gene_dict[feature_id] = data['cancer_related_genes'][entrez_id]
+        set_related_genes.add(feature_id)
+    method_list = ['spam_l2', 'fsauc', 'solam', 'spam_l1', 'sht_am']
     results = {(task_id, fold_id): dict()
                for task_id, fold_id in product(range(25), range(5))}
     for task_id, method in product(range(25), method_list):
@@ -179,18 +186,23 @@ def results_analysis_bc():
                 results[key][_] = re[key][_]
     print('\t'.join(method_list))
     all_aucs = {method: np.zeros((25, 5)) for method in method_list}
+    all_found_genes = {method: {(task_id, fold_id): None for
+                                task_id, fold_id in product(range(25), range(5))}
+                       for method in method_list}
     for task_id in range(25):
         for method in method_list:
             auc_list = np.zeros(5)
             for fold_id in range(5):
-                print(method, results[(task_id, fold_id)][method]['auc'])
                 auc_list[fold_id] = results[(task_id, fold_id)][method]['auc']
-
-            # print('%.4f\t' % np.mean(np.asarray(auc_list))),
+                nonzeros = set(np.nonzero(results[(task_id, fold_id)][method]['wt'])[0])
+                intersect = nonzeros.intersection(set_related_genes)
+                all_found_genes[method][(task_id, fold_id)] = [gene_dict[_] for _ in intersect]
+            print('%.4f\t' % np.mean(np.asarray(auc_list))),
             all_aucs[method][task_id] = auc_list
         print()
     for method in method_list:
-        print('\t'.join(np.mean(all_aucs[method], axis=0)))
+        print(method, '%.4f %.4f' % (float(np.mean(all_aucs[method])),
+                                     float(np.std(all_aucs[method]))))
 
 
 if __name__ == '__main__':

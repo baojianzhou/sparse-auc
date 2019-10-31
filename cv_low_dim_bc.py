@@ -547,6 +547,7 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, cpus, data):
         list_b = [20, 40]
         list_c = 2. ** np.arange(-2., 1., 0.2)
         print('size of parameter space: %d' % (len(list_s) * len(list_b) * len(list_c)))
+        sys.stdout.flush()
         para_space = []
         for para_b, para_c, para_s in product(list_b, list_c, list_s):
             para_space.append((k_fold, fold_id, tr_index, data, num_passes,
@@ -565,6 +566,8 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, cpus, data):
         auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
         results[(task_id, fold_id)][method_name] = {
             'auc': auc_wt, 'rts': rts, 'ms': (para_s, para_b, para_c), 'wt': wt}
+        print(task_id, fold_id, auc_wt)
+        sys.stdout.flush()
     return results
 
 
