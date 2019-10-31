@@ -328,6 +328,7 @@ bool run_pcst(PCST *pcst,
         double cost = pcst->costs[ii];
         if (uu < 0 || vv < 0 || uu >= pcst->n
             || vv >= pcst->n || cost < 0.0) {
+            fprintf(stderr, "%d %d %.4f\n", uu, vv, cost);
             char *error_1 = "node index should be [0,n-1].\n";
             char *error_2 = "edge endpoint is out of range: too large.\n";
             char *error_3 = "edge endpoint is negative.\n";
