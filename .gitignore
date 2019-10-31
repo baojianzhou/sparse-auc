@@ -111,3 +111,5 @@ slurm_run.sh
 slurm_test.sh
 *.o
 *.so.3
+train
+predict
