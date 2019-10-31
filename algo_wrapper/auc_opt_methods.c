@@ -128,6 +128,7 @@ bool head_tail_binsearch(
     do {
         stat->num_iter += 1;
         lambda_high *= 2.0;
+        if (lambda_high <= 0.0) { printf("lambda_high: %.6e\n", lambda_high); }
         for (int ii = 0; ii < m; ii++) {
             cur_costs[ii] = lambda_high * costs[ii];
         }
@@ -140,7 +141,6 @@ bool head_tail_binsearch(
             printf("lambda_high: %f\n", lambda_high);
             printf("target_num_clusters: %d\n", target_num_clusters);
         }
-        printf("lambda_high: %.6e\n", lambda_high);
         PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
                                1e-10, pruning, n, m, verbose);
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
@@ -160,8 +160,9 @@ bool head_tail_binsearch(
     while (stat->num_iter < max_num_iter) {
         stat->num_iter += 1;
         lambda_mid = (lambda_low + lambda_high) / 2.0;
+        if (lambda_mid <= 0.0) { printf("lambda_mid: %.6e\n", lambda_mid); }
         for (int ii = 0; ii < m; ii++) { cur_costs[ii] = lambda_mid * costs[ii]; }
-        printf("lambda_mid: %.6e\n", lambda_mid);
+
         PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters, 1e-10,
                                pruning, n, m, verbose);
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
@@ -190,8 +191,8 @@ bool head_tail_binsearch(
             lambda_high = lambda_mid;
         }
     }
+    if (lambda_high <= 0.0) { printf("lambda_high: %.6e\n", lambda_high); }
     for (int ii = 0; ii < m; ++ii) { cur_costs[ii] = lambda_high * costs[ii]; }
-    printf("lambda_high: %.6e\n", lambda_high);
     PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
                            1e-10, pruning, n, m, verbose);
     run_pcst(pcst, stat->re_nodes, stat->re_edges);
