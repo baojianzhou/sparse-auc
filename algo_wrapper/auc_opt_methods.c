@@ -1026,20 +1026,19 @@ void _algo_graph_am(const double *data_x_tr, const double *data_y_tr, const Edge
     double b_wt, *nega_x_mean = malloc(sizeof(double) * data_p);
     memset(nega_x_mean, 0, sizeof(double) * data_p);
     double alpha_wt; // initialize alpha_wt (initialize to zero.)
-    double posi_t = 0.0, nega_t = 0.0; // to determine a_wt, b_wt, and alpha_wt
+    double posi_t = 0.0, nega_t = 0.0, prob_p, eta_t, t = 1.0;;
     for (int i = 0; i < data_n; i++) {
         if (data_y_tr[i] > 0) {
             posi_t++;
-            cblas_dscal(data_p, (posi_t - 1.) / posi_t, posi_x_mean, 1);
-            cblas_daxpy(data_p, 1. / posi_t, (data_x_tr + i * data_p), 1, posi_x_mean, 1);
+            cblas_daxpy(data_p, 1., (data_x_tr + i * data_p), 1, posi_x_mean, 1);
         } else {
             nega_t++;
-            cblas_dscal(data_p, (nega_t - 1.) / nega_t, nega_x_mean, 1);
-            cblas_daxpy(data_p, 1. / nega_t, (data_x_tr + i * data_p), 1, nega_x_mean, 1);
+            cblas_daxpy(data_p, 1., (data_x_tr + i * data_p), 1, nega_x_mean, 1);
         }
     }
-    // Pr(y=1), learning rate, initial start time is zero=1.0
-    double prob_p = posi_t / (data_n * 1.0), eta_t, t = 1.0;
+    prob_p = posi_t / (data_n * 1.0);
+    cblas_dscal(data_p, 1. / posi_t, posi_x_mean, 1);
+    cblas_dscal(data_p, 1. / nega_t, nega_x_mean, 1);
     if (para_verbose > 0) {
         printf("num_posi: %f num_nega: %f prob_p: %.4f\n", posi_t, nega_t, prob_p);
         printf("average norm(x_posi): %.4f average norm(x_nega): %.4f\n",

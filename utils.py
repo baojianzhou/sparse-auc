@@ -169,7 +169,7 @@ def results_show(data_name):
 
 if __name__ == '__main__':
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc'
-    method_list = ['spam_l2', 'fsauc', 'spam_l1', 'sht_am']
+    method_list = ['spam_l2', 'fsauc', 'spam_l1', 'spam_l1l2', 'sht_am']
     results = dict()
     for i in range(25):
         results_auc = {_: [] for _ in method_list}
@@ -185,4 +185,5 @@ if __name__ == '__main__':
         x = []
         for key in results:
             x.append(results[key][method]['auc'])
-        print(method, np.mean(np.asarray(x)))
+        print(method, '%.5f %.5f' % (float(np.mean(np.asarray(x))),
+                                     float(np.std(np.asarray(x)))))
