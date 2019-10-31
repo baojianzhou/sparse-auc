@@ -1241,6 +1241,7 @@ void _algo_opauc(const double *data_x_tr,
                  int data_p,
                  double para_eta,
                  double para_lambda,
+                 int para_num_passes,
                  int para_step_len,
                  int para_verbose,
                  double *re_wt,
@@ -1272,7 +1273,7 @@ void _algo_opauc(const double *data_x_tr,
     double *y_pred = malloc(sizeof(double) * data_n);
     *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
-    for (int t = 0; t < data_n; t++) {
+    for (int t = 0; t < data_n* para_num_passes; t++) {
         const double *cur_x = data_x_tr + t * data_p;
         double cur_y = data_y_tr[t];
         if (cur_y > 0) {
