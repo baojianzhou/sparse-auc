@@ -5,6 +5,7 @@ import sys
 import time
 import numpy as np
 import pickle as pkl
+import multiprocessing
 from sklearn.model_selection import KFold
 from itertools import product
 from sklearn.metrics import roc_auc_score
@@ -507,45 +508,63 @@ def cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data):
     return results
 
 
-def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data):
+def run_single_graph_am(para):
+    k_fold, fold_id, tr_index, data, num_passes, step_len, para_s, para_b, para_c = para
+    fold = KFold(n_splits=k_fold, shuffle=False)
+    s_time = time.time()
+    auc_arr = np.zeros(k_fold)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+        wt, wt_bar, auc, rts = c_algo_graph_am(
+            np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
+            np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
+            np.asarray(data['data_edges'], dtype=np.int32),
+            np.asarray(data['data_weights'], dtype=float),
+            para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
+        auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
+        auc_arr[ind] = auc_wt
+    print(fold_id, para_b, para_c, para_s, 'auc: %.5f run_time: %.5f' %
+          (float(np.mean(auc_arr)), time.time() - s_time))
+    sys.stdout.flush()
+    return {'auc': np.mean(auc_arr),
+            'para_c': para_c, 'para_b': para_b, 'para_s': para_s}
+
+
+def get_best_para(ms_res):
+    best_auc, para_s, para_c, para_b = None, 0, 0, 0
+    for re in ms_res:
+        if best_auc is None or best_auc < re['auc']:
+            best_auc, para_s, para_c, para_b = re['auc'], re['para_s'], re['para_c'], re['para_b']
+    return best_auc, para_s, para_c, para_b
+
+
+def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, cpus, data):
     results = dict()
     for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
-        best_auc = None
-        fold = KFold(n_splits=k_fold, shuffle=False)
         list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
         list_b = [20, 40]
         list_c = 2. ** np.arange(-2., 1., 0.2)
+        print('size of parameter space: %d' % (len(list_s) * len(list_b) * len(list_c)))
+        para_space = []
         for para_b, para_c, para_s in product(list_b, list_c, list_s):
-            s_time = time.time()
-            auc_arr = np.zeros(k_fold)
-            for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
-                wt, wt_bar, auc, rts = c_algo_graph_am(
-                    np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float),
-                    np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                    np.asarray(data['data_edges'], dtype=np.int32),
-                    np.asarray(data['data_weights'], dtype=float),
-                    para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
-                auc_wt, auc_wt_bar = pred(wt, wt_bar, tr_index[sub_te_ind], data)
-                auc_arr[ind] = auc_wt
-            print(fold_id, para_b, para_c, para_s, 'auc: %.5f run_time: %.5f' %
-                  (float(np.mean(auc_arr)), time.time() - s_time))
-            sys.stdout.flush()
-            if best_auc is None or best_auc['auc'] < np.mean(auc_arr):
-                best_auc = {'auc': np.mean(auc_arr),
-                            'para_c': para_c, 'para_b': para_b, 'para_s': para_s}
+            para_space.append((k_fold, fold_id, tr_index, data, num_passes,
+                               step_len, para_s, para_b, para_c))
+        pool = multiprocessing.Pool(processes=cpus)
+        ms_res = pool.map(run_single_graph_am, para_space)
+        pool.close()
+        pool.join()
+        _, para_s, para_c, para_b = get_best_para(ms_res=ms_res)
         wt, wt_bar, auc, rts = c_algo_graph_am(
             np.asarray(data['data_x_tr'][tr_index], dtype=float),
             np.asarray(data['data_y_tr'][tr_index], dtype=float),
             np.asarray(data['data_edges'], dtype=np.int32),
             np.asarray(data['data_weights'], dtype=float),
-            best_auc['para_s'], best_auc['para_b'], best_auc['para_c'],
-            0.0, num_passes, step_len, 0)
+            para_s, para_b, para_c, 0.0, num_passes, step_len, 0)
         auc_wt, auc_wt_bar = pred(wt, wt_bar, te_index, data)
         results[(task_id, fold_id)][method_name] = {
-            'auc': auc_wt, 'rts': rts, 'ms': best_auc, 'wt': wt}
+            'auc': auc_wt, 'rts': rts, 'ms': (para_s, para_b, para_c), 'wt': wt}
     return results
 
 
@@ -657,7 +676,7 @@ def run_ms(method_name):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    k_fold, num_passes, step_len = 5, 20, 200000000
+    k_fold, num_passes, step_len, cpus = 5, 20, 200000000, 24
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc/'
     data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
     results = dict()
@@ -670,7 +689,7 @@ def run_ms(method_name):
     elif method_name == 'sht_am':
         results = cv_sht_am(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'graph_am':
-        results = cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, data)
+        results = cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, cpus, data)
     elif method_name == 'fsauc':
         results = cv_fsauc(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'solam':
