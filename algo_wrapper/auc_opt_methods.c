@@ -1090,9 +1090,15 @@ void _algo_graph_am(const double *data_x_tr, const double *data_y_tr, const Edge
              */
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), u, 1);
             //to do graph projection.
-            for (int kk = 0; kk < data_p; kk++) { proj_prizes[kk] = u[kk] * u[kk]; }
+            for (int kk = 0; kk < data_p; kk++) {
+                proj_prizes[kk] = u[kk] * u[kk];
+                if (proj_prizes[kk] >= 1e8) {
+                    printf(" warning! too large value: %.4f\n", proj_prizes[kk]);
+                }
+            }
             int g = 1, sparsity_low = para_sparsity, sparsity_high = para_sparsity + 10;
             int tail_max_iter = 20, verbose = 0;
+
             head_tail_binsearch(edges, weights, proj_prizes, data_p, data_m, g, -1, sparsity_low,
                                 sparsity_high, tail_max_iter, GWPruning, verbose, graph_stat);
             cblas_dscal(data_p, 0.0, re_wt, 1);
@@ -1273,7 +1279,7 @@ void _algo_opauc(const double *data_x_tr,
     double *y_pred = malloc(sizeof(double) * data_n);
     *re_len_auc = 0;
     if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
-    for (int t = 0; t < data_n* para_num_passes; t++) {
+    for (int t = 0; t < data_n * para_num_passes; t++) {
         int cur_ind = t % data_n;
         const double *cur_x = data_x_tr + cur_ind * data_p;
         double cur_y = data_y_tr[cur_ind];
