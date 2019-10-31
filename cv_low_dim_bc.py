@@ -674,6 +674,47 @@ def cv_opauc(method_name, k_fold, task_id, num_passes, step_len, data):
     return results
 
 
+def cv_liblinear(method_name, k_fold, task_id, num_passes, step_len, data):
+    from baselines.liblinear.liblinearutil import train
+    from baselines.liblinear.liblinearutil import predict
+    from sklearn.metrics import roc_auc_score
+    results = dict()
+    for fold_id in range(k_fold):
+        results[(task_id, fold_id)] = dict()
+        tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
+        best_auc = None
+        fold = KFold(n_splits=k_fold, shuffle=False)
+        list_c = [1., 5., 10., 50., 100., 200., 300., 500., 700., 1000.]
+        list_other = [1.]
+        for para_c, para_other in product(list_c, list_other):
+            s_time = time.time()
+            auc_arr = np.zeros(k_fold)
+            for ind, (sub_tr_ind, sub_te_ind) in enumerate(fold.split(tr_index)):
+                x_tr = np.asarray(data['data_x_tr'][tr_index[sub_tr_ind]], dtype=float)
+                y_tr = np.asarray(data['data_y_tr'][tr_index[sub_tr_ind]], dtype=float)
+                x_te = np.asarray(data['data_x_tr'][tr_index[sub_te_ind]], dtype=float)
+                y_te = np.asarray(data['data_y_tr'][tr_index[sub_te_ind]], dtype=float)
+                m = train(y_tr, x_tr, '-s 6 -c %f -e 1e-6 -q' % para_c)
+                p_label, p_acc, p_val = predict(y_te, x_te, m, '-b 1 -q')
+                auc_score = roc_auc_score(y_true=y_te, y_score=np.asarray(p_val)[:, 0])
+                auc_arr[ind] = auc_score
+            print(fold_id, para_c, para_other, 'auc: %.5f run_time: %.5f' %
+                  (float(np.mean(auc_arr)), time.time() - s_time))
+            if best_auc is None or best_auc['auc'] < np.mean(auc_arr):
+                best_auc = {'auc': np.mean(auc_arr),
+                            'para_c': para_c, 'para_other': para_other}
+        x_tr = np.asarray(data['data_x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['data_y_tr'][tr_index], dtype=float)
+        x_te = np.asarray(data['data_x_tr'][te_index], dtype=float)
+        y_te = np.asarray(data['data_y_tr'][te_index], dtype=float)
+        m = train(y_tr, x_tr, '-s 6 -c %f -e 1e-6 -q' % best_auc['para_c'])
+        p_label, p_acc, p_val = predict(y_te, x_te, m, '-b 1 -q')
+        auc_score = roc_auc_score(y_true=y_te, y_score=np.asarray(p_val)[:, 0])
+        results[(task_id, fold_id)][method_name] = {'auc': auc_score, 'ms': best_auc}
+    return results
+
+
 def run_ms(method_name, cpus):
     if 'SLURM_ARRAY_TASK_ID' in os.environ:
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
@@ -699,6 +740,12 @@ def run_ms(method_name, cpus):
         results = cv_solam(method_name, k_fold, task_id, num_passes, step_len, data)
     elif method_name == 'opauc':
         results = cv_opauc(method_name, k_fold, task_id, num_passes, step_len, data)
+    elif method_name == 'liblinear':
+        for task_id in range(25):
+            results = cv_liblinear(method_name, k_fold, task_id, num_passes, step_len, data)
+            f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
+            pkl.dump(results, open(f_path, 'wb'))
+        exit()
     f_path = os.path.join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method_name))
     pkl.dump(results, open(f_path, 'wb'))
 
