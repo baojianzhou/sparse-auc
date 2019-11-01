@@ -180,7 +180,7 @@ def results_analysis_bc():
                 results[key][_] = re[key][_]
     print('\t'.join(method_list))
     all_aucs = {method: np.zeros((25, 5)) for method in method_list}
-    all_found_genes = {method: {(task_id, fold_id): None for
+    all_found_genes = {method: {(task_id, fold_id): [] for
                                 task_id, fold_id in product(range(25), range(5))}
                        for method in method_list}
     for task_id in range(25):
@@ -195,10 +195,26 @@ def results_analysis_bc():
                     all_found_genes[method][(task_id, fold_id)] = intersect
             print('%.4f\t' % np.mean(np.asarray(auc_list))),
             all_aucs[method][task_id] = auc_list
-        print()
+        print('')
     for method in method_list:
         print(method, '%.4f %.4f' % (float(np.mean(all_aucs[method])),
                                      float(np.std(all_aucs[method]))))
+    for method in method_list:
+        set_genes = set()
+        for task_id in range(25):
+            for fold_id in range(5):
+                for gene in all_found_genes[method][(task_id, fold_id)]:
+                    set_genes.add(gene)
+        print(sorted(list(set_genes)), len(set_genes), method)
+
+    for task_id in range(25):
+        for method in method_list:
+            set_genes = set()
+            for fold_id in range(5):
+                for gene in all_found_genes[method][(task_id, fold_id)]:
+                    set_genes.add(gene)
+            print('%d ' % len(set_genes)),
+        print('')
 
 
 if __name__ == '__main__':

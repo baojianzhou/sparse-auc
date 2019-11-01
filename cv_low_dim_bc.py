@@ -543,7 +543,7 @@ def cv_graph_am(method_name, k_fold, task_id, num_passes, step_len, cpus, data):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
-        list_s = [int(_ * data['p']) for _ in np.arange(0.1, 1.01, 0.1)]
+        list_s = [int(_ * data['p']) for _ in np.arange(0.1, 0.81, 0.1)]
         list_b = [20, 40]
         list_c = 2. ** np.arange(-2., 1., 0.2)
         print('size of parameter space: %d' % (len(list_s) * len(list_b) * len(list_c)))
