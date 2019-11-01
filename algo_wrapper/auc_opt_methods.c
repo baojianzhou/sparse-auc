@@ -90,19 +90,19 @@ bool head_tail_binsearch(
     int guess_pos = n - sparsity_high;
     _arg_sort_descend(sorted_prizes, sorted_indices, n);
     double lambda_low = 0.0;
-    double lambda_high = 2.0 * sorted_prizes[sorted_indices[guess_pos]];
+    double lambda_high = fabs(2.0 * sorted_prizes[sorted_indices[guess_pos]]);
     bool using_sparsity_low = false;
     bool using_max_value = false;
     if (lambda_high == 0.0) {
         guess_pos = n - sparsity_low;
-        lambda_high = 2.0 * sorted_prizes[sorted_indices[guess_pos]];
+        lambda_high = fabs(2.0 * sorted_prizes[sorted_indices[guess_pos]]);
         if (lambda_high != 0.0) {
             using_sparsity_low = true;
         } else {
             using_max_value = true;
-            lambda_high = prizes[0];
+            lambda_high = fabs(prizes[0]);
             for (int ii = 1; ii < n; ii++) {
-                lambda_high = fmax(lambda_high, prizes[ii]);
+                lambda_high = fmax(lambda_high, fabs(prizes[ii]));
             }
             lambda_high *= 2.0;
         }
