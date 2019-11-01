@@ -170,50 +170,74 @@ def results_show(data_name):
 def results_analysis_bc():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/16_bc'
     data = pkl.load(open(os.path.join(data_path, 'input_bc.pkl'), 'rb'))
-    method_list = ['spam_l2', 'fsauc', 'solam', 'spam_l1', 'spam_l1l2', 'sht_am', 'liblinear']
-    results = {(task_id, fold_id): dict()
-               for task_id, fold_id in product(range(25), range(5))}
-    for task_id, method in product(range(25), method_list):
-        re = pkl.load(open(join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method)), 'rb'))
-        for key in re:
-            for _ in re[key]:
-                results[key][_] = re[key][_]
+    method_list = ['liblinear', 'solam', 'spam_l2', 'fsauc', 'spam_l1',
+                   'spam_l1l2', 'sht_am', 'graph_am']
+    task_list = [0, 1, 2, 3, 4, 8, 9, 10, 11, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    results = {(task_id, fold_id): {method: dict() for method in method_list}
+               for task_id, fold_id in product(task_list, range(5))}
+
+    for task_id, method in product(task_list, method_list):
+        if os.path.exists(join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method))):
+            re = pkl.load(open(join(data_path, 'ms_task_%02d_%s.pkl' % (task_id, method)), 'rb'))
+            for key in re:
+                for _ in re[key]:
+                    results[key][_] = re[key][_]
     print('\t'.join(method_list))
-    all_aucs = {method: np.zeros((25, 5)) for method in method_list}
+    all_aucs = {method: np.zeros((len(task_list), 5)) for method in method_list}
     all_found_genes = {method: {(task_id, fold_id): [] for
                                 task_id, fold_id in product(range(25), range(5))}
                        for method in method_list}
-    for task_id in range(25):
+    all_nonzeros = {method: {(task_id, fold_id): 0.0 for
+                             task_id, fold_id in product(range(25), range(5))}
+                    for method in method_list}
+    for task_id_ind, task_id in enumerate(task_list):
+        print('Fold-%02d & ' % task_id_ind),
         for method in method_list:
             auc_list = np.zeros(5)
             for fold_id in range(5):
-                auc_list[fold_id] = results[(task_id, fold_id)][method]['auc']
+                if 'auc' in results[(task_id, fold_id)][method]:
+                    auc_list[fold_id] = results[(task_id, fold_id)][method]['auc']
                 if 'wt' in results[(task_id, fold_id)][method]:
                     nonzeros = np.nonzero(results[(task_id, fold_id)][method]['wt'])[0]
+                    all_nonzeros[method][(task_id, fold_id)] = float(len(nonzeros))
                     nonzeros = set([data['map_entrez'][_] for _ in nonzeros])
                     intersect = nonzeros.intersection(data['cancer_related_genes'].keys())
                     all_found_genes[method][(task_id, fold_id)] = intersect
-            print('%.4f\t' % np.mean(np.asarray(auc_list))),
-            all_aucs[method][task_id] = auc_list
+
+            print('%.4f & ' % np.mean(np.asarray(auc_list))),
+            all_aucs[method][task_id_ind] = auc_list
         print('')
+    print('Aver')
+    for method in method_list:
+        print('%.4f & ' % (float(np.mean(all_aucs[method])))),
+    print('')
+
     for method in method_list:
         print(method, '%.4f %.4f' % (float(np.mean(all_aucs[method])),
                                      float(np.std(all_aucs[method]))))
     for method in method_list:
         set_genes = set()
-        for task_id in range(25):
+        for task_id in task_list:
             for fold_id in range(5):
                 for gene in all_found_genes[method][(task_id, fold_id)]:
                     set_genes.add(gene)
         print(sorted(list(set_genes)), len(set_genes), method)
 
-    for task_id in range(25):
+    for task_id in task_list:
         for method in method_list:
             set_genes = set()
             for fold_id in range(5):
                 for gene in all_found_genes[method][(task_id, fold_id)]:
                     set_genes.add(gene)
             print('%d ' % len(set_genes)),
+        print('')
+    for task_id_ind, task_id in enumerate(task_list):
+        print('Fold-%02d & ' % task_id_ind),
+        for method in method_list:
+            nonzeros_list = np.zeros(5)
+            for fold_id in range(5):
+                nonzeros_list[fold_id] = all_nonzeros[method][(task_id, fold_id)]
+            print('%.f & ' % float(np.mean(np.asarray(nonzeros_list)))),
         print('')
 
 
