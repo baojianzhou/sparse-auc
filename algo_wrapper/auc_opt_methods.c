@@ -1069,7 +1069,7 @@ void _algo_sht_am_old(
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            re_rts[*re_len_auc] = clock() - start_time - clock() - t_eval;
+            re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
             *re_len_auc = *re_len_auc + 1;
         }
     }

@@ -1123,11 +1123,18 @@ def main():
     kf = KFold(n_splits=k_fold, shuffle=False)
     for ind, (sub_tr_ind, sub_te_ind) in enumerate(
             kf.split(np.zeros(shape=(len(tr_index), 1)))):
-        _, _, auc, rts = c_algo_sht_am(np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
-                                       np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                                       sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
         import matplotlib.pyplot as plt
-        plt.plot(rts, auc)
+        _, _, auc, rts = c_algo_sht_am_old(
+            np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
+            np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+            sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
+        plt.plot(rts, auc, label='Old')
+        _, _, auc, rts = c_algo_sht_am(
+            np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
+            np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+            sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
+        plt.plot(rts, auc, label='New')
+        plt.legend()
         plt.show()
 
 
