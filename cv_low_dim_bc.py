@@ -368,14 +368,14 @@ def pred(wt, wt_bar, te_index, data):
 
 def cv_spam_l1(method_name, k_fold, task_id, num_passes, step_len, data):
     results = dict()
+    list_c = np.arange(1, 101, 9, dtype=float)
+    list_l1 = 10. ** np.arange(-8, 3, 1, dtype=float)
     for fold_id in range(k_fold):
         results[(task_id, fold_id)] = dict()
         tr_index = data['run_%d_fold_%d' % (task_id, fold_id)]['tr_index']
         te_index = data['run_%d_fold_%d' % (task_id, fold_id)]['te_index']
         best_auc = None
         fold = KFold(n_splits=k_fold, shuffle=False)
-        list_c = np.arange(1, 101, 9, dtype=float)
-        list_l1 = 10. ** np.arange(-8, 3, 1, dtype=float)
         for para_c, para_l1 in product(list_c, list_l1):
             s_time = time.time()
             auc_arr = np.zeros(k_fold)
