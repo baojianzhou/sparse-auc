@@ -453,22 +453,22 @@ static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
 
 // wrap_algo_solam_sparse
 static PyMethodDef sparse_methods[] = {
-        {"c_test",                 (PyCFunction) test,                        METH_VARARGS, "docs"},
-        {"c_algo_solam",           (PyCFunction) wrap_algo_solam,             METH_VARARGS, "docs"},
-        {"c_algo_spam",            (PyCFunction) wrap_algo_spam,              METH_VARARGS, "docs"},
-        {"c_algo_sht_am",          (PyCFunction) wrap_algo_sht_am,            METH_VARARGS, "docs"},
-        {"c_algo_sht_am",          (PyCFunction) wrap_algo_sht_am_old,        METH_VARARGS, "docs"},
-        {"c_algo_graph_am",        (PyCFunction) wrap_algo_graph_am,          METH_VARARGS, "docs"},
-        {"c_algo_opauc",           (PyCFunction) wrap_algo_opauc,             METH_VARARGS, "docs"},
-        {"c_algo_fsauc",           (PyCFunction) wrap_algo_fsauc,             METH_VARARGS, "docs"},
+        {"c_test",                   (PyCFunction) test,                        METH_VARARGS, "docs"},
+        {"c_algo_solam",             (PyCFunction) wrap_algo_solam,             METH_VARARGS, "docs"},
+        {"c_algo_spam",              (PyCFunction) wrap_algo_spam,              METH_VARARGS, "docs"},
+        {"c_algo_sht_am",            (PyCFunction) wrap_algo_sht_am,            METH_VARARGS, "docs"},
+        {"c_algo_sht_am_old",        (PyCFunction) wrap_algo_sht_am_old,        METH_VARARGS, "docs"},
+        {"c_algo_graph_am",          (PyCFunction) wrap_algo_graph_am,          METH_VARARGS, "docs"},
+        {"c_algo_opauc",             (PyCFunction) wrap_algo_opauc,             METH_VARARGS, "docs"},
+        {"c_algo_fsauc",             (PyCFunction) wrap_algo_fsauc,             METH_VARARGS, "docs"},
 
-        {"c_algo_solam_sparse",    (PyCFunction) wrap_algo_solam_sparse,      METH_VARARGS, "docs"},
-        {"c_algo_sht_am_sparse",   (PyCFunction) wrap_algo_sht_am_sparse,     METH_VARARGS, "docs"},
-        {"c_algo_sht_am_sparse",   (PyCFunction) wrap_algo_sht_am_sparse_old, METH_VARARGS, "docs"},
-        {"c_algo_spam_sparse",     (PyCFunction) wrap_algo_spam_sparse,       METH_VARARGS, "docs"},
-        {"c_algo_fsauc_sparse",    (PyCFunction) wrap_algo_fsauc_sparse,      METH_VARARGS, "docs"},
-        {"c_algo_opauc_sparse",    (PyCFunction) wrap_algo_opauc_sparse,      METH_VARARGS, "docs"},
-        {"c_algo_graph_am_sparse", (PyCFunction) wrap_algo_graph_am_sparse,   METH_VARARGS, "docs"},
+        {"c_algo_solam_sparse",      (PyCFunction) wrap_algo_solam_sparse,      METH_VARARGS, "docs"},
+        {"c_algo_sht_am_sparse",     (PyCFunction) wrap_algo_sht_am_sparse,     METH_VARARGS, "docs"},
+        {"c_algo_sht_am_sparse_old", (PyCFunction) wrap_algo_sht_am_sparse_old, METH_VARARGS, "docs"},
+        {"c_algo_spam_sparse",       (PyCFunction) wrap_algo_spam_sparse,       METH_VARARGS, "docs"},
+        {"c_algo_fsauc_sparse",      (PyCFunction) wrap_algo_fsauc_sparse,      METH_VARARGS, "docs"},
+        {"c_algo_opauc_sparse",      (PyCFunction) wrap_algo_opauc_sparse,      METH_VARARGS, "docs"},
+        {"c_algo_graph_am_sparse",   (PyCFunction) wrap_algo_graph_am_sparse,   METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 /** Python version 2 for module initialization */

@@ -1049,8 +1049,86 @@ def test_fsauc_simu():
             print(para_r, para_g, re['auc_wt'])
 
 
+def cv_sht_am_v1():
+    k_fold = 5
+    num_passes = 20
+    task_id = 0
+    data = pkl.load(open(
+        os.path.join(data_path, 'data_task_%02d_tr_1000_mu_0.3_p-ratio_0.3.pkl' % task_id), 'r'))
+    data = data['fig_1']
+    list_c = 2. ** np.arange(-2., 1., 0.2)
+    s_time = time.time()
+    auc_wt, auc_wt_bar = dict(), dict()
+    for fold_id, para_c, sparsity, b in product(
+            range(k_fold), list_c, [20, 30, 40, 50, 60], [20, 40]):
+        # only run sub-tasks for parallel
+        algo_para = (task_id, fold_id, num_passes, para_c, sparsity, k_fold)
+        tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+        # cross validate based on tr_index
+        if (task_id, fold_id) not in auc_wt:
+            auc_wt[(task_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+            auc_wt_bar[(task_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+        step_len, verbose = 100000000, 0
+        list_auc_wt = np.zeros(k_fold)
+        list_auc_wt_bar = np.zeros(k_fold)
+        list_num_nonzeros_wt = np.zeros(k_fold)
+        list_num_nonzeros_wt_bar = np.zeros(k_fold)
+        kf = KFold(n_splits=k_fold, shuffle=False)
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(
+                kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                               np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                               sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
+            wt = np.asarray(re[0])
+            wt_bar = np.asarray(re[1])
+            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
+            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        if auc_wt[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt):
+            auc_wt[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
+            auc_wt[(task_id, fold_id)]['para'] = algo_para
+            auc_wt[(task_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
+        if auc_wt_bar[(task_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
+            auc_wt_bar[(task_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
+            auc_wt_bar[(task_id, fold_id)]['para'] = algo_para
+            auc_wt_bar[(task_id, fold_id)]['num_nonzeros'] = float(
+                np.mean(list_num_nonzeros_wt_bar))
+    run_time = time.time() - s_time
+    print('-' * 40 + ' sht-am ' + '-' * 40)
+    print('run_time: %.4f' % run_time)
+    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
+    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
+    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
+    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
+                                          for _ in auc_wt_bar]))
+    return auc_wt, auc_wt_bar
+
+
 def main():
-    run_testing()
+    k_fold = 5
+    num_passes = 20
+    task_id = 0
+    data = pkl.load(open(
+        os.path.join(data_path, 'data_task_%02d_tr_1000_mu_0.3_p-ratio_0.3.pkl' % task_id), 'r'))
+    data = data['fig_1']
+    para_c = .5
+    sparsity = 50
+    b = 50
+    fold_id = 0
+    tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
+    step_len, verbose = 50, 1
+    kf = KFold(n_splits=k_fold, shuffle=False)
+    for ind, (sub_tr_ind, sub_te_ind) in enumerate(
+            kf.split(np.zeros(shape=(len(tr_index), 1)))):
+        _, _, auc, rts = c_algo_sht_am(np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
+                                       np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
+                                       sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
+        import matplotlib.pyplot as plt
+        plt.plot(rts, auc)
+        plt.show()
 
 
 if __name__ == '__main__':

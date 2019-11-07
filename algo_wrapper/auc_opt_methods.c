@@ -874,9 +874,11 @@ void _algo_sht_am(
                 cblas_daxpy(data_p, part_wei, cur_xt, 1, tmp, 1);
                 cblas_daxpy(data_p, -part_wei, vt, 1, tmp, 1);
             }
-            cblas_daxpy(data_p, 1., tmp, 1, grad_wt, 1); // calculate the gradient
+            // calculate the gradient
+            cblas_daxpy(data_p, 1., tmp, 1, grad_wt, 1);
         }
-        cblas_daxpy(data_p, -eta_t / cur_b_size, grad_wt, 1, re_wt, 1); // wt = wt - eta * grad(wt)
+        // wt = wt - eta * grad(wt)
+        cblas_daxpy(data_p, -eta_t / cur_b_size, grad_wt, 1, re_wt, 1);
         if (para_l2_reg != 0.0) // ell_2 reg. we do not need it in our case.
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
         _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
@@ -886,8 +888,8 @@ void _algo_sht_am(
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            re_rts[*re_len_auc] = clock() - start_time - clock() - t_eval;
-            *re_len_auc = *re_len_auc + 1;
+            printf("%.4f\n", re_auc[*re_len_auc]);
+            re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
     }
     cblas_dscal(data_p, 1. / total_blocks, re_wt_bar, 1);
