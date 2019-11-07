@@ -1045,7 +1045,7 @@ void _algo_sht_am_old(
         a_wt = cblas_ddot(data_p, re_wt, 1, posi_x_mean, 1); // update a(wt)
         b_wt = cblas_ddot(data_p, re_wt, 1, nega_x_mean, 1); // update b(wt)
         alpha_wt = b_wt - a_wt; // update alpha(wt)
-        eta_t = para_c / sqrt(t); // TODO: current learning rate ?
+        eta_t = para_c;
         memset(grad_wt, 0, sizeof(double) * data_p);
         int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data_n % para_b) : para_b);
         for (int kk = 0; kk < cur_b_size; kk++) {

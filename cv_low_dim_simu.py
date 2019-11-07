@@ -15,9 +15,9 @@ try:
     try:
         from sparse_module import c_algo_spam
         from sparse_module import c_algo_solam
-        from sparse_module import c_algo_solam_sparse
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_sht_am_old
         from sparse_module import c_algo_graph_am
         from sparse_module import c_algo_fsauc
     except ImportError:
@@ -653,7 +653,7 @@ def run_ms(method_name):
         task_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
     else:
         task_id = 0
-    k_fold, num_passes = 5, 10
+    k_fold, num_passes = 5, 20
     tr_list = [1000]
     mu_list = [0.3]
     posi_ratio_list = [0.1, 0.2, 0.3, 0.4, 0.5]
