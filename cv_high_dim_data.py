@@ -20,6 +20,7 @@ try:
         from sparse_module import c_algo_spam_sparse
         from sparse_module import c_algo_solam_sparse
         from sparse_module import c_algo_sht_am_sparse
+        from sparse_module import c_algo_sht_am_sparse_old
         from sparse_module import c_algo_fsauc_sparse
         from sparse_module import c_algo_opauc_sparse
     except ImportError:
@@ -459,4 +460,40 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import matplotlib.pyplot as plt
+
+    k_fold = 5
+    num_passes = 50
+    task_id = 0
+    data = pkl.load(open(os.path.join(data_path, '12_news20/data_run_%d.pkl' % task_id), 'r'))
+    para_c = .8
+    s = 60000
+    b = 50
+    fold_id = 0
+    step_len, verbose = 50, 1
+    kf = KFold(n_splits=k_fold, shuffle=False)
+    tr_index = data['fold_%d' % fold_id]['tr_index']
+    te_index = data['fold_%d' % fold_id]['te_index']
+    fold = KFold(n_splits=k_fold, shuffle=False)
+    s_time = time.time()
+    para = get_data_by_ind(data, tr_index, range(len(tr_index)))
+    x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr = para
+    para = get_data_by_ind(data, te_index, range(len(te_index)))
+    x_te_vals, x_te_inds, x_te_posis, x_te_lens, y_te = para
+
+    wt, _, auc_list, rts_list = c_algo_sht_am_sparse_old(
+        x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
+        x_te_vals, x_te_inds, x_te_posis, x_te_lens, y_te,
+        data['p'], s, b, para_c, 0.0, num_passes, step_len, 1)
+    cur_auc = pred_auc(data, te_index, range(len(te_index)), wt)
+    print('test auc: %.5f' % cur_auc)
+    plt.plot(rts_list, auc_list, label='Old')
+    wt, _, auc_list, rts_list = c_algo_sht_am_sparse(
+        x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
+        x_te_vals, x_te_inds, x_te_posis, x_te_lens, y_te,
+        data['p'], s, b, para_c, 0.0, num_passes, step_len, 1)
+    cur_auc = pred_auc(data, te_index, range(len(te_index)), wt)
+    print('test auc: %.5f' % cur_auc)
+    plt.plot(rts_list, auc_list, label='New')
+    plt.legend()
+    plt.show()

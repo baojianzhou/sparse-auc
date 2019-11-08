@@ -41,10 +41,10 @@ PyObject *get_results(int data_p, double *re_wt, double *re_wt_bar,
     for (int i = 0; i < data_p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(re_wt[i]));
         PyList_SetItem(wt_bar, i, PyFloat_FromDouble(re_wt_bar[i]));
-        if (i < *re_len_auc) {
-            PyList_SetItem(auc, i, PyFloat_FromDouble(re_auc[i]));
-            PyList_SetItem(rts, i, PyFloat_FromDouble(re_rts[i]));
-        }
+    }
+    for (int i = 0; i < *re_len_auc; i++) {
+        PyList_SetItem(auc, i, PyFloat_FromDouble(re_auc[i]));
+        PyList_SetItem(rts, i, PyFloat_FromDouble(re_rts[i]));
     }
     PyTuple_SetItem(results, 0, wt);
     PyTuple_SetItem(results, 1, wt_bar);
@@ -175,7 +175,7 @@ static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_x_tr->dimensions[0];
     data_p = (int) data_x_tr->dimensions[1];
-    total_num_eval = (data_n * para_num_passes) / para_step_len;
+    total_num_eval = (data_n / para_b) * para_num_passes;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -202,7 +202,7 @@ static PyObject *wrap_algo_sht_am_old(PyObject *self, PyObject *args) {
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) data_x_tr->dimensions[0];
     data_p = (int) data_x_tr->dimensions[1];
-    total_num_eval = (data_n * para_num_passes) / para_step_len;
+    total_num_eval = (data_n / para_b) * para_num_passes;
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -211,7 +211,7 @@ static PyObject *wrap_algo_sht_am_old(PyObject *self, PyObject *args) {
                      data_n, data_p, para_s, para_b, para_c, para_l2_reg, para_num_passes,
                      para_step_len, para_verbose, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
-    free(re_wt), free(re_wt_bar), free(re_auc);
+    free(re_wt), free(re_wt_bar), free(re_auc), free(re_rts);
     return results;
 }
 
@@ -219,27 +219,32 @@ static PyObject *wrap_algo_sht_am_old(PyObject *self, PyObject *args) {
 static PyObject *wrap_algo_sht_am_sparse_old(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; } // error: unknown error !!
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_te_vals, *x_te_inds, *x_te_posis, *x_te_lens, *data_y_te;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    int data_n, data_p, para_b, para_sparsity, para_num_passes,
+    int data_tr_n, data_te_n, data_p, para_b, para_sparsity, para_num_passes,
             para_step_len, para_verbose, re_len_auc;
     int total_num_eval;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiddiii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!O!O!O!O!O!iiiddiii",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type,
                           &x_tr_posis, &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr,
+                          &PyArray_Type, &x_te_vals, &PyArray_Type, &x_te_inds, &PyArray_Type,
+                          &x_te_posis, &PyArray_Type, &x_te_lens, &PyArray_Type, &data_y_te,
                           &data_p, &para_sparsity, &para_b, &para_xi, &para_l2_reg,
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
-    data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n / para_b) * (para_num_passes + 1);
+    data_tr_n = (int) data_y_tr->dimensions[0];
+    data_te_n = (int) data_y_te->dimensions[0];
+    total_num_eval = (data_tr_n / para_b) * (para_num_passes + 1);
     re_wt = calloc((size_t) data_p, sizeof(double));
     re_wt_bar = calloc((size_t) data_p, sizeof(double));
     re_auc = malloc(total_num_eval * sizeof(double));
     re_rts = malloc(total_num_eval * sizeof(double));
     _algo_sht_am_sparse_old((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                             (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
-                            (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_sparsity,
-                            para_b,
-                            para_xi, para_l2_reg, para_num_passes, para_step_len, para_verbose,
-                            re_wt,
+                            (double *) PyArray_DATA(data_y_tr), (double *) PyArray_DATA(x_te_vals),
+                            (int *) PyArray_DATA(x_te_inds), (int *) PyArray_DATA(x_te_posis),
+                            (int *) PyArray_DATA(x_te_lens), (double *) PyArray_DATA(data_y_te),
+                            data_tr_n, data_te_n, data_p, para_sparsity, para_b, para_xi,
+                            para_l2_reg, para_num_passes, para_step_len, para_verbose, re_wt,
                             re_wt_bar, re_auc, re_rts, &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     free(re_wt), free(re_wt_bar), free(re_auc), free(re_rts);
@@ -250,25 +255,32 @@ static PyObject *wrap_algo_sht_am_sparse_old(PyObject *self, PyObject *args) {
 static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; } // error: unknown error !!
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_te_vals, *x_te_inds, *x_te_posis, *x_te_lens, *data_y_te;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    int data_n, data_p, para_b, para_sparsity, para_num_passes,
+    int data_tr_n, data_te_n, data_p, para_b, para_sparsity, para_num_passes,
             para_step_len, para_verbose, re_len_auc;
     int total_num_eval;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiddiii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!O!O!O!O!O!iiiddiii",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type,
                           &x_tr_posis, &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr,
+                          &PyArray_Type, &x_te_vals, &PyArray_Type, &x_te_inds, &PyArray_Type,
+                          &x_te_posis, &PyArray_Type, &x_te_lens, &PyArray_Type, &data_y_te,
                           &data_p, &para_sparsity, &para_b, &para_xi, &para_l2_reg,
                           &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
-    data_n = (int) data_y_tr->dimensions[0];
-    total_num_eval = (data_n / para_b) * (para_num_passes + 1);
+    data_tr_n = (int) data_y_tr->dimensions[0];
+    data_te_n = (int) data_y_te->dimensions[0];
+    total_num_eval = (data_tr_n / para_b) * (para_num_passes + 1);
     re_wt = calloc((size_t) data_p, sizeof(double));
     re_wt_bar = calloc((size_t) data_p, sizeof(double));
     re_auc = malloc(total_num_eval * sizeof(double));
     re_rts = malloc(total_num_eval * sizeof(double));
     _algo_sht_am_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                         (int *) PyArray_DATA(x_tr_posis), (int *) PyArray_DATA(x_tr_lens),
-                        (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_sparsity, para_b,
-                        para_xi, para_l2_reg, para_num_passes, para_step_len, para_verbose, re_wt,
+                        (double *) PyArray_DATA(data_y_tr), (double *) PyArray_DATA(x_te_vals),
+                        (int *) PyArray_DATA(x_te_inds), (int *) PyArray_DATA(x_te_posis),
+                        (int *) PyArray_DATA(x_te_lens), (double *) PyArray_DATA(data_y_te),
+                        data_tr_n, data_te_n, data_p, para_sparsity, para_b, para_xi, para_l2_reg,
+                        para_num_passes, para_step_len, para_verbose, re_wt,
                         re_wt_bar, re_auc, re_rts, &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     free(re_wt), free(re_wt_bar), free(re_auc), free(re_rts);

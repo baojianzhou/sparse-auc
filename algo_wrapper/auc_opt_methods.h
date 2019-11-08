@@ -212,7 +212,7 @@ void _algo_sht_am_old(const double *data_x_tr,
  * @param x_tr_poss
  * @param x_tr_lens
  * @param data_y_tr
- * @param data_n
+ * @param data_tr_n
  * @param data_p
  * @param para_s
  * @param para_b
@@ -230,7 +230,13 @@ void _algo_sht_am_sparse(const double *x_tr_vals,
                          const int *x_tr_poss,
                          const int *x_tr_lens,
                          const double *data_y_tr,
-                         int data_n,
+                         const double *x_te_vals,
+                         const int *x_te_inds,
+                         const int *x_te_poss,
+                         const int *x_te_lens,
+                         const double *data_y_te,
+                         int data_tr_n,
+                         int data_te_n,
                          int data_p,
                          int para_s,
                          int para_b,
@@ -250,7 +256,13 @@ void _algo_sht_am_sparse_old(const double *x_tr_vals,
                              const int *x_tr_poss,
                              const int *x_tr_lens,
                              const double *data_y_tr,
-                             int data_n,
+                             const double *x_te_vals,
+                             const int *x_te_inds,
+                             const int *x_te_poss,
+                             const int *x_te_lens,
+                             const double *data_y_te,
+                             int data_tr_n,
+                             int data_te_n,
                              int data_p,
                              int para_s,
                              int para_b,

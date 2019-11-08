@@ -1116,7 +1116,7 @@ def main():
     data = data['fig_1']
     para_c = .5
     sparsity = 50
-    b = 50
+    b = 20
     fold_id = 0
     tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
     step_len, verbose = 50, 1
@@ -1129,10 +1129,12 @@ def main():
             np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
             sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
         plt.plot(rts, auc, label='Old')
+        print('test', len(rts), len(auc))
         _, _, auc, rts = c_algo_sht_am(
             np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
             np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
             sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
+        print('test', len(rts), len(auc))
         plt.plot(rts, auc, label='New')
         plt.legend()
         plt.show()
