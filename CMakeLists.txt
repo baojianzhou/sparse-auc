@@ -24,7 +24,7 @@ add_executable(test_l1ballproj algo_wrapper/condat_l1ballproj.c)
 target_link_libraries(test_l1ballproj -Wall -O3 -lm)
 
 add_executable(test_kth_selection algo_wrapper/test_kth_selection.c
-        algo_wrapper/kth_selection.c algo_wrapper/kth_selection.h algo_wrapper/test_case.c)
+        algo_wrapper/kth_selection.c algo_wrapper/kth_selection.h)
 target_link_libraries(test_kth_selection -Wall -O3 -lm)
 
 add_executable(test_case algo_wrapper/test_case.c)
