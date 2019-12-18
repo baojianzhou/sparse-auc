@@ -1,37 +1,88 @@
-//
-// Created by baojian on 9/2/19.
-//
+/**
+ * This program tests different selection algorithms.
+ * A selection algorithm is a method for finding the
+ * k-th smallest/largest number in an array
+ */
 #include "kth_selection.h"
 
-int array_simulate_uniform(double *arr, int n, double rand_low, double rand_high) {
-    for (int j = 0; j < n; j++) {
-        arr[j] = drand48() * (rand_high - rand_low);
+
+/**
+ * Generate a random array where each element is from
+ * uniform distribution, i.e., arr[i] ~ U[u_low, u_high]
+ *
+ * @param arr generated random array.
+ * @param n the size of the random array.
+ * @param u_low the lower bound of uniform distribution.
+ * @param u_high the upper bound of uniform distribution.
+ */
+bool gen_array_uniform(double *arr, int n, double u_low, double u_high) {
+    if ((u_low > u_high) || (n <= 0)) {
+        return false;
     }
-    return 0;
+    for (int j = 0; j < n; j++) {
+        arr[j] = drand48() * (u_high - u_low);
+    }
+    return true;
 }
 
-int array_simulate_rand_int(double *arr, int n, int mod) {
-    for (int j = 0; j < n; j++) {
-        arr[j] = mrand48() % mod;
+/**
+ * Generate a random array where each element is randomly picked from [0, bound].
+ *
+ * @param arr generated random array.
+ * @param n the size of the random array.
+ * @param bound the upper bound of uniform distribution.
+ */
+bool gen_array_int(double *arr, int n, int bound) {
+    if ((bound <= 0) || (n <= 0)) {
+        return false;
     }
-    return 0;
+    for (int j = 0; j < n; j++) {
+        arr[j] = mrand48() % bound;
+    }
+    return true;
 }
 
-int array_simulate_most_zeros(double *arr, int n, double proportion) {
+/**
+ * Generate a random array where proportion*100 % of elements are zeros.
+ *
+ * @param arr generated random array.
+ * @param n the size of the random array.
+ * @param proportion the proportion of elements are zeros.
+ */
+bool gen_array_prop_zeros(double *arr, int n, double proportion) {
+    if ((proportion <= 0) || (proportion > 1) || (n <= 0)) {
+        return false;
+    }
+    memset(arr, 0, (size_t) n);
     for (int j = 0; j < n; j++) {
         if (mrand48() < proportion) {
             arr[j] = drand48();
-        } else {
-            arr[j] = 0.0;
         }
     }
     return 0;
 }
 
+bool get_array(double *arr, int n, int arr_opt) {
+    if (arr_opt == 0) {
+        return gen_array_uniform(arr, n, 0.0, 10.0);
+    } else if (arr_opt == 1) {
+        return gen_array_int(arr, n, 100);
+    } else if (arr_opt == 2) {
+        return gen_array_prop_zeros(arr, n, 0.8);
+    } else {
+        gen_array_uniform(arr, n, 0.0, 10.0);
+    }
+    return false;
+}
+
+
 int main() {
+    int arr_opt = 0;
     srand48(time(0));
     clock_t begin = clock(), begin_kth;
-    int n = 55197, k = 5000;
+    int n = 551970, k = 5000;
+    int num_iter = 1000;
+
     double *arr = malloc(sizeof(double) * n);
     int *sorted_set = malloc(sizeof(int) * n);
     double total_v1 = 0.0, total_run_time_v1 = 0.0;
@@ -43,11 +94,11 @@ int main() {
     double total_v7 = 0.0, total_run_time_v7 = 0.0;
     double total_v8 = 0.0, total_run_time_v8 = 0.0;
     double total_v9 = 0.0, total_run_time_v9 = 0.0;
-    for (int i = 0; i < 8000; i++) {
-        array_simulate_uniform(arr, n, 0.0, 10.0);
+    for (int i = 0; i < num_iter; i++) {
+        get_array(arr, n, arr_opt);
         begin_kth = clock();
         total_v9 += fabs(kth_largest_quick_sort(arr, sorted_set, k, n));
-        total_run_time_v9 += clock() - begin_kth;
+        total_run_time_v9 += (clock() - begin_kth);
 
         begin_kth = clock();
         total_v1 += fabs(kth_largest_quick_select_v1(arr, n, k));
@@ -117,40 +168,35 @@ int main() {
     }
     free(arr);
     free(sorted_set);
-    printf("------ quick_select_v1 ------\n");
-    printf("%.0f, %.0f, %.1f, %.0f, %.0f, %.0f, %.0f, %.0f, %.0f\n",
-           total_run_time_v1, total_run_time_v2, total_run_time_v3,
-           total_run_time_v4, total_run_time_v5, total_run_time_v6,
-           total_run_time_v7, total_run_time_v8, total_run_time_v9);
-    if (false) {
-        double time_spent = (double) (clock() - begin) / CLOCKS_PER_SEC;
-        printf("------ quick_select_v1 ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v1 / CLOCKS_PER_SEC, total_v1);
-        printf("------ quick_select_v2 ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v2 / CLOCKS_PER_SEC, total_v2);
-        printf("------ max heap ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v3 / CLOCKS_PER_SEC, total_v3);
-        printf("------ floyd rivest ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v4 / CLOCKS_PER_SEC, total_v4);
-        printf("------ quick select v3 ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v5 / CLOCKS_PER_SEC, total_v5);
-        printf("------ quick select wirth ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v6 / CLOCKS_PER_SEC, total_v6);
-        printf("------ quick select 3 median ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v7 / CLOCKS_PER_SEC, total_v7);
-        printf("------ floyd rivest with 3 median ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v8 / CLOCKS_PER_SEC, total_v8);
-        printf("------ quick sort ------\n");
-        printf("total run time: %.4f selection time: %.4f total value: %.4f\n",
-               time_spent, total_run_time_v9 / CLOCKS_PER_SEC, total_v9);
-    }
+    double time_spent = (double) (clock() - begin) / CLOCKS_PER_SEC;
+    total_run_time_v1 = total_run_time_v1 / CLOCKS_PER_SEC;
+    total_run_time_v2 = total_run_time_v2 / CLOCKS_PER_SEC;
+    total_run_time_v3 = total_run_time_v3 / CLOCKS_PER_SEC;
+    total_run_time_v4 = total_run_time_v4 / CLOCKS_PER_SEC;
+    total_run_time_v5 = total_run_time_v5 / CLOCKS_PER_SEC;
+    total_run_time_v6 = total_run_time_v6 / CLOCKS_PER_SEC;
+    total_run_time_v7 = total_run_time_v7 / CLOCKS_PER_SEC;
+    total_run_time_v8 = total_run_time_v8 / CLOCKS_PER_SEC;
+    total_run_time_v9 = total_run_time_v9 / CLOCKS_PER_SEC;
+    printf("total running time: %.2f(s) \n", time_spent);
+    printf("%20s -- total time -- aver select -- \n", "method");
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "quick_select_v1", total_run_time_v1, total_run_time_v1 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "quick_select_v2", total_run_time_v2, total_run_time_v2 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "quick_select_v3", total_run_time_v5, total_run_time_v5 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "max heap", total_run_time_v3, total_run_time_v3 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "floyd rivest", total_run_time_v4, total_run_time_v4 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "quick select wirth", total_run_time_v6, total_run_time_v6 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "quick with 3 median", total_run_time_v7, total_run_time_v7 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "floyd with 3 median", total_run_time_v8, total_run_time_v8 / (double) num_iter);
+    printf("%20s -- %10.4f -- %11.4f\n",
+           "quick sort", total_run_time_v9, total_run_time_v9 / (double) num_iter);
     return 0;
 }

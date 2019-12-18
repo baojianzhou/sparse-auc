@@ -463,11 +463,11 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     k_fold = 5
-    num_passes = 50
+    num_passes = 20
     task_id = 0
-    data = pkl.load(open(os.path.join(data_path, '12_news20/data_run_%d.pkl' % task_id), 'r'))
+    data = pkl.load(open(os.path.join(data_path, '01_pcmac/data_run_%d.pkl' % task_id), 'r'))
     para_c = .8
-    s = 60000
+    s = 5000
     b = 50
     fold_id = 0
     step_len, verbose = 50, 1
@@ -481,19 +481,25 @@ if __name__ == '__main__':
     para = get_data_by_ind(data, te_index, range(len(te_index)))
     x_te_vals, x_te_inds, x_te_posis, x_te_lens, y_te = para
 
-    wt, _, auc_list, rts_list = c_algo_sht_am_sparse_old(
+    wt, _, auc_list1, rts_list1 = c_algo_sht_am_sparse_old(
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         x_te_vals, x_te_inds, x_te_posis, x_te_lens, y_te,
         data['p'], s, b, para_c, 0.0, num_passes, step_len, 1)
     cur_auc = pred_auc(data, te_index, range(len(te_index)), wt)
     print('test auc: %.5f' % cur_auc)
-    plt.plot(rts_list, auc_list, label='Old')
-    wt, _, auc_list, rts_list = c_algo_sht_am_sparse(
+    fig, ax = plt.subplots(nrows=1, ncols=2)
+    wt, _, auc_list2, rts_list2 = c_algo_sht_am_sparse(
         x_tr_vals, x_tr_inds, x_tr_posis, x_tr_lens, y_tr,
         x_te_vals, x_te_inds, x_te_posis, x_te_lens, y_te,
         data['p'], s, b, para_c, 0.0, num_passes, step_len, 1)
     cur_auc = pred_auc(data, te_index, range(len(te_index)), wt)
     print('test auc: %.5f' % cur_auc)
-    plt.plot(rts_list, auc_list, label='New')
-    plt.legend()
+    ax[0].plot(rts_list1, auc_list1, label='Old', linewidth=2.5, color='blue')
+    ax[0].plot(rts_list2, auc_list2, label='New', linewidth=2.5, color='red')
+    ax[0].set_xlabel('Run Time', fontsize=20)
+    ax[1].plot(auc_list1[:1000], label='Old', linewidth=2.5, color='blue')
+    ax[1].plot(auc_list2[:1000], label='New', linewidth=2.5, color='red')
+    ax[1].set_xlabel('Iterations', fontsize=20)
+    ax[0].legend()
+    ax[1].legend()
     plt.show()
