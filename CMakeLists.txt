@@ -37,7 +37,7 @@ target_link_libraries(test_spam python2.7 -std=c11 -Wall -Wextra -O3
         -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -L${OPENBLAS_LIB}
         -lm -lpython2.7 -lopenblas -lpthread)
 
-add_library(main_gpu SHARED algo_wrapper/main_gpu.c algo_wrapper/cuda_spam.h)
+add_library(main_gpu SHARED algo_wrapper/main_gpu.c algo_wrapper/cuda_spam.cu)
 target_link_libraries(main_gpu python2.7 -std=c11 -Wall -Wextra -O3
         -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -I${PYTHON_INCLUDE} -lm -lpython2.7)
 

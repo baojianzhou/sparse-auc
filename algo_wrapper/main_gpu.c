@@ -4,7 +4,7 @@
 
 #include <Python.h>
 #include <numpy/arrayobject.h>
-#include "cuda_spam.h"
+#include "cuda_spam.cu"
 
 
 PyObject *get_results(int data_p, double *re_wt, double *re_wt_bar,
