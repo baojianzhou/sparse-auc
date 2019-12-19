@@ -3,6 +3,24 @@
 #include "auc_opt_methods.h"
 
 
+static PyObject *hello(PyObject *self, PyObject *args) {
+    printf("Hello, world!\n");
+    Py_RETURN_NONE;
+}
+
+static PyObject *hello_name(PyObject *self, PyObject *args) {
+    if (self != NULL) {
+        printf("error: unknown error !!\n");
+        return NULL;
+    }
+    const char *name;
+    if (!PyArg_ParseTuple(args, "s", &name)) {
+        return NULL;
+    }
+    printf("Hello, %s!\n", name);
+    Py_RETURN_NONE;
+}
+
 static PyObject *test(PyObject *self, PyObject *args) {
     if (self != NULL) {
         printf("error: unknown error !!\n");
@@ -133,7 +151,6 @@ static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_reg_opt, para_num_passes,
             para_step_len, para_verbose, total_num_eval, re_len_auc;
@@ -143,7 +160,8 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
                           &PyArray_Type, &x_tr_poss, &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &data_y_tr, &data_p, &para_xi, &para_l1_reg, &para_l2_reg,
                           &para_reg_opt, &para_num_passes, &para_step_len,
-                          &para_verbose)) { return NULL; }
+                          &para_verbose)) { printf("test"); return NULL; }
+    printf("%d\n", data_p);
     data_n = (int) data_y_tr->dimensions[0];
     total_num_eval = (data_n * (para_num_passes + 1)) / para_step_len;
     re_wt = calloc((size_t) data_p, sizeof(double));
@@ -462,7 +480,6 @@ static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
     return results;
 }
 
-
 // wrap_algo_solam_sparse
 static PyMethodDef sparse_methods[] = {
         {"c_test",                   (PyCFunction) test,                        METH_VARARGS, "docs"},
@@ -483,11 +500,59 @@ static PyMethodDef sparse_methods[] = {
         {"c_algo_graph_am_sparse",   (PyCFunction) wrap_algo_graph_am_sparse,   METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
+// wrap_algo_solam_sparse
+static PyMethodDef sparse_methods_3[] = { // hello_name
+        {"c_test",                   test,                        METH_VARARGS, "docs"},
+        {"c_hello",                  hello,                       METH_VARARGS, "docs"},
+        {"c_hello_name",             hello_name,                  METH_VARARGS, "docs"},
+        {"c_algo_solam",             wrap_algo_solam,             METH_VARARGS, "docs"},
+        {"c_algo_spam",              wrap_algo_spam,              METH_VARARGS, "docs"},
+        {"c_algo_sht_am",            wrap_algo_sht_am,            METH_VARARGS, "docs"},
+        {"c_algo_sht_am_old",        wrap_algo_sht_am_old,        METH_VARARGS, "docs"},
+        {"c_algo_graph_am",          wrap_algo_graph_am,          METH_VARARGS, "docs"},
+        {"c_algo_opauc",             wrap_algo_opauc,             METH_VARARGS, "docs"},
+        {"c_algo_fsauc",             wrap_algo_fsauc,             METH_VARARGS, "docs"},
+
+        {"c_algo_solam_sparse",      wrap_algo_solam_sparse,      METH_VARARGS, "docs"},
+        {"c_algo_sht_am_sparse",     wrap_algo_sht_am_sparse,     METH_VARARGS, "docs"},
+        {"c_algo_sht_am_sparse_old", wrap_algo_sht_am_sparse_old, METH_VARARGS, "docs"},
+        {"c_algo_spam_sparse",       wrap_algo_spam_sparse,       METH_VARARGS, "docs"},
+        {"c_algo_fsauc_sparse",      wrap_algo_fsauc_sparse,      METH_VARARGS, "docs"},
+        {"c_algo_opauc_sparse",      wrap_algo_opauc_sparse,      METH_VARARGS, "docs"},
+        {"c_algo_graph_am_sparse",   wrap_algo_graph_am_sparse,   METH_VARARGS, "docs"},
+        {NULL, NULL, 0, NULL}};
+
+
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "sparse_module",     /* m_name */
+        "This is a module",  /* m_doc */
+        -1,                  /* m_size */
+        sparse_methods_3,      /* m_methods */
+        NULL,                /* m_reload */
+        NULL,                /* m_traverse */
+        NULL,                /* m_clear */
+        NULL,                /* m_free */
+    };
+#endif
+
+
 /** Python version 2 for module initialization */
-PyMODINIT_FUNC initsparse_module() {
+PyMODINIT_FUNC
+#if PY_MAJOR_VERSION >= 3
+PyInit_sparse_module(void){
+     Py_Initialize();
+     import_array();
+    return PyModule_Create(&moduledef);
+}
+#else
+initsparse_module(void) {
     Py_InitModule3("sparse_module", sparse_methods, "some docs for solam algorithm.");
     import_array();
 }
+
+#endif
 
 int main() {
     printf("test of main wrapper!\n");
