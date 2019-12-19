@@ -3,15 +3,12 @@ import os
 import sys
 import time
 import math
+import numpy as np
 import pickle as pkl
 from sklearn.metrics import roc_auc_score
 import cupy as cp
 
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
-
-
-def auc_score(data_y_tr, y_pred, data_n):
-    return roc_auc_score(y_true=data_y_tr, y_score=y_pred)
 
 
 def c_algo_spam_sparse(x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr,
@@ -88,9 +85,9 @@ def get_data_by_ind(data, tr_ind, sub_tr_ind):
         sub_x_posis.append(prev_posi)
         prev_posi += cur_len
     sub_x_vals = cp.asarray(sub_x_vals, dtype=float)
-    sub_x_inds = cp.asarray(sub_x_inds, dtype=cp.int32)
-    sub_x_posis = cp.asarray(sub_x_posis, dtype=cp.int32)
-    sub_x_lens = cp.asarray(sub_x_lens, dtype=cp.int32)
+    sub_x_inds = np.asarray(sub_x_inds, dtype=np.int32)
+    sub_x_posis = np.asarray(sub_x_posis, dtype=np.int32)
+    sub_x_lens = np.asarray(sub_x_lens, dtype=np.int32)
     sub_y_tr = cp.asarray(data[b'y_tr'][tr_ind[sub_tr_ind]], dtype=float)
     return sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens, sub_y_tr
 
