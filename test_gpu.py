@@ -16,7 +16,7 @@ def c_algo_spam_sparse(x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr,
                        para_reg_opt, para_num_passes, para_step_len):
     start_time = time.time()
     posi_t, nega_t, data_n = 0.0, 0.0, len(data_y_tr)
-    y_pred = cp.zeros((len(data_y_tr),))
+    y_pred = np.zeros((len(data_y_tr),))
     re_wt, re_wt_bar = cp.zeros((data_p,)), cp.zeros((data_p,))
     posi_x_mean = cp.zeros((data_p,))
     nega_x_mean = cp.zeros((data_p,))
@@ -88,7 +88,7 @@ def get_data_by_ind(data, tr_ind, sub_tr_ind):
     sub_x_inds = np.asarray(sub_x_inds, dtype=np.int32)
     sub_x_posis = np.asarray(sub_x_posis, dtype=np.int32)
     sub_x_lens = np.asarray(sub_x_lens, dtype=np.int32)
-    sub_y_tr = cp.asarray(data[b'y_tr'][tr_ind[sub_tr_ind]], dtype=float)
+    sub_y_tr = np.asarray(data[b'y_tr'][tr_ind[sub_tr_ind]], dtype=float)
     return sub_x_vals, sub_x_inds, sub_x_posis, sub_x_lens, sub_y_tr
 
 
