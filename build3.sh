@@ -1,9 +1,14 @@
 #!/bin/bash
 ROOT_PATH=/network/rit/lab/ceashpc/bz383376/opt/
+<<<<<<< HEAD
 # PYTHON_PATH=/home/baojian/anaconda3/include/python3.7m/
 PYTHON_PATH=/network/rit/home/bz383376/anaconda3/include/python3.7m/
 # NUMPY_PATH=/home/baojian/git/sparse-auc/venv/lib/python3.7/site-packages/numpy/core/include/
 NUMPY_PATH=/network/rit/home/bz383376/anaconda3/lib/python3.7/site-packages/numpy/core/include
+=======
+PYTHON_PATH=/home/baojian/anaconda3/include/python3.7m/
+NUMPY_PATH=/home/baojian/git/sparse-auc/venv/lib/python3.7/site-packages/numpy/core/include/
+>>>>>>> baa9d2a298bddce4dd9e59d1fc33c2ff0ec5cb72
 OPENBLAS_PATH=${ROOT_PATH}openblas-0.3.1/include/
 OPENBLAS_LIB=${ROOT_PATH}openblas-0.3.1/lib/
 PYTHON_LIB=/home/baojian/anaconda3/lib/
