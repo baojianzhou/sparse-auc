@@ -543,13 +543,13 @@ PyMODINIT_FUNC
 #if PY_MAJOR_VERSION >= 3
 PyInit_sparse_module(void){
      Py_Initialize();
-     import_array();
+     import_array(); // In order to use numpy, you must include this!
     return PyModule_Create(&moduledef);
 }
 #else
 initsparse_module(void) {
     Py_InitModule3("sparse_module", sparse_methods, "some docs for solam algorithm.");
-    import_array();
+    import_array(); // In order to use numpy, you must include this!
 }
 
 #endif

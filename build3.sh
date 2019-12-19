@@ -1,4 +1,5 @@
 #!/bin/bash
+ROOT_PATH=/network/rit/lab/ceashpc/bz383376/opt/
 PYTHON_PATH=/home/baojian/anaconda3/include/python3.7m/
 NUMPY_PATH=/home/baojian/git/sparse-auc/venv/lib/python3.7/site-packages/numpy/core/include/
 OPENBLAS_PATH=${ROOT_PATH}openblas-0.3.1/include/
