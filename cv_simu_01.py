@@ -1184,16 +1184,9 @@ def cv_sht_am_v1():
 
 
 def main():
-    k_fold = 5
-    num_passes = 20
-    task_id = 0
-    data = pkl.load(open(
-        os.path.join(data_path, 'data_task_%02d_tr_1000_mu_0.3_p-ratio_0.3.pkl' % task_id), 'r'))
-    data = data['fig_1']
-    para_c = .5
-    sparsity = 50
-    b = 20
-    fold_id = 0
+    k_fold, num_passes, task_id, fold_id, = 5, 20, 0, 0
+    data = pkl.load(open(os.path.join(data_path, 'data_task_%02d_tr_1000_mu_0.3_p-ratio_0.3.pkl' % task_id), 'r'))
+    data, para_c, sparsity, b = data['fig_1'], 0.5, 50, 20
     tr_index = data['task_%d_fold_%d' % (task_id, fold_id)]['tr_index']
     step_len, verbose = 50, 1
     kf = KFold(n_splits=k_fold, shuffle=False)
@@ -1216,61 +1209,5 @@ def main():
         plt.show()
 
 
-def test_sto_iht():
-    task_id, k_fold, passes, tr_list, mu_list, posi_ratio_list, fig_list = 0, 5, 50, [1000], [0.3], [0.5], ['fig_2']
-    results = dict()
-    s_time = time.time()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'sto_iht'
-            list_c, list_sparsity, b = 10. ** np.arange(-5, 3, 1, dtype=float), [40, 42, 44, 46, 48, 50], 800
-            list_para_l2_reg = [0.0, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 5e1, 7e1, 1e2, 5e2]
-            best_auc = None
-            tmp = []
-            for para_l2_reg in list_para_l2_reg:
-                print(para_l2_reg)
-                best_auc = None
-                for para_c, para_sparsity in product(list_c, list_sparsity):
-                    re = run_sto_iht(task_id, fold_id, para_c, para_l2_reg, para_sparsity, b, passes, data[fig_i])
-                    if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                        best_auc = re
-                tmp.append(best_auc['auc_wt'])
-            import matplotlib.pyplot as plt
-            plt.plot(tmp, marker='o')
-            plt.show()
-            results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'], best_auc['auc_wt_bar'], time.time() - s_time)
-        break
-
-
-def test_sht_am():
-    task_id, k_fold, passes, tr_list, mu_list, posi_ratio_list, fig_list = 0, 5, 50, [1000], [0.3], [0.5], ['fig_2']
-    results = dict()
-    s_time = time.time()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (task_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (task_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'sht_am'
-            list_c, list_sparsity, b = 10. ** np.arange(-5, 3, 1, dtype=float), [50], 800
-            list_para_l2_reg = [0.0, 1e-3, 1e-2, 1e-1, 1e0]
-            best_auc = None
-            for para_c, para_l2_reg, para_sparsity in product(list_c, list_para_l2_reg, list_sparsity):
-                re = run_sht_am(task_id, fold_id, para_c, para_l2_reg, para_sparsity, b, passes, data[fig_i])
-                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                    best_auc = re
-            results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'], best_auc['auc_wt_bar'], time.time() - s_time)
-        break
-
-
 if __name__ == '__main__':
-    # test_sto_iht()
-    test_sht_am()
-    # main()
+    main()
