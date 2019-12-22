@@ -16,6 +16,7 @@
 // These are the third part library needed.
 #include <cblas.h>
 #include "fast_pcst.h"
+#include "loss.h"
 
 #define PI 3.14159265358979323846
 #define sign(x) (x > 0) - (x < 0)
@@ -153,6 +154,23 @@ void _algo_spam_sparse(const double *x_tr_vals,
                        double *re_auc,
                        double *re_rts,
                        int *re_len_auc);
+
+void _algo_sto_iht(const double *data_x_tr,
+                   const double *data_y_tr,
+                   int data_n,
+                   int data_p,
+                   int para_s,
+                   int para_b,
+                   double para_c,
+                   double para_l2_reg,
+                   int para_num_passes,
+                   int para_step_len,
+                   int para_verbose,
+                   double *re_wt,
+                   double *re_wt_bar,
+                   double *re_auc,
+                   double *re_rts,
+                   int *re_len_auc);
 
 /**
  * Stochastic Hard Thresholding for AUC maximization.

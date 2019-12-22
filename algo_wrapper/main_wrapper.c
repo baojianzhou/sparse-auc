@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include "auc_opt_methods.h"
+#include "algo_hsg_ht.h"
 
 
 static PyObject *hello(PyObject *self, PyObject *args) {
@@ -506,8 +507,35 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
     return results;
 }
 
-static PyObject *wrap_algo_hsg_ht_sparse(PyObject *self, PyObject *args) {
+
+static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
     if (self != NULL) { return NULL; } // error: unknown error !!
+    PyArrayObject *data_x_tr, *data_y_tr;
+    double para_c, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
+    int data_n, data_p, para_s, para_b, para_num_passes,
+            para_step_len, para_verbose, re_len_auc;
+    int total_num_eval;
+    if (!PyArg_ParseTuple(args, "O!O!iiddiii",
+                          &PyArray_Type, &data_x_tr,
+                          &PyArray_Type, &data_y_tr,
+                          &para_s, &para_b, &para_c, &para_l2_reg,
+                          &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
+    data_n = (int) data_x_tr->dimensions[0];
+    data_p = (int) data_x_tr->dimensions[1];
+    total_num_eval = (data_n / para_b) * para_num_passes;
+    re_wt = malloc(sizeof(double) * (data_p + 1)); // with one additional intercept.
+    re_wt_bar = malloc(sizeof(double) * (data_p + 1)); // with one additional intercept.
+    re_auc = malloc(sizeof(double) * total_num_eval);
+    re_rts = malloc(sizeof(double) * total_num_eval);
+    _algo_sto_iht((double *) PyArray_DATA(data_x_tr), (double *) PyArray_DATA(data_y_tr),
+                  data_n, data_p, para_s, para_b, para_c, para_l2_reg, para_num_passes,
+                  para_step_len, para_verbose, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
+    PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
+    free(re_wt), free(re_wt_bar), free(re_auc);
+    return results;
+}
+
+static PyObject *wrap_algo_hsg_ht_sparse(PyObject *self, PyObject *args) {
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_num_passes, para_step_len, para_verbose, total_num_eval, re_len_auc;
     double para_r, para_g, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -537,14 +565,15 @@ static PyMethodDef sparse_methods[] = { // hello_name
         {"c_test",                   test,                        METH_VARARGS, "docs"},
         {"c_hello",                  hello,                       METH_VARARGS, "docs"},
         {"c_hello_name",             hello_name,                  METH_VARARGS, "docs"},
-        {"c_algo_solam",             wrap_algo_solam,             METH_VARARGS, "docs"},
         {"c_algo_spam",              wrap_algo_spam,              METH_VARARGS, "docs"},
+        {"c_algo_solam",             wrap_algo_solam,             METH_VARARGS, "docs"},
         {"c_algo_sht_am",            wrap_algo_sht_am,            METH_VARARGS, "docs"},
         {"c_algo_sht_am_old",        wrap_algo_sht_am_old,        METH_VARARGS, "docs"},
         {"c_algo_graph_am",          wrap_algo_graph_am,          METH_VARARGS, "docs"},
         {"c_algo_opauc",             wrap_algo_opauc,             METH_VARARGS, "docs"},
         {"c_algo_fsauc",             wrap_algo_fsauc,             METH_VARARGS, "docs"},
         {"c_algo_hsg_ht",            wrap_algo_hsg_ht,            METH_VARARGS, "docs"},
+        {"c_algo_sto_iht",           wrap_algo_sto_iht,           METH_VARARGS, "docs"},
 
         {"c_algo_hsg_ht_sparse",     wrap_algo_hsg_ht_sparse,     METH_VARARGS, "docs"},
         {"c_algo_solam_sparse",      wrap_algo_solam_sparse,      METH_VARARGS, "docs"},

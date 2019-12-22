@@ -949,14 +949,13 @@ void _algo_sht_am_sparse(
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     *re_len_auc = 0;
 
-    if(false){
+    if (false) {
         posi_t = 0;
         nega_t = 0;
         prob_p = 0.0;
         cblas_dscal(data_p, 0.0, ut, 1);
         cblas_dscal(data_p, 0.0, vt, 1);
     }
-
 
 
     for (int t = 1; t <= total_blocks; t++) { // for each block
@@ -976,7 +975,7 @@ void _algo_sht_am_sparse(
             for (int tt = 0; tt < x_tr_lens[ind]; tt++) {
                 xtw += (re_wt[xt_inds[tt]] * xt_vals[tt]);
             }
-            if(false){
+            if (false) {
                 if (data_y_tr[ind] > 0) {
                     posi_t++;
                     for (int tt = 0; tt < x_tr_lens[ind]; tt++) {
@@ -1006,7 +1005,7 @@ void _algo_sht_am_sparse(
             }
             cblas_daxpy(data_p, 1., tmp, 1, grad_wt, 1); // calculate the gradient
         }
-        if(false){
+        if (false) {
             prob_p = posi_t / (nega_t + posi_t);
             memcpy(ut, posi_ut, sizeof(double) * data_p);
             memcpy(vt, nega_vt, sizeof(double) * data_p);
@@ -1702,6 +1701,63 @@ void _algo_opauc_sparse(
     free(h_center_p);
     free(center_n);
     free(center_p);
+}
+
+
+void _algo_sto_iht(const double *data_x_tr,
+                   const double *data_y_tr,
+                   int data_n,
+                   int data_p,
+                   int para_s,
+                   int para_b,
+                   double para_c,
+                   double para_l2_reg,
+                   int para_num_passes,
+                   int para_step_len,
+                   int para_verbose,
+                   double *re_wt,
+                   double *re_wt_bar,
+                   double *re_auc,
+                   double *re_rts,
+                   int *re_len_auc) {
+
+    double start_time = clock();
+    openblas_set_num_threads(1);
+    srand((unsigned int) time(NULL));
+    double eta_t, t_eval;
+    double *y_pred = calloc((size_t) data_n, sizeof(double));
+    int min_b_ind = 0, max_b_ind = data_n / para_b;
+    int total_blocks = para_num_passes * (data_n / para_b);
+    memset(re_wt, 0, sizeof(double) * (data_p + 1)); // wt --> 0.0
+    memset(re_wt_bar, 0, sizeof(double) * (data_p + 1)); // wt_bar --> 0.0
+    *re_len_auc = 0;
+    double *loss_grad_wt = calloc((data_p + 2), sizeof(double));
+    for (int t = 1; t <= total_blocks; t++) { // for each block
+        // block bi must be in [min_b_ind,max_b_ind-1]
+        int bi = rand() % (max_b_ind - min_b_ind);
+        eta_t = para_c;
+        int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data_n % para_b) : para_b);
+        // calculate the gradient
+        logistic_loss_grad(re_wt, data_x_tr + bi * para_b, data_y_tr + bi * para_b,
+                           loss_grad_wt, para_l2_reg, cur_b_size, data_p);
+        // wt = wt - eta * grad(wt)
+        cblas_daxpy(data_p + 1, -eta_t / cur_b_size, loss_grad_wt + 1, 1, re_wt, 1);
+        _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
+        cblas_daxpy(data_p + 1, 1., re_wt, 1, re_wt_bar, 1);
+        if (para_verbose == 1) {  // to evaluate AUC score
+            t_eval = clock();
+            cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                        data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
+            re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+            printf("%.4f\n", re_auc[*re_len_auc]);
+            re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
+            *re_len_auc = *re_len_auc + 1;
+        }
+    }
+    free(loss_grad_wt);
+    cblas_dscal(data_p + 1, 1. / total_blocks, re_wt_bar, 1);
+    cblas_dscal(*re_len_auc, 1. / CLOCKS_PER_SEC, re_rts, 1);
+    free(y_pred);
 }
 
 
