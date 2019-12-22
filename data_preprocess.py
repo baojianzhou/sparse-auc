@@ -2,14 +2,52 @@
 
 import os
 import csv
+import sys
 import time
 import numpy as np
 import pickle as pkl
 from sklearn.model_selection import KFold
 
 
-def _gen_dataset_00_simu(data_path, num_tr, task_id, mu,
-                         posi_ratio=0.1, noise_mu=0.0, noise_std=1.0):
+def __simu_grid_graph(width, height, rand_weight=False):
+    """ Generate a grid graph with size, width x height. Totally there will be
+            width x height number of nodes in this generated graph.
+    :param width:       the width of the grid graph.
+    :param height:      the height of the grid graph.
+    :param rand_weight: the edge costs in this generated grid graph.
+    :return:            1.  list of edges
+                        2.  list of edge costs
+    """
+    np.random.seed()
+    if width < 0 and height < 0:
+        print('Error: width and height should be positive.')
+        return [], []
+    width, height = int(width), int(height)
+    edges, weights = [], []
+    index = 0
+    for i in range(height):
+        for j in range(width):
+            if (index % width) != (width - 1):
+                edges.append((index, index + 1))
+                if index + width < int(width * height):
+                    edges.append((index, index + width))
+            else:
+                if index + width < int(width * height):
+                    edges.append((index, index + width))
+            index += 1
+    edges = np.asarray(edges, dtype=int)
+    # random generate costs of the graph
+    if rand_weight:
+        weights = []
+        while len(weights) < len(edges):
+            weights.append(np.random.uniform(1., 2.0))
+        weights = np.asarray(weights, dtype=np.float64)
+    else:  # set unit weights for edge costs.
+        weights = np.ones(len(edges), dtype=np.float64)
+    return edges, weights
+
+
+def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0.0, noise_std=1.0):
     """
     number of classes: 2
     number of samples: 1,000
@@ -25,46 +63,15 @@ def _gen_dataset_00_simu(data_path, num_tr, task_id, mu,
     year={2011},
     publisher={Institute of Mathematical Statistics}}
     ---
+    :param data_path:
+    :param num_tr:
+    :param trial_id:
+    :param mu:
+    :param posi_ratio:
+    :param noise_mu:
+    :param noise_std:
     :return:
     """
-
-    def __simu_grid_graph(width, height, rand_weight=False):
-        """ Generate a grid graph with size, width x height. Totally there will be
-                width x height number of nodes in this generated graph.
-        :param width:       the width of the grid graph.
-        :param height:      the height of the grid graph.
-        :param rand_weight: the edge costs in this generated grid graph.
-        :return:            1.  list of edges
-                            2.  list of edge costs
-        """
-        np.random.seed()
-        if width < 0 and height < 0:
-            print('Error: width and height should be positive.')
-            return [], []
-        width, height = int(width), int(height)
-        edges, weights = [], []
-        index = 0
-        for i in range(height):
-            for j in range(width):
-                if (index % width) != (width - 1):
-                    edges.append((index, index + 1))
-                    if index + width < int(width * height):
-                        edges.append((index, index + width))
-                else:
-                    if index + width < int(width * height):
-                        edges.append((index, index + width))
-                index += 1
-        edges = np.asarray(edges, dtype=int)
-        # random generate costs of the graph
-        if rand_weight:
-            weights = []
-            while len(weights) < len(edges):
-                weights.append(np.random.uniform(1., 2.0))
-            weights = np.asarray(weights, dtype=np.float64)
-        else:  # set unit weights for edge costs.
-            weights = np.ones(len(edges), dtype=np.float64)
-        return edges, weights
-
     bench_data = {
         # figure 1 in [1], it has 26 nodes.
         'fig_1': [475, 505, 506, 507, 508, 509, 510, 511, 512, 539, 540, 541, 542,
@@ -118,8 +125,7 @@ def _gen_dataset_00_simu(data_path, num_tr, task_id, mu,
         labels = [posi_label] * num_posi + [nega_label] * num_nega
         y_labels = np.asarray(labels, dtype=np.float64)
         x_data = np.random.normal(noise_mu, noise_std, n * p).reshape(n, p)
-        _ = s * num_posi
-        anomalous_data = np.random.normal(mu, noise_std, _).reshape(num_posi, s)
+        anomalous_data = np.random.normal(mu, noise_std, s * num_posi).reshape(num_posi, s)
         x_data[:num_posi, sub_graph] = anomalous_data
         rand_indices = np.random.permutation(len(y_labels))
         x_tr, y_tr = x_data[rand_indices], y_labels[rand_indices]
@@ -134,14 +140,17 @@ def _gen_dataset_00_simu(data_path, num_tr, task_id, mu,
         data = {'x_tr': x_tr,
                 'y_tr': y_tr,
                 'subgraph': sub_graph,
+                'height': bench_data['height'],
+                'width': bench_data['width'],
                 'edges': edges,
                 'weights': weights,
                 'mu': mu,
                 'p': p,
                 'n': num_tr,
+                's': len(sub_graph),
                 'noise_mu': noise_mu,
                 'noise_std': noise_std,
-                'task_id': task_id,
+                'trial_id': trial_id,
                 'num_k_fold': k_fold,
                 'posi_ratio': posi_ratio}
         # randomly permute the datasets 25 times for future use.
@@ -150,11 +159,11 @@ def _gen_dataset_00_simu(data_path, num_tr, task_id, mu,
         for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
             # since original data is ordered, we need to shuffle it!
             rand_perm = np.random.permutation(data['n'])
-            data['task_%d_fold_%d' % (task_id, fold_index)] = {'tr_index': rand_perm[train_index],
-                                                               'te_index': rand_perm[test_index]}
+            data['trial_%d_fold_%d' % (trial_id, fold_index)] = {'tr_index': rand_perm[train_index],
+                                                                 'te_index': rand_perm[test_index]}
         all_data[fig_id] = data
-    pkl.dump(all_data, open(data_path + '/data_task_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-                            % (task_id, num_tr, mu, posi_ratio), 'wb'))
+    pkl.dump(all_data, open(data_path + '/data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+                            % (trial_id, num_tr, mu, posi_ratio), 'wb'))
 
 
 def _gen_dataset_01_pcmac(run_id, data_path):
@@ -917,9 +926,10 @@ def data_process_13_ad():
 def main(dataset):
     if dataset == '00_simu':
         root_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/'
-        for task_id in range(25):
-            _gen_dataset_00_simu(data_path=os.path.join(root_path, '00_%s' % 'simu'),
-                                 num_tr=1000, task_id=task_id, mu=0.3, posi_ratio=0.3)
+        for trial_id in range(20):
+            for posi_ratio in [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]:
+                _gen_dataset_00_simu(data_path=os.path.join(root_path, '00_simu'),
+                                     num_tr=1000, trial_id=trial_id, mu=0.3, posi_ratio=posi_ratio)
     elif dataset == '01_pcmac':
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/01_pcmac'
         for run_id in range(5):
@@ -959,4 +969,4 @@ def main(dataset):
 
 
 if __name__ == '__main__':
-    main(dataset='10_farmads')
+    main(dataset=sys.argv[1])
