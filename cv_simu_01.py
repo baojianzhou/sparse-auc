@@ -374,7 +374,7 @@ def cv_sht_am(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    list_s = range(5, 140, 5)
+    list_s = range(20, 140, 2)
     list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
