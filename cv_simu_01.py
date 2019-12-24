@@ -801,14 +801,6 @@ def run_testing(method_name, num_cpus):
             key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
             results[key] = dict()
             # -----------------------
-            method = 'graph_am'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = run_graph_am(trial_id, fold_id, para_c, sparsity, len(tr_index), passes,
-                              data[fig_i])
-            results[key][method] = re
-            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
-            # -----------------------
             method = 'opauc'
             ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
             _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(trial_id, fold_id)]['para']
@@ -1133,8 +1125,69 @@ def cv_sht_am_v1():
     return auc_wt, auc_wt_bar
 
 
+def show_result_01():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 14
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 12, 8
+    color_list = ['b', 'g', 'm', 'r']
+    marker_list = ['X', 'o', 'P', 's']
+    fig, ax = plt.subplots(2, 2, sharex=True)
+    for ii, jj in product(range(2), range(2)):
+        ax[ii, jj].grid(color='lightgray', linestyle='dotted', axis='both')
+        ax[ii, jj].spines['right'].set_visible(False)
+        ax[ii, jj].spines['top'].set_visible(False)
+    method_list = ['sht_am', 'spam_l1', 'spam_l2']
+    method_label_list = ['SHT-AM', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$"]
+    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
+    posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+
+    for ind_method, method in enumerate(method_list):
+        results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
+        for ind_fig, fig_i in enumerate(fig_list):
+            re = []
+            for posi_ratio in posi_ratio_list:
+                tmp = [results[key]['auc_wt'] for key in results if key[-1] == fig_i and key[-2] == posi_ratio]
+                re.append(np.mean(tmp))
+            ax[ind_fig / 2, ind_fig % 2].plot(posi_ratio_list, re,
+                                              marker=marker_list[ind_method],
+                                              color=color_list[ind_method],
+                                              label=method_label_list[ind_method])
+    for ind_fig in range(4):
+        ax[ind_fig / 2, ind_fig % 2].set_title(r"Network %d" % (ind_fig + 1))
+    ax[0, 0].set_ylabel('AUC')
+    ax[1, 0].set_ylabel('AUC')
+    ax[1, 0].set_xlabel('Positive Ratio')
+    ax[1, 1].set_xlabel('Positive Ratio')
+    ax[1, 1].legend(loc='lower right', framealpha=1., bbox_to_anchor=(1.0, 0.0),
+                    fontsize=14., frameon=True, borderpad=0.1,
+                    labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax[0, 0].set_xticks(posi_ratio_list)
+    ax[0, 1].set_xticks(posi_ratio_list)
+    ax[1, 0].set_xticks(posi_ratio_list)
+    ax[1, 1].set_xticks(posi_ratio_list)
+    ax[0, 0].set_yticks([0.55, 0.65, 0.75, 0.85, 0.95])
+    ax[0, 1].set_yticks([0.55, 0.65, 0.75, 0.85, 0.95])
+    for i in range(2):
+        ax[0, i].set_ylim([0.56, .96])
+    for i in range(2):
+        ax[1, i].set_yticks([0.8, 0.85, 0.9, 0.95, 1.0])
+        ax[1, i].set_ylim([0.81, 1.01])
+    # ax[1, 1].set_yticks([0.75, 0.8, 0.85, 0.9, 0.95, 1.0])
+    plt.subplots_adjust(wspace=0.1, hspace=0.2)
+    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    plt.savefig(root_path + 'simu-result-01', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.close()
+    plt.show()
+
+
 def main():
-    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    show_result_01()
+    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
