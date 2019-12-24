@@ -174,6 +174,7 @@ def test_spam_l1(para):
     ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
     results = dict()
     for fold_id in range(k_fold):
+        print(trial_id, fold_id, fig_i)
         _, _, _, para_c, para_l1, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -755,35 +756,34 @@ def run_testing(method_name, num_cpus):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 20, 20, [1000], [0.3]
     posi_ratio_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
-    para_space, ms_res, results = [], [], dict()
+    para_space, test_res, results = [], [], dict()
     for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
         for fig_i in fig_list:
             para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
     pool = multiprocessing.Pool(processes=num_cpus)
     if method_name == 'solam':
-        ms_res = pool.map(test_solam, para_space)
+        test_res = pool.map(test_solam, para_space)
     elif method_name == 'spam_l1':
-        ms_res = pool.map(test_spam_l1, para_space)
+        test_res = pool.map(test_spam_l1, para_space)
     elif method_name == 'spam_l2':
-        ms_res = pool.map(test_spam_l2, para_space)
+        test_res = pool.map(test_spam_l2, para_space)
     elif method_name == 'spam_l1l2':
-        ms_res = pool.map(test_spam_l1l2, para_space)
+        test_res = pool.map(test_spam_l1l2, para_space)
     elif method_name == 'fsauc':
-        ms_res = pool.map(cv_fsauc, para_space)
+        test_res = pool.map(cv_fsauc, para_space)
     elif method_name == 'sht_am':
-        ms_res = pool.map(test_sht_am, para_space)
+        test_res = pool.map(test_sht_am, para_space)
     elif method_name == 'graph_am':
-        ms_res = pool.map(test_graph_am, para_space)
+        test_res = pool.map(test_graph_am, para_space)
     elif method_name == 'opauc':
-        ms_res = pool.map(cv_opauc, para_space)
+        test_res = pool.map(cv_opauc, para_space)
     elif method_name == 'sto_iht':
-        ms_res = pool.map(cv_sto_iht, para_space)
+        test_res = pool.map(cv_sto_iht, para_space)
     pool.close()
     pool.join()
-    for para, auc_wt, auc_wt_bar, cv_wt_results in ms_res:
-        results[para] = dict()
-        results[para][method_name] = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar, 'cv_wt': cv_wt_results}
+    results = {key: val for d in test_res for key, val in d.items()}
     pkl.dump(results, open(data_path + 're_%s.pkl' % method_name, 'wb'))
+    exit(0)
     for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
         for fold_id in range(k_fold):
             key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
