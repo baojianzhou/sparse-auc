@@ -73,7 +73,7 @@ def cv_spam_l1(para):
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_c, para_l1, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        # print(para_c, para_l1, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' spam-l1 ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -126,7 +126,7 @@ def cv_spam_l2(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_c, para_l2, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        # print(para_c, para_l2, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' spam-l2 ' + '-' * 40)
     print('run_time: %.4f' % run_time)
