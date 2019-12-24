@@ -273,8 +273,7 @@ def cv_opauc(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             re = c_algo_opauc(sub_x_tr, sub_y_tr, para_eta, para_lambda, num_passes, 1000000, 0)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
+            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
