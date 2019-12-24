@@ -1466,29 +1466,20 @@ void _algo_opauc(const double *data_x_tr,
                  double *re_rts,
                  int *re_len_auc) {
 
-    // make sure openblas uses only one cpu at a time.
-    openblas_set_num_threads(1);
+    openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
     double start_time = clock();
     double num_p = 0.0, num_n = 0.0;
-    double *center_p = malloc(sizeof(double) * data_p);
-    double *center_n = malloc(sizeof(double) * data_p);
-    double *cov_p = malloc(sizeof(double) * data_p * data_p);
-    double *cov_n = malloc(sizeof(double) * data_p * data_p);
+    double *center_p = calloc((size_t) data_p, sizeof(double));
+    double *center_n = calloc((size_t) data_p, sizeof(double));
+    double *cov_p = calloc((size_t) (data_p * data_p), sizeof(double));
+    double *cov_n = calloc((size_t) (data_p * data_p), sizeof(double));
     double *grad_wt = malloc(sizeof(double) * data_p);
-    memset(center_p, 0, sizeof(double) * data_p);
-    memset(center_n, 0, sizeof(double) * data_p);
-    memset(cov_p, 0, sizeof(double) * data_p * data_p);
-    memset(cov_n, 0, sizeof(double) * data_p * data_p);
+    double *tmp_vec = calloc((size_t) data_p, sizeof(double));
+    double *tmp_mat = calloc((size_t) (data_p * data_p), sizeof(double));
+    double *y_pred = malloc(sizeof(double) * data_n);
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
-
-    double *tmp_mat = malloc(sizeof(double) * data_p * data_p);
-    double *tmp_vec = malloc(sizeof(double) * data_p);
-    memset(tmp_mat, 0, sizeof(double) * data_p);
-    memset(tmp_vec, 0, sizeof(double) * data_p);
-    double *y_pred = malloc(sizeof(double) * data_n);
     *re_len_auc = 0;
-    if (para_verbose > 0) { printf("%d %d\n", data_n, data_p); }
     for (int t = 0; t < data_n * para_num_passes; t++) {
         int cur_ind = t % data_n;
         const double *cur_x = data_x_tr + cur_ind * data_p;
@@ -1524,14 +1515,11 @@ void _algo_opauc(const double *data_x_tr,
             cblas_dcopy(data_p, center_n, 1, tmp_vec, 1); // copy previous center
             cblas_dscal(data_p, (num_n - 1.) / num_n, center_n, 1); // update center_n
             cblas_daxpy(data_p, 1. / num_n, cur_x, 1, center_n, 1);
-            cblas_dscal(data_p * data_p, (num_n - 1.) / num_n, cov_n,
-                        1); // update covariance matrix
-            cblas_dger(CblasRowMajor, data_p, data_p, 1. / num_n, cur_x, 1, cur_x, 1, cov_n,
-                       data_p);
+            cblas_dscal(data_p * data_p, (num_n - 1.) / num_n, cov_n, 1); // update covariance matrix
+            cblas_dger(CblasRowMajor, data_p, data_p, 1. / num_n, cur_x, 1, cur_x, 1, cov_n, data_p);
             cblas_dger(CblasRowMajor, data_p, data_p, (num_n - 1.) / num_n,
                        tmp_vec, 1, tmp_vec, 1, cov_n, data_p);
-            cblas_dger(CblasRowMajor, data_p, data_p, -1., center_n, 1, center_n, 1, cov_n,
-                       data_p);
+            cblas_dger(CblasRowMajor, data_p, data_p, -1., center_n, 1, center_n, 1, cov_n, data_p);
             if (num_p > 0.0) {
                 // calculate the gradient part 1: \para_lambda w + x_t - c_t^+
                 cblas_dcopy(data_p, cur_x, 1, grad_wt, 1);
@@ -1540,14 +1528,11 @@ void _algo_opauc(const double *data_x_tr,
                 cblas_dcopy(data_p, cur_x, 1, tmp_vec, 1); // xt - c_t^+
                 cblas_daxpy(data_p, -1., center_p, 1, tmp_vec, 1);
                 cblas_dscal(data_p * data_p, 0.0, tmp_mat, 1); // (xt - c_t^+)(xt - c_t^+)^T
-                cblas_dger(CblasRowMajor, data_p, data_p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat,
-                           data_p);
+                cblas_dger(CblasRowMajor, data_p, data_p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat, data_p);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans, data_p, data_p, 1., tmp_mat, data_p,
-                            re_wt, 1, 1.0, grad_wt,
-                            1);
+                            re_wt, 1, 1.0, grad_wt, 1);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans, data_p, data_p, 1., cov_p, data_p, re_wt,
-                            1, 1.0, grad_wt,
-                            1);
+                            1, 1.0, grad_wt, 1);
             } else {
                 cblas_dscal(data_p, 0.0, grad_wt, 1);
             }
@@ -1557,14 +1542,14 @@ void _algo_opauc(const double *data_x_tr,
         cblas_daxpy(data_p, 1. / (cur_ind + 1.), re_wt, 1, re_wt_bar, 1);
         if ((fmod(cur_ind, para_step_len) == 0.)) { // to calculate AUC score
             double t_eval = clock();
-            cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                        data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
+            cblas_dgemv(CblasRowMajor, CblasNoTrans, data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
             t_eval = clock() - t_eval;
             re_rts[*re_len_auc] = (clock() - start_time - t_eval) / CLOCKS_PER_SEC;
             *re_len_auc = *re_len_auc + 1;
         }
     }
+    free(y_pred);
     free(tmp_vec);
     free(tmp_mat);
     free(grad_wt);
