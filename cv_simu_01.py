@@ -202,7 +202,6 @@ def cv_spam_l1l2(para):
     list_l2 = 10. ** np.arange(-5, 3, 1, dtype=float)
     auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_l1), len(list_l2)))
     s_time = time.time()
-    auc_wt, auc_wt_bar = dict(), dict()
     for fold_id, (ind_c, para_c), (ind_l1, para_l1), (ind_l2, para_l2) in \
             product(range(k_fold), enumerate(list_c), enumerate(list_l1), enumerate(list_l2)):
         algo_para = (trial_id, fold_id, num_passes, para_c, para_l1, para_l2, k_fold)
@@ -238,7 +237,7 @@ def cv_spam_l1l2(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_c, para_l1, para_l2, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        # print(para_c, para_l1, para_l2, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' spam-l1l2 ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -318,13 +317,15 @@ def cv_opauc(trial_id, k_fold, num_passes, data):
     return auc_wt, auc_wt_bar
 
 
-def cv_fsauc(trial_id, k_fold, num_passes, data):
+def cv_fsauc(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-    list_g = 2. ** np.arange(-10, -0, 1, dtype=float)
-    auc_wt, auc_wt_bar = dict(), dict()
+    list_g = 2. ** np.arange(-10, 11, 1, dtype=float)
+    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_r), len(list_g)))
     s_time = time.time()
-    for fold_id, para_r, para_g in product(range(k_fold), list_r, list_g):
-        # only run sub-tasks for parallel
+    for fold_id, (ind_r, para_r), (ind_g, para_g) in product(range(k_fold), enumerate(list_r), enumerate(list_g)):
         algo_para = (trial_id, fold_id, num_passes, para_r, para_g, k_fold)
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         # cross validate based on tr_index
@@ -337,20 +338,19 @@ def cv_fsauc(trial_id, k_fold, num_passes, data):
         list_num_nonzeros_wt_bar = np.zeros(k_fold)
         kf = KFold(n_splits=k_fold, shuffle=False)
         verbose, step_len = 0, 10000000
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(
-                kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            re = c_algo_fsauc(
-                np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
-                np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                para_r, para_g, num_passes, step_len, verbose)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            re = c_algo_fsauc(sub_x_tr, sub_y_tr, para_r, para_g, num_passes, step_len, verbose)
+            wt = np.asarray(re[0])
+            wt_bar = np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        cv_wt_results[ind_r, ind_g] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
@@ -358,11 +358,8 @@ def cv_fsauc(trial_id, k_fold, num_passes, data):
         if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(
-                np.mean(list_num_nonzeros_wt_bar))
-        print('fold-id:%d AUC-wt: %.4f AUC-wt-bar: %.4f run_time: %.4f' %
-              (fold_id, float(np.mean(list_auc_wt)), float(np.mean(list_auc_wt_bar)),
-               time.time() - s_time))
+            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
+        print(para_r, para_g, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
 
     run_time = time.time() - s_time
     print('-' * 40 + ' opauc ' + '-' * 40)
@@ -370,9 +367,9 @@ def cv_fsauc(trial_id, k_fold, num_passes, data):
     print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
     print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
     print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
-    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros']
-                                          for _ in auc_wt_bar]))
-    return auc_wt, auc_wt_bar
+    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros'] for _ in auc_wt_bar]))
+    sys.stdout.flush()
+    return para, auc_wt, auc_wt_bar, cv_wt_results
 
 
 def cv_sht_am(trial_id, k_fold, num_passes, data):
@@ -737,7 +734,8 @@ def run_ms(method_name, num_cpus):
         ms_res = pool.map(cv_spam_l2, para_space)
     elif method_name == 'spam_l1l2':
         ms_res = pool.map(cv_spam_l1l2, para_space)
-
+    elif method_name == 'fsauc':
+        ms_res = pool.map(cv_fsauc, para_space)
     pool.close()
     pool.join()
     for para, auc_wt, auc_wt_bar, cv_wt_results in ms_res:
@@ -757,13 +755,6 @@ def run_ms(method_name, num_cpus):
             item = (trial_id, num_passes, num_tr, mu, posi_ratio, fig_i)
             results[item] = dict()
             results[item][method_name] = cv_opauc(trial_id, k_fold, num_passes, data[fig_i])
-    elif method_name == 'fsauc':
-        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-            f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-            data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-            item = (trial_id, num_passes, num_tr, mu, posi_ratio, fig_i)
-            results[item] = dict()
-            results[item][method_name] = cv_fsauc(trial_id, k_fold, num_passes, data[fig_i])
     pkl.dump(results, open(data_path + 'ms_%s.pkl' % method_name, 'wb'))
 
 
