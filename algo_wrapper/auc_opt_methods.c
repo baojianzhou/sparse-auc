@@ -1498,14 +1498,11 @@ void _algo_opauc(const double *data_x_tr,
             cblas_dcopy(data_p, center_p, 1, tmp_vec, 1); // copy previous center
             cblas_dscal(data_p, (num_p - 1.) / num_p, center_p, 1); // update center_p
             cblas_daxpy(data_p, 1. / num_p, cur_x, 1, center_p, 1);
-            cblas_dscal(data_p * data_p, (num_p - 1.) / num_p, cov_p,
-                        1); // update covariance matrix
-            cblas_dger(CblasRowMajor, data_p, data_p, 1. / num_p, cur_x, 1, cur_x, 1, cov_p,
-                       data_p);
+            cblas_dscal(data_p * data_p, (num_p - 1.) / num_p, cov_p, 1); // update covariance matrix
+            cblas_dger(CblasRowMajor, data_p, data_p, 1. / num_p, cur_x, 1, cur_x, 1, cov_p, data_p);
             cblas_dger(CblasRowMajor, data_p, data_p, (num_p - 1.) / num_p,
                        tmp_vec, 1, tmp_vec, 1, cov_p, data_p);
-            cblas_dger(CblasRowMajor, data_p, data_p, -1., center_p, 1, center_p, 1, cov_p,
-                       data_p);
+            cblas_dger(CblasRowMajor, data_p, data_p, -1., center_p, 1, center_p, 1, cov_p, data_p);
             if (num_n > 0.0) {
                 // calculate the gradient part 1: \para_lambda w + x_t - c_t^+
                 cblas_dcopy(data_p, center_n, 1, grad_wt, 1);
@@ -1514,14 +1511,11 @@ void _algo_opauc(const double *data_x_tr,
                 cblas_dcopy(data_p, cur_x, 1, tmp_vec, 1); // xt - c_t^-
                 cblas_daxpy(data_p, -1., center_n, 1, tmp_vec, 1);
                 cblas_dscal(data_p * data_p, 0.0, tmp_mat, 1); // (xt - c_t^+)(xt - c_t^+)^T
-                cblas_dger(CblasRowMajor, data_p, data_p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat,
-                           data_p);
-                cblas_dgemv(CblasRowMajor, CblasNoTrans, data_p, data_p, 1., tmp_mat, data_p,
-                            re_wt, 1, 1.0, grad_wt,
-                            1);
+                cblas_dger(CblasRowMajor, data_p, data_p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat, data_p);
+                cblas_dgemv(CblasRowMajor, CblasNoTrans, data_p, data_p, 1., tmp_mat, data_p, re_wt,
+                            1, 1.0, grad_wt, 1);
                 cblas_dgemv(CblasRowMajor, CblasNoTrans, data_p, data_p, 1., cov_n, data_p, re_wt,
-                            1, 1.0, grad_wt,
-                            1);
+                            1, 1.0, grad_wt, 1);
             } else {
                 cblas_dscal(data_p, 0.0, grad_wt, 1);
             }
