@@ -254,6 +254,7 @@ def test_spam_l2(para):
     ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
     results = dict()
     for fold_id in range(k_fold):
+        print(trial_id, fold_id, fig_i)
         _, _, _, para_c, para_l2, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
