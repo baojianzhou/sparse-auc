@@ -722,8 +722,8 @@ def run_solam(trial_id, fold_id, para_xi, para_r, num_passes, data):
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
 
-def run_ms(method_name):
-    k_fold, num_trials, num_passes, tr_list, mu_list, num_cpus = 5, 20, 20, [1000], [0.3], 1
+def run_ms(method_name, num_cpus):
+    k_fold, num_trials, num_passes, tr_list, mu_list = 5, 20, 20, [1000], [0.3]
     posi_ratio_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
@@ -1181,7 +1181,7 @@ def cv_sht_am_v1():
 
 
 def main():
-    run_ms(method_name='spam_l1')
+    run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
