@@ -678,7 +678,6 @@ def run_ms(method_name, num_cpus):
     elif method_name == 'fsauc':
         ms_res = pool.map(cv_fsauc, para_space)
     elif method_name == 'sht_am':
-        cv_sht_am(para_space[-1])
         ms_res = pool.map(cv_sht_am, para_space)
     pool.close()
     pool.join()
