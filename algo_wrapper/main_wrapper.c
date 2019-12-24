@@ -74,8 +74,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     int data_n, data_p, para_num_passes, para_verbose, para_step_len, total_num_eval, re_len_auc;
     if (!PyArg_ParseTuple(args, "O!O!ddiii",
                           &PyArray_Type, &x_tr, &PyArray_Type, &y_tr,
-                          &para_xi, &para_r, &para_num_passes, &para_step_len,
-                          &para_verbose)) { return NULL; }
+                          &para_xi, &para_r, &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
     data_n = (int) x_tr->dimensions[0];
     data_p = (int) x_tr->dimensions[1];
     total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
