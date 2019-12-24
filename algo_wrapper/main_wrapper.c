@@ -505,9 +505,7 @@ static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr;
     double para_c, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    int data_n, data_p, para_s, para_b, para_num_passes,
-            para_step_len, para_verbose, re_len_auc;
-    int total_num_eval;
+    int data_n, data_p, para_s, para_b, para_num_passes, para_step_len, para_verbose, re_len_auc, total_num_eval;
     if (!PyArg_ParseTuple(args, "O!O!iiddiii",
                           &PyArray_Type, &data_x_tr,
                           &PyArray_Type, &data_y_tr,

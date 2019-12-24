@@ -1734,9 +1734,9 @@ void _algo_sto_iht(const double *data_x_tr,
             *re_len_auc = *re_len_auc + 1;
         }
     }
-    free(loss_grad_wt);
     cblas_dscal(data_p + 1, 1. / total_blocks, re_wt_bar, 1);
     cblas_dscal(*re_len_auc, 1. / CLOCKS_PER_SEC, re_rts, 1);
+    free(loss_grad_wt);
     free(y_pred);
 }
 
