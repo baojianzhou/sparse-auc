@@ -149,7 +149,7 @@ def cv_spam_l1l2(para):
     auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_l1), len(list_l2)))
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
-    for fold_id, para_c, (ind_c, para_c), (ind_l1, para_l1), (ind_l2, para_l2) in \
+    for fold_id, (ind_c, para_c), (ind_l1, para_l1), (ind_l2, para_l2) in \
             product(range(k_fold), enumerate(list_c), enumerate(list_l1), enumerate(list_l2)):
         algo_para = (trial_id, fold_id, num_passes, para_c, para_l1, para_l2, k_fold)
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
@@ -184,7 +184,7 @@ def cv_spam_l1l2(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        # print(para_c, para_beta, para_l1, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        print(para_c, para_l1, para_l2, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' spam-l1l2 ' + '-' * 40)
     print('run_time: %.4f' % run_time)
