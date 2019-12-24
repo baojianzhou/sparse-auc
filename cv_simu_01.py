@@ -33,6 +33,7 @@ data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
 
 
 def cv_spam_l1(para):
+    """ SPAM algorithm with l1-regularization. """
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
@@ -57,7 +58,7 @@ def cv_spam_l1(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            reg_opt, step_len, verbose, para_l2_reg = 0, 10000, 0, 0.0
+            reg_opt, step_len, verbose, para_l2_reg = 0, 1000000, 0, 0.0
             re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, para_l1, para_l2_reg, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
@@ -86,6 +87,7 @@ def cv_spam_l1(para):
 
 
 def cv_spam_l2(para):
+    """ SPAM algorithm with l2-regularization. """
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
@@ -96,8 +98,7 @@ def cv_spam_l2(para):
     for fold_id, (ind_c, para_c), (ind_l2, para_l2) in product(range(k_fold), enumerate(list_c), enumerate(list_l2)):
         algo_para = (trial_id, fold_id, num_passes, para_c, para_l2, k_fold)
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        # cross validate based on tr_index
-        if (trial_id, fold_id) not in auc_wt:
+        if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
         list_auc_wt = np.zeros(k_fold)
@@ -110,7 +111,7 @@ def cv_spam_l2(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            l1_reg, reg_opt, step_len, verbose = 0.0, 1, 10000, 0
+            l1_reg, reg_opt, step_len, verbose = 0.0, 1, 1000000, 0
             re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, l1_reg, para_l2, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
@@ -138,14 +139,19 @@ def cv_spam_l2(para):
     return para, auc_wt, auc_wt_bar, cv_wt_results
 
 
-def cv_spam_l1l2(trial_id, k_fold, num_passes, data):
+def cv_spam_l1l2(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-    list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_l1 = 10. ** np.arange(-5, 3, 1, dtype=float)
+    list_l2 = 10. ** np.arange(-5, 3, 1, dtype=float)
+    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_l1), len(list_l2)))
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
-    for fold_id, para_c, para_beta, para_l1 in product(range(k_fold), list_c, list_beta, list_l1):
-        algo_para = (trial_id, fold_id, num_passes, para_c, para_beta, para_l1, k_fold)
+    for fold_id, para_c, (ind_c, para_c), (ind_l1, para_l1), (ind_l2, para_l2) in \
+            product(range(k_fold), enumerate(list_c), enumerate(list_l1), enumerate(list_l2)):
+        algo_para = (trial_id, fold_id, num_passes, para_c, para_l1, para_l2, k_fold)
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         # cross validate based on tr_index
         if (trial_id, fold_id) not in auc_wt:
@@ -162,14 +168,14 @@ def cv_spam_l1l2(trial_id, k_fold, num_passes, data):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            reg_opt, step_len, is_sparse, verbose = 0, 10000, 0, 0
-            re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, para_l1, para_beta, reg_opt, num_passes,
-                             step_len, is_sparse, verbose)
+            reg_opt, step_len, verbose = 0, 1000000, 0
+            re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        cv_wt_results[ind_c, ind_l1, ind_l2] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
@@ -177,8 +183,7 @@ def cv_spam_l1l2(trial_id, k_fold, num_passes, data):
         if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(
-                np.mean(list_num_nonzeros_wt_bar))
+            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
         # print(para_c, para_beta, para_l1, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' spam-l1l2 ' + '-' * 40)
@@ -187,7 +192,8 @@ def cv_spam_l1l2(trial_id, k_fold, num_passes, data):
     print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
     print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
     print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros'] for _ in auc_wt_bar]))
-    return auc_wt, auc_wt_bar
+    sys.stdout.flush()
+    return para, auc_wt, auc_wt_bar, cv_wt_results
 
 
 def cv_solam(trial_id, k_fold, num_passes, data):
@@ -736,14 +742,7 @@ def run_ms(method_name, num_cpus):
     for para, auc_wt, auc_wt_bar, cv_wt_results in ms_res:
         results[para] = dict()
         results[para][method_name] = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar, 'cv_wt': cv_wt_results}
-    if method_name == 'spam_l1l2':
-        for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-            f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-            data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-            item = (trial_id, num_passes, num_tr, mu, posi_ratio, fig_i)
-            results[item] = dict()
-            results[item][method_name] = cv_spam_l1l2(trial_id, k_fold, num_passes, data[fig_i])
-    elif method_name == 'solam':
+    if method_name == 'solam':
         for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
             f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
             data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
