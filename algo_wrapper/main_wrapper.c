@@ -387,8 +387,12 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
+    bool para_is_aucs = true;
+    if (total_num_eval == 0) {
+        para_is_aucs = false;
+    }
     _algo_opauc((double *) PyArray_DATA(data_x_tr), (double *) PyArray_DATA(data_y_tr),
-                data_n, data_p, para_eta, para_lambda, para_num_passes, para_step_len,
+                data_n, data_p, para_eta, para_lambda, para_num_passes, para_step_len, para_is_aucs,
                 para_verbose, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);

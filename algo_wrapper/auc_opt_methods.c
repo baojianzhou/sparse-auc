@@ -1459,6 +1459,7 @@ void _algo_opauc(const double *data_x_tr,
                  double para_lambda,
                  int para_num_passes,
                  int para_step_len,
+                 bool para_is_aucs,
                  int para_verbose,
                  double *re_wt,
                  double *re_wt_bar,
@@ -1540,7 +1541,7 @@ void _algo_opauc(const double *data_x_tr,
         cblas_daxpy(data_p, -para_eta, grad_wt, 1, re_wt, 1); // update the solution
         cblas_dscal(data_p, (cur_ind * 1.) / (cur_ind * 1. + 1.), re_wt_bar, 1);
         cblas_daxpy(data_p, 1. / (cur_ind + 1.), re_wt, 1, re_wt_bar, 1);
-        if ((fmod(cur_ind, para_step_len) == 0.)) { // to calculate AUC score
+        if ((fmod(cur_ind, para_step_len) == 0.) && para_is_aucs) { // to calculate AUC score
             double t_eval = clock();
             cblas_dgemv(CblasRowMajor, CblasNoTrans, data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
