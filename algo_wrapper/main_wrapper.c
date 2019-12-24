@@ -10,10 +10,7 @@ static PyObject *hello(PyObject *self, PyObject *args) {
 }
 
 static PyObject *hello_name(PyObject *self, PyObject *args) {
-    if (self != NULL) {
-        printf("error: unknown error !!\n");
-        return NULL;
-    }
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     const char *name;
     if (!PyArg_ParseTuple(args, "s", &name)) {
         return NULL;
@@ -23,10 +20,7 @@ static PyObject *hello_name(PyObject *self, PyObject *args) {
 }
 
 static PyObject *test(PyObject *self, PyObject *args) {
-    if (self != NULL) {
-        printf("error: unknown error !!\n");
-        return NULL;
-    }
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     int verbose = 0;
     double sum = 0.0;
     PyArrayObject *x_tr_;
@@ -74,7 +68,7 @@ PyObject *get_results(int data_p, double *re_wt, double *re_wt_bar,
 
 
 static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr, *y_tr;
     double para_xi, para_r, *re_wt, *re_wt_bar, *re_auc, *re_rts;
     int data_n, data_p, para_num_passes, para_verbose, para_step_len, total_num_eval, re_len_auc;
@@ -99,7 +93,7 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_values, *x_tr_indices, *x_tr_posis, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_num_passes, para_verbose, para_step_len, total_num_eval, re_len_auc;
     double para_r, para_c, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -126,7 +120,7 @@ static PyObject *wrap_algo_solam_sparse(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr;
     int data_n, data_p, para_reg_opt, para_num_passes, para_step_len,
             para_verbose, total_num_eval, re_len_auc;
@@ -161,10 +155,7 @@ static PyObject *wrap_algo_spam_sparse(PyObject *self, PyObject *args) {
                           &PyArray_Type, &x_tr_poss, &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &data_y_tr, &data_p, &para_xi, &para_l1_reg, &para_l2_reg,
                           &para_reg_opt, &para_num_passes, &para_step_len,
-                          &para_verbose)) {
-        printf("test");
-        return NULL;
-    }
+                          &para_verbose)) { return NULL; }
     printf("%d\n", data_p);
     data_n = (int) data_y_tr->dimensions[0];
     total_num_eval = (data_n * (para_num_passes + 1)) / para_step_len;
@@ -239,7 +230,7 @@ static PyObject *wrap_algo_sht_am_old(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_sht_am_sparse_old(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
     PyArrayObject *x_te_vals, *x_te_inds, *x_te_posis, *x_te_lens, *data_y_te;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -275,7 +266,7 @@ static PyObject *wrap_algo_sht_am_sparse_old(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
     PyArrayObject *x_te_vals, *x_te_inds, *x_te_posis, *x_te_lens, *data_y_te;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -311,7 +302,7 @@ static PyObject *wrap_algo_sht_am_sparse(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr, *graph_edges, *graph_weights;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
     int data_n, data_p, para_step_len, para_sparsity, para_b, para_num_passes, para_verbose, re_len_auc;
@@ -345,7 +336,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     PyArrayObject *graph_edges, *graph_weights;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -384,7 +375,7 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr;
     int data_p, data_n, para_num_passes, para_step_len, para_verbose, total_num_eval, re_len_auc;
     double para_eta, para_lambda, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -408,7 +399,7 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_tau, para_num_passes, para_step_len,
             para_verbose, total_num_eval, re_len_auc;
@@ -436,7 +427,7 @@ static PyObject *wrap_algo_opauc_sparse(PyObject *self, PyObject *args) {
 }
 
 static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr;
     int data_n, data_p, para_num_passes, para_step_len, para_verbose, total_num_eval, re_len_auc;
     double para_r, para_g, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -459,7 +450,7 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
 }
 
 static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_num_passes, para_step_len, para_verbose, total_num_eval, re_len_auc;
     double para_r, para_g, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -485,7 +476,7 @@ static PyObject *wrap_algo_fsauc_sparse(PyObject *self, PyObject *args) {
 }
 
 static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr;
     int data_n, data_p, para_num_passes, para_step_len, para_verbose, total_num_eval, re_len_auc;
     double para_r, para_g, *re_wt, *re_wt_bar, *re_auc, *re_rts;
@@ -509,7 +500,7 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
 
 
 static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
-    if (self != NULL) { return NULL; } // error: unknown error !!
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *data_x_tr, *data_y_tr;
     double para_c, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
     int data_n, data_p, para_s, para_b, para_num_passes,
@@ -536,6 +527,7 @@ static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
 }
 
 static PyObject *wrap_algo_hsg_ht_sparse(PyObject *self, PyObject *args) {
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_posis, *x_tr_lens, *data_y_tr;
     int data_n, data_p, para_num_passes, para_step_len, para_verbose, total_num_eval, re_len_auc;
     double para_r, para_g, *re_wt, *re_wt_bar, *re_auc, *re_rts;
