@@ -140,7 +140,8 @@ def cv_spam_l1(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             reg_opt, step_len, verbose, para_l2_reg = 0, 1000000, 0, 0.0
-            re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, para_l1, para_l2_reg, reg_opt, num_passes, step_len, verbose)
+            re = c_algo_spam(sub_x_tr, None, None, None, sub_y_tr, 0, data['p'],
+                             para_c, para_l1, para_l2_reg, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
@@ -179,10 +180,11 @@ def test_spam_l1(para):
         _, _, _, para_c, para_l1, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        reg_opt, step_len, l2_reg, verbose = 0, 100, 0.0, 0
-        wt, wt_bar, auc, rts = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                                           np.asarray(data['y_tr'][tr_index], dtype=float),
-                                           para_c, para_l1, l2_reg, reg_opt, num_passes, step_len, verbose)
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        reg_opt, step_len, para_l2, verbose = 0, 100, 0.0, 0
+        wt, wt_bar, auc, rts = c_algo_spam(x_tr, None, None, None, y_tr, 0, data['p'],
+                                           para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_c, para_l1],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -219,8 +221,9 @@ def cv_spam_l2(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            l1_reg, reg_opt, step_len, verbose = 0.0, 1, 1000000, 0
-            re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, l1_reg, para_l2, reg_opt, num_passes, step_len, verbose)
+            para_l1, reg_opt, step_len, verbose = 0.0, 1, 1000000, 0
+            re = c_algo_spam(sub_x_tr, None, None, None, sub_y_tr, 0, data['p'],
+                             para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
@@ -259,9 +262,10 @@ def test_spam_l2(para):
         _, _, _, para_c, para_l2, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         reg_opt, step_len, l1_reg, verbose = 1, 100, 0.0, 0
-        wt, wt_bar, auc, rts = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                                           np.asarray(data['y_tr'][tr_index], dtype=float), para_c,
+        wt, wt_bar, auc, rts = c_algo_spam(x_tr, None, None, None, y_tr, 0, data['p'], para_c,
                                            l1_reg, para_l2, reg_opt, num_passes, step_len, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_c, para_l2],
@@ -301,7 +305,8 @@ def cv_spam_l1l2(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             reg_opt, step_len, verbose = 0, 1000000, 0
-            re = c_algo_spam(sub_x_tr, sub_y_tr, para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
+            re = c_algo_spam(sub_x_tr, None, None, None, sub_y_tr, 0, data['p'],
+                             para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
@@ -340,9 +345,10 @@ def test_spam_l1l2(para):
         _, _, _, para_c, para_l1, para_l2, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         reg_opt, step_len, verbose = 0, 100, 0
-        wt, wt_bar, auc, rts = c_algo_spam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                                           np.asarray(data['y_tr'][tr_index], dtype=float),
+        wt, wt_bar, auc, rts = c_algo_spam(x_tr, None, None, None, y_tr, 0, data['p'],
                                            para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_c, para_l1, para_l2],
@@ -963,12 +969,11 @@ def test_spaml1_simu():
             for para_c, para_l1 in product(list_c, list_l1):
                 tr_index = data[fig_i]['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
                 te_index = data[fig_i]['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+                x_tr = np.asarray(data[fig_i]['x_tr'][tr_index], dtype=float)
+                y_tr = np.asarray(data[fig_i]['y_tr'][tr_index], dtype=float)
                 reg_opt, step_len, verbose, num_passes = 0, 10000000, 0, 10
-                wt, wt_bar, auc, rts = c_algo_spam(
-                    np.asarray(data[fig_i]['x_tr'][tr_index], dtype=float),
-                    np.asarray(data[fig_i]['y_tr'][tr_index], dtype=float),
-                    para_c, para_l1, 0.0, reg_opt, num_passes, step_len,
-                    verbose)
+                wt, wt_bar, auc, rts = c_algo_spam(x_tr, None, None, None, y_tr, 0, data['p'],
+                                                   para_c, para_l1, 0.0, reg_opt, num_passes, step_len, verbose)
                 wt_ = []
                 for _ in wt:
                     if abs(_) < 1e-2:

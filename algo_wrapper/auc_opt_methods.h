@@ -104,8 +104,12 @@ bool _algo_solam(const double *x_tr_vals,
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-void _algo_spam(const double *data_x_tr,
+void _algo_spam(const double *x_tr_vals,
+                const int *x_tr_inds,
+                const int *x_tr_poss,
+                const int *x_tr_lens,
                 const double *data_y_tr,
+                bool is_sparse,
                 int data_n,
                 int data_p,
                 double para_xi,
@@ -121,25 +125,49 @@ void _algo_spam(const double *data_x_tr,
                 double *re_rts,
                 int *re_len_auc);
 
-void _algo_spam_sparse(const double *x_tr_vals,
-                       const int *x_tr_inds,
-                       const int *x_tr_poss,
-                       const int *x_tr_lens,
-                       const double *data_y_tr,
-                       int data_n,
-                       int data_p,
-                       double para_c,
-                       double para_l1_reg,
-                       double para_l2_reg,
-                       int para_num_passes,
-                       int para_step_len,
-                       int para_reg_opt,
-                       int para_verbose,
-                       double *re_wt,
-                       double *re_wt_bar,
-                       double *re_auc,
-                       double *re_rts,
-                       int *re_len_auc);
+/**
+ * Stochastic Hard Thresholding for AUC maximization.
+ * @param x_tr_vals
+ * @param x_tr_inds
+ * @param x_tr_poss
+ * @param x_tr_lens
+ * @param data_y_tr
+ * @param is_sparse
+ * @param data_n
+ * @param data_p
+ * @param para_s
+ * @param para_b
+ * @param para_c
+ * @param para_l2_reg
+ * @param para_num_passes
+ * @param para_step_len
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ * @param re_rts
+ * @param re_len_auc
+ */
+void _algo_sht_am(const double *x_tr_vals,
+                  const int *x_tr_inds,
+                  const int *x_tr_poss,
+                  const int *x_tr_lens,
+                  const double *data_y_tr,
+                  bool is_sparse,
+                  bool record_aucs,
+                  int data_n,
+                  int data_p,
+                  int para_s,
+                  int para_b,
+                  double para_c,
+                  double para_l2_reg,
+                  int para_num_passes,
+                  int para_verbose,
+                  double *re_wt,
+                  double *re_wt_bar,
+                  double *re_auc,
+                  double *re_rts,
+                  int *re_len_auc);
 
 void _algo_sto_iht(const double *data_x_tr,
                    const double *data_y_tr,
@@ -175,22 +203,6 @@ void _algo_sto_iht(const double *data_x_tr,
  * @param re_wt_bar
  * @param re_auc
  */
-void _algo_sht_am(const double *data_x_tr,
-                  const double *data_y_tr,
-                  int data_n,
-                  int data_p,
-                  int para_s,
-                  int para_b,
-                  double para_c,
-                  double para_l2_reg,
-                  int para_num_passes,
-                  bool record_aucs,
-                  int para_verbose,
-                  double *re_wt,
-                  double *re_wt_bar,
-                  double *re_auc,
-                  double *re_rts,
-                  int *re_len_auc);
 
 void _algo_sht_am_old(const double *data_x_tr,
                       const double *data_y_tr,
@@ -209,51 +221,6 @@ void _algo_sht_am_old(const double *data_x_tr,
                       double *re_rts,
                       int *re_len_auc);
 
-/**
- *
- * @param x_tr_vals
- * @param x_tr_inds
- * @param x_tr_poss
- * @param x_tr_lens
- * @param data_y_tr
- * @param data_tr_n
- * @param data_p
- * @param para_s
- * @param para_b
- * @param para_c
- * @param para_l2_reg
- * @param para_num_passes
- * @param para_step_len
- * @param para_verbose
- * @param re_wt
- * @param re_wt_bar
- * @param re_auc
- */
-void _algo_sht_am_sparse(const double *x_tr_vals,
-                         const int *x_tr_inds,
-                         const int *x_tr_poss,
-                         const int *x_tr_lens,
-                         const double *data_y_tr,
-                         const double *x_te_vals,
-                         const int *x_te_inds,
-                         const int *x_te_poss,
-                         const int *x_te_lens,
-                         const double *data_y_te,
-                         int data_tr_n,
-                         int data_te_n,
-                         int data_p,
-                         int para_s,
-                         int para_b,
-                         double para_c,
-                         double para_l2_reg,
-                         int para_num_passes,
-                         int para_step_len,
-                         int para_verbose,
-                         double *re_wt,
-                         double *re_wt_bar,
-                         double *re_auc,
-                         double *re_rts,
-                         int *re_len_auc);
 
 void _algo_sht_am_sparse_old(const double *x_tr_vals,
                              const int *x_tr_inds,
