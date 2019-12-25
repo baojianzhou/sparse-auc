@@ -351,6 +351,8 @@ def test_spam_l1l2(para):
                                                      y_score=np.dot(data['x_tr'][te_index], wt_bar)),
                          'auc': auc, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt),
                          'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+    sys.stdout.flush()
+    return results
 
 
 def cv_opauc(para):
@@ -482,6 +484,7 @@ def test_fsauc(para):
                                                      y_score=np.dot(data['x_tr'][te_index], wt_bar)),
                          'auc': auc, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt),
                          'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+    sys.stdout.flush()
     return results
 
 
