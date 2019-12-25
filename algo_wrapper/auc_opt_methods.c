@@ -810,11 +810,9 @@ void _algo_spam_sparse(
 }
 
 
-void _algo_sht_am(
-        const double *data_x_tr, const double *data_y_tr, int data_n, int data_p, int para_s,
-        int para_b, double para_c, double para_l2_reg, int para_num_passes, bool record_aucs,
-        int para_verbose, double *re_wt, double *re_wt_bar, double *re_auc, double *re_rts,
-        int *re_len_auc) {
+void _algo_sht_am(const double *data_x_tr, const double *data_y_tr, int data_n, int data_p, int para_s, int para_b,
+                  double para_c, double para_l2_reg, int para_num_passes, bool record_aucs, int para_verbose,
+                  double *re_wt, double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
 
     double start_time = clock();
     openblas_set_num_threads(1);
@@ -883,6 +881,7 @@ void _algo_sht_am(
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+            printf("%.6f %.6f\n", re_auc[*re_len_auc], eta_t / cur_b_size);
             re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
             *re_len_auc = *re_len_auc + 1;
         }
