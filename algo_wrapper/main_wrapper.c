@@ -64,12 +64,8 @@ static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
-    // const double *data_x_tr, const double *data_y_tr, int data_n, int data_p, double para_xi,
-    //        double para_r, int para_num_passes, int para_step_len, int para_verbose, double *re_wt,
-    //        double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc
-    _algo_solam((double *) PyArray_DATA(x_tr), (double *) PyArray_DATA(y_tr),
-                data_n, data_p, para_xi, para_r, para_num_passes, para_step_len, para_verbose,
-                re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
+    _algo_solam((double *) PyArray_DATA(x_tr), (double *) PyArray_DATA(y_tr), data_n, data_p, para_xi, para_r,
+                para_num_passes, para_step_len, para_verbose, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     free(re_wt), free(re_wt_bar), free(re_auc), free(re_rts);
     return results;

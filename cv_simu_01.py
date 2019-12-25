@@ -63,6 +63,7 @@ def cv_solam(para):
             wt_bar = np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            print(list_auc_wt[ind], list_auc_wt_bar[ind], time.time() - s_time)
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
         cv_wt_results[ind_xi, ind_r] = np.mean(list_auc_wt)
@@ -74,7 +75,7 @@ def cv_solam(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        # print(para_xi, para_r, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        print(para_xi, para_r, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' solam ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -557,7 +558,6 @@ def test_sht_am(para):
         wt, wt_bar, auc, rts = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
                                              np.asarray(data['y_tr'][tr_index], dtype=float),
                                              para_s, b, para_c, l2_reg, num_passes, record_aucs, verbose)
-        break
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_c, para_s],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -733,17 +733,19 @@ def run_opauc(trial_id, fold_id, para_eta, para_lambda, data):
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
 
-def run_ms(method_name, num_cpus):
+def run_ms(method_name, trial_id, num_cpus):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 20, 20, [1000], [0.3]
     posi_ratio_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
     para_space, ms_res = [], []
-    for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
+    for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
         for fig_i in fig_list:
             para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
     pool = multiprocessing.Pool(processes=num_cpus)
     if method_name == 'solam':
+        cv_solam(para_space[0])
+        exit()
         ms_res = pool.map(cv_solam, para_space)
     elif method_name == 'spam_l1':
         ms_res = pool.map(cv_spam_l1, para_space)
@@ -789,8 +791,6 @@ def run_testing(method_name, num_cpus):
     elif method_name == 'fsauc':
         test_res = pool.map(test_fsauc, para_space)
     elif method_name == 'sht_am':
-        test_sht_am(para_space[0])
-        exit()
         test_res = pool.map(test_sht_am, para_space)
     elif method_name == 'graph_am':
         test_res = pool.map(test_graph_am, para_space)
@@ -1260,8 +1260,8 @@ def main():
     # show_result_02()
     # exit()
     # show_result_01()
-    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    # run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    run_ms(method_name=sys.argv[1], trial_id=int(sys.argv[2]), num_cpus=int(sys.argv[3]))
 
 
 if __name__ == '__main__':

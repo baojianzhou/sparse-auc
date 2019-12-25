@@ -487,55 +487,52 @@ bool _algo_solam(
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
-
     if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
-
     for (int t = 1; t <= (para_num_passes * data_n); t++) {
-        for (int j = 0; j < data_n; j++) {
-            const double *xt = data_x_tr + j * data_p; // current sample
-            is_p_yt = is_posi(data_y_tr[j]);
-            is_n_yt = is_nega(data_y_tr[j]);
-            p_hat = ((t - 1.) * p_hat + is_p_yt) / t; // update p_hat
-            gamma = para_xi / sqrt(t); // current learning rate
-            memcpy(grad_v, xt, sizeof(double) * data_p); // calculate the gradient w
-            vt_dot = cblas_ddot(data_p, v_prev, 1, xt, 1);
-            wei_posi = 2. * (1. - p_hat) * (vt_dot - v_prev[data_p] - (1. + alpha_prev));
-            wei_nega = 2. * p_hat * ((vt_dot - v_prev[data_p + 1]) + (1. + alpha_prev));
-            weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
-            cblas_dscal(data_p, weight, grad_v, 1);
-            grad_v[data_p] = -2. * (1. - p_hat) * (vt_dot - v_prev[data_p]) * is_p_yt; //grad a
-            grad_v[data_p + 1] = -2. * p_hat * (vt_dot - v_prev[data_p + 1]) * is_n_yt; //grad b
-            cblas_dscal(data_p + 2, -gamma, grad_v, 1); // gradient descent step of vt
-            cblas_daxpy(data_p + 2, 1.0, v_prev, 1, grad_v, 1);
-            memcpy(v, grad_v, sizeof(double) * (data_p + 2));
-            wei_posi = -2. * (1. - p_hat) * vt_dot; // calculate the gradient of dual alpha
-            wei_nega = 2. * p_hat * vt_dot;
-            grad_alpha = wei_posi * is_p_yt + wei_nega * is_n_yt;
-            grad_alpha += -2. * p_hat * (1. - p_hat) * alpha_prev;
-            alpha = alpha_prev + gamma * grad_alpha; // gradient descent step of alpha
-            norm_v = sqrt(cblas_ddot(data_p, v, 1, v, 1)); // projection w
-            if (norm_v > para_r) { cblas_dscal(data_p, para_r / norm_v, v, 1); }
-            v[data_p] = (v[data_p] > para_r) ? para_r : v[data_p]; // projection a
-            v[data_p + 1] = (v[data_p + 1] > para_r) ? para_r : v[data_p + 1]; // projection b
-            // projection alpha
-            alpha = (fabs(alpha) > 2. * para_r) ? (2. * alpha * para_r) / fabs(alpha) : alpha;
-            gamma_bar = gamma_bar_prev + gamma; // update gamma_
-            memcpy(v_bar, v_prev, sizeof(double) * (data_p + 2)); // update v_bar
-            cblas_dscal(data_p + 2, gamma / gamma_bar, v_bar, 1);
-            cblas_daxpy(data_p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
-            // update alpha_bar
-            alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
-            cblas_daxpy(data_p, 1., v_bar, 1, re_wt_bar, 1);
-            alpha_prev = alpha, alpha_bar_prev = alpha_bar, gamma_bar_prev = gamma_bar;
-            memcpy(v_bar_prev, v_bar, sizeof(double) * (data_p + 2));
-            memcpy(v_prev, v, sizeof(double) * (data_p + 2));
-            if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
-                t_eval = clock(), memset(y_pred, 0, sizeof(double) * data_n);
-                cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                            data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-                re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
-            }
+        int cur_ind = (t - 1) % data_n;
+        const double *xt = data_x_tr + cur_ind * data_p; // current sample
+        is_p_yt = is_posi(data_y_tr[cur_ind]);
+        is_n_yt = is_nega(data_y_tr[cur_ind]);
+        p_hat = ((t - 1.) * p_hat + is_p_yt) / t; // update p_hat
+        gamma = para_xi / sqrt(t); // current learning rate
+        memcpy(grad_v, xt, sizeof(double) * data_p); // calculate the gradient w
+        vt_dot = cblas_ddot(data_p, v_prev, 1, xt, 1);
+        wei_posi = 2. * (1. - p_hat) * (vt_dot - v_prev[data_p] - (1. + alpha_prev));
+        wei_nega = 2. * p_hat * ((vt_dot - v_prev[data_p + 1]) + (1. + alpha_prev));
+        weight = wei_posi * is_p_yt + wei_nega * is_n_yt;
+        cblas_dscal(data_p, weight, grad_v, 1);
+        grad_v[data_p] = -2. * (1. - p_hat) * (vt_dot - v_prev[data_p]) * is_p_yt; //grad a
+        grad_v[data_p + 1] = -2. * p_hat * (vt_dot - v_prev[data_p + 1]) * is_n_yt; //grad b
+        cblas_dscal(data_p + 2, -gamma, grad_v, 1); // gradient descent step of vt
+        cblas_daxpy(data_p + 2, 1.0, v_prev, 1, grad_v, 1);
+        memcpy(v, grad_v, sizeof(double) * (data_p + 2));
+        wei_posi = -2. * (1. - p_hat) * vt_dot; // calculate the gradient of dual alpha
+        wei_nega = 2. * p_hat * vt_dot;
+        grad_alpha = wei_posi * is_p_yt + wei_nega * is_n_yt;
+        grad_alpha += -2. * p_hat * (1. - p_hat) * alpha_prev;
+        alpha = alpha_prev + gamma * grad_alpha; // gradient descent step of alpha
+        norm_v = sqrt(cblas_ddot(data_p, v, 1, v, 1)); // projection w
+        if (norm_v > para_r) { cblas_dscal(data_p, para_r / norm_v, v, 1); }
+        v[data_p] = (v[data_p] > para_r) ? para_r : v[data_p]; // projection a
+        v[data_p + 1] = (v[data_p + 1] > para_r) ? para_r : v[data_p + 1]; // projection b
+        // projection alpha
+        alpha = (fabs(alpha) > 2. * para_r) ? (2. * alpha * para_r) / fabs(alpha) : alpha;
+        gamma_bar = gamma_bar_prev + gamma; // update gamma_
+        memcpy(v_bar, v_prev, sizeof(double) * (data_p + 2)); // update v_bar
+        cblas_dscal(data_p + 2, gamma / gamma_bar, v_bar, 1);
+        cblas_daxpy(data_p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
+        // update alpha_bar
+        alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
+        cblas_daxpy(data_p, 1., v_bar, 1, re_wt_bar, 1);
+        alpha_prev = alpha, alpha_bar_prev = alpha_bar, gamma_bar_prev = gamma_bar;
+        memcpy(v_bar_prev, v_bar, sizeof(double) * (data_p + 2));
+        memcpy(v_prev, v, sizeof(double) * (data_p + 2));
+        if ((fmod(t, para_step_len) == 0.)) { // to calculate AUC score
+            t_eval = clock(), memset(y_pred, 0, sizeof(double) * data_n);
+            cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                        data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
+            re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+            re_rts[(*re_len_auc)++] = clock() - start_time - (clock() - t_eval);
         }
     }
     memcpy(re_wt, v_bar, sizeof(double) * data_p);
@@ -574,12 +571,7 @@ bool _algo_solam_sparse(
     memset(re_wt, 0, sizeof(double) * data_p);
     memset(re_wt_bar, 0, sizeof(double) * data_p);
     *re_len_auc = 0;
-
-    if (para_verbose > 0) {
-        printf("n: %d p: %d %.6f\n", data_n, data_p,
-               sqrt(cblas_ddot(data_p + 2, v_prev, 1, v_prev, 1)));
-    }
-
+    if (para_verbose > 0) { printf("n: %d p: %d", data_n, data_p); }
     for (int t = 1; t <= (para_num_passes * data_n); t++) {
         int cur_ind = (t - 1) % data_n;
         const int *xt_inds = x_tr_inds + x_tr_poss[cur_ind]; // current sample
