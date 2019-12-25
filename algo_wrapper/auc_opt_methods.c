@@ -1,13 +1,9 @@
-//
-// Created by baojian on 9/9/19.
-//
 #include "auc_opt_methods.h"
 
 /**
  * The Box–Muller method uses two independent random
  * numbers U and V distributed uniformly on (0,1).
  * Then the two random variables X and Y.
- *
  * @param n
  * @param samples
  */
@@ -816,7 +812,7 @@ void _algo_spam_sparse(
 
 void _algo_sht_am(
         const double *data_x_tr, const double *data_y_tr, int data_n, int data_p, int para_s,
-        int para_b, double para_c, double para_l2_reg, int para_num_passes, int para_step_len,
+        int para_b, double para_c, double para_l2_reg, int para_num_passes, bool record_aucs,
         int para_verbose, double *re_wt, double *re_wt_bar, double *re_auc, double *re_rts,
         int *re_len_auc) {
 
@@ -850,7 +846,9 @@ void _algo_sht_am(
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     *re_len_auc = 0;
-
+    if (para_verbose > 0) {
+        printf("total blocks: %d", total_blocks);
+    }
     for (int t = 1; t <= total_blocks; t++) { // for each block
         double utw = cblas_ddot(data_p, re_wt, 1, ut, 1);
         double vtw = cblas_ddot(data_p, re_wt, 1, vt, 1);
@@ -874,8 +872,7 @@ void _algo_sht_am(
                 cblas_daxpy(data_p, part_wei, cur_xt, 1, tmp, 1);
                 cblas_daxpy(data_p, -part_wei, vt, 1, tmp, 1);
             }
-            // calculate the gradient
-            cblas_daxpy(data_p, 1., tmp, 1, grad_wt, 1);
+            cblas_daxpy(data_p, 1., tmp, 1, grad_wt, 1); // calculate the gradient
         }
         // wt = wt - eta * grad(wt)
         cblas_daxpy(data_p, -eta_t / cur_b_size, grad_wt, 1, re_wt, 1);
@@ -883,7 +880,7 @@ void _algo_sht_am(
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
         _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
         cblas_daxpy(data_p, 1., re_wt, 1, re_wt_bar, 1);
-        if (para_verbose == 1) {  // to evaluate AUC score
+        if (record_aucs) {  // to evaluate AUC score
             t_eval = clock();
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);

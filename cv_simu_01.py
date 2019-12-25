@@ -553,10 +553,10 @@ def test_sht_am(para):
         _, _, _, para_c, para_s, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        b, l2_reg, step_len, verbose = 50, 0.0, 100, 0
+        b, l2_reg, record_aucs, verbose = 50, 0.0, 1, 0
         wt, wt_bar, auc, rts = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float),
                                              np.asarray(data['y_tr'][tr_index], dtype=float),
-                                             para_s, b, para_c, l2_reg, num_passes, step_len, verbose)
+                                             para_s, b, para_c, l2_reg, num_passes, record_aucs, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_c, para_s],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -1193,8 +1193,8 @@ def show_result_01():
 
 def main():
     # show_result_01()
-    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    # run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
