@@ -1138,15 +1138,17 @@ def show_result_01():
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 12, 8
-    color_list = ['b', 'g', 'm', 'r']
-    marker_list = ['X', 'o', 'P', 's']
     fig, ax = plt.subplots(2, 2, sharex=True)
     for ii, jj in product(range(2), range(2)):
         ax[ii, jj].grid(color='lightgray', linestyle='dotted', axis='both')
         ax[ii, jj].spines['right'].set_visible(False)
         ax[ii, jj].spines['top'].set_visible(False)
-    method_list = ['sht_am', 'spam_l1', 'spam_l2']
-    method_label_list = ['SHT-AM', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$"]
+
+    color_list = ['b', 'g', 'm', 'r', 'y']
+    marker_list = ['X', 'o', 'P', 's', 'H']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2']
+    method_label_list = ['SHT-AM', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$", 'FSAUC',
+                         r"SPAM-$\displaystyle \ell^1/\ell^2$"]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
 
@@ -1191,7 +1193,8 @@ def show_result_01():
 
 def main():
     # show_result_01()
-    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
