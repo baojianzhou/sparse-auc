@@ -14,13 +14,14 @@ try:
     import sparse_module
 
     try:
-        from sparse_module import c_algo_spam
         from sparse_module import c_algo_solam
-        from sparse_module import c_algo_opauc
+        from sparse_module import c_algo_spam
         from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_graph_am
+        from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sht_am_old
         from sparse_module import c_algo_sto_iht
-        from sparse_module import c_algo_graph_am
+
         from sparse_module import c_algo_fsauc
     except ImportError:
         print('cannot find some function(s) in sparse_module')
@@ -652,9 +653,10 @@ def cv_graph_am(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             edges, weights = np.asarray(data['edges'], dtype=np.int32), np.asarray(data['weights'], dtype=float)
-            b, para_l2, step_len, verbose = 50, 0.0, 1000000, 0
-            wt, wt_bar, _, _ = c_algo_graph_am(sub_x_tr, sub_y_tr, edges, weights, para_s, b, para_c, para_l2,
-                                               num_passes, step_len, verbose)
+            none_arr = np.asarray([0.0], dtype=np.int32)
+            b, para_l2, verbose = 50, 0.0, 0
+            wt, wt_bar, _, _ = c_algo_graph_am(sub_x_tr, none_arr, none_arr, none_arr, sub_y_tr, edges, weights, 0, 0,
+                                               data['p'], para_s, b, para_c, para_l2, num_passes, verbose)
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt)))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt_bar)))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
@@ -682,11 +684,11 @@ def cv_graph_am(para):
 def test_graph_am(trial_id, fold_id, para_c, sparsity, b, num_passes, data):
     tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
     te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+    x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+    y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+    edges, weights = np.asarray(data['edges'], dtype=np.int32), np.asarray(data['weights'], dtype=float)
     step_len, verbose = len(tr_index), 0
-    re = c_algo_graph_am(np.asarray(data['x_tr'][tr_index], dtype=float),
-                         np.asarray(data['y_tr'][tr_index], dtype=float),
-                         np.asarray(data['edges'], dtype=np.int32),
-                         np.asarray(data['weights'], dtype=float),
+    re = c_algo_graph_am(x_tr, None, None, None, y_tr, edges, weights, 0, 0,
                          sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
     wt = np.asarray(re[0])
     wt_bar = np.asarray(re[1])
@@ -763,6 +765,7 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     elif method_name == 'sht_am':
         ms_res = pool.map(cv_sht_am, para_space)
     elif method_name == 'graph_am':
+        cv_graph_am(para_space[0])
         ms_res = pool.map(cv_graph_am, para_space)
     elif method_name == 'opauc':
         ms_res = pool.map(cv_opauc, para_space)

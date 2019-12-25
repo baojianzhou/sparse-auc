@@ -204,46 +204,12 @@ static PyObject *wrap_algo_sht_am_sparse_old(PyObject *self, PyObject *args) {
 
 static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *data_x_tr, *data_y_tr, *graph_edges, *graph_weights;
-    double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    int data_n, data_p, para_step_len, para_sparsity, para_b, para_num_passes, para_verbose, re_len_auc;
-    int total_num_eval;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!iiddiii",
-                          &PyArray_Type, &data_x_tr, &PyArray_Type, &data_y_tr,
-                          &PyArray_Type, &graph_edges, &PyArray_Type, &graph_weights,
-                          &para_sparsity, &para_b, &para_xi, &para_l2_reg,
-                          &para_num_passes, &para_step_len, &para_verbose)) { return NULL; }
-    data_n = (int) data_x_tr->dimensions[0];
-    data_p = (int) data_x_tr->dimensions[1];
-    EdgePair *edges = malloc(sizeof(EdgePair) * (int) graph_weights->dimensions[0]);
-    for (int i = 0; i < (int) graph_weights->dimensions[0]; i++) {
-        edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
-        edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
-    }
-    total_num_eval = (data_n / para_b) * (para_num_passes + 1);
-    re_wt = malloc(sizeof(double) * data_p);
-    re_wt_bar = malloc(sizeof(double) * data_p);
-    re_auc = malloc(sizeof(double) * total_num_eval);
-    re_rts = malloc(sizeof(double) * total_num_eval);
-    _algo_graph_am((double *) PyArray_DATA(data_x_tr), (double *) PyArray_DATA(data_y_tr),
-                   edges, (double *) PyArray_DATA(graph_weights),
-                   (int) graph_weights->dimensions[0], data_n, data_p, para_sparsity, para_b,
-                   para_xi, para_l2_reg, para_num_passes, para_step_len, para_verbose, re_wt,
-                   re_wt_bar, re_auc, re_rts, &re_len_auc);
-    PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
-    free(edges), free(re_auc), free(re_wt_bar), free(re_wt);
-    return results;
-}
-
-
-static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
-    if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     PyArrayObject *graph_edges, *graph_weights;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
     int data_p, para_b, data_n, para_s, para_num_passes,
             para_is_sparse, para_record_aucs, para_verbose, re_len_auc, total_num_eval;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!O!O!iiiiiddiii",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!O!O!iiiiiddii",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds,
                           &PyArray_Type, &x_tr_poss, &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &data_y_tr, &PyArray_Type, &graph_edges,
@@ -263,17 +229,16 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
     re_wt_bar = calloc((size_t) data_p, sizeof(double));
     re_auc = malloc(total_num_eval * sizeof(double));
     re_rts = malloc(total_num_eval * sizeof(double));
-    _algo_graph_am_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
-                          (int *) PyArray_DATA(x_tr_poss), (int *) PyArray_DATA(x_tr_lens),
-                          (double *) PyArray_DATA(data_y_tr), edges, (double *) PyArray_DATA(graph_weights),
-                          (int) graph_weights->dimensions[0], data_n, data_p, para_s, para_b, para_xi, para_l2_reg,
-                          para_num_passes, para_verbose, is_sparse, record_aucs, re_wt, re_wt_bar, re_auc, re_rts,
-                          &re_len_auc);
+    _algo_graph_am((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
+                   (int *) PyArray_DATA(x_tr_poss), (int *) PyArray_DATA(x_tr_lens),
+                   (double *) PyArray_DATA(data_y_tr), edges, (double *) PyArray_DATA(graph_weights),
+                   (int) graph_weights->dimensions[0], data_n, data_p, para_s, para_b, para_xi, para_l2_reg,
+                   para_num_passes, para_verbose, is_sparse, record_aucs, re_wt, re_wt_bar, re_auc, re_rts,
+                   &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     free(edges), free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);
     return results;
 }
-
 
 static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
