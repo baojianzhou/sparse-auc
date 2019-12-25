@@ -74,7 +74,7 @@ def cv_solam(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_xi, para_r, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        # print(para_xi, para_r, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' solam ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -605,7 +605,7 @@ def cv_sto_iht(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        # print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
     run_time = time.time() - s_time
     print('-' * 40 + ' sht-am ' + '-' * 40)
     print('run_time: %.4f' % run_time)
