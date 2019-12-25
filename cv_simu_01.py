@@ -512,8 +512,8 @@ def cv_sht_am(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            b, para_l2, step_len, verbose = 50, 0.0, 1000000, 0
-            re = c_algo_sht_am(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, step_len, verbose)
+            b, para_l2, record_aucs, verbose = 50, 0.0, 0, 0
+            re = c_algo_sht_am(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, record_aucs, verbose)
             wt = np.asarray(re[0])
             wt_bar = np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
@@ -1091,7 +1091,7 @@ def cv_sht_am_v1():
         if (trial_id, fold_id) not in auc_wt:
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-        step_len, verbose = 100000000, 0
+        record_aucs, verbose = 0, 0
         list_auc_wt = np.zeros(k_fold)
         list_auc_wt_bar = np.zeros(k_fold)
         list_num_nonzeros_wt = np.zeros(k_fold)
@@ -1194,7 +1194,7 @@ def show_result_01():
 def main():
     # show_result_01()
     run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    # run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    run_ms(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
