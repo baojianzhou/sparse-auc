@@ -733,13 +733,14 @@ def run_opauc(trial_id, fold_id, para_eta, para_lambda, data):
             'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
 
-def run_ms(method_name, trial_id, num_cpus):
+def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 20, 20, [1000], [0.3]
     posi_ratio_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
     para_space, ms_res = [], []
-    for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
+    for trial_id, num_tr, mu, posi_ratio in product(range(trial_id_low, trial_id_high),
+                                                    tr_list, mu_list, posi_ratio_list):
         for fig_i in fig_list:
             para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
     pool = multiprocessing.Pool(processes=num_cpus)
@@ -766,7 +767,7 @@ def run_ms(method_name, trial_id, num_cpus):
     for para, auc_wt, auc_wt_bar, cv_wt_results in ms_res:
         results[para] = dict()
         results[para][method_name] = {'auc_wt': auc_wt, 'auc_wt_bar': auc_wt_bar, 'cv_wt': cv_wt_results}
-    pkl.dump(results, open(data_path + 'ms_%s.pkl' % method_name, 'wb'))
+    pkl.dump(results, open(data_path + 'ms_%02d_%02d_%s.pkl' % (trial_id_low, trial_id_high, method_name), 'wb'))
 
 
 def run_testing(method_name, num_cpus):
@@ -1259,7 +1260,8 @@ def main():
     # exit()
     # show_result_01()
     # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    run_ms(method_name=sys.argv[1], trial_id=int(sys.argv[2]), num_cpus=int(sys.argv[3]))
+    run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]),
+           trial_id_high=int(sys.argv[3]), num_cpus=int(sys.argv[4]))
 
 
 if __name__ == '__main__':
