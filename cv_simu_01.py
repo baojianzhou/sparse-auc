@@ -335,6 +335,7 @@ def test_spam_l1l2(para):
     ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
     results = dict()
     for fold_id in range(k_fold):
+        print(trial_id, fold_id, fig_i)
         _, _, _, para_c, para_l1, para_l2, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -1186,8 +1187,8 @@ def show_result_01():
 
 
 def main():
-    show_result_01()
-    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    # show_result_01()
+    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
 
 
 if __name__ == '__main__':
