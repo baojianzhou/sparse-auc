@@ -744,8 +744,6 @@ def run_ms(method_name, trial_id, num_cpus):
             para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
     pool = multiprocessing.Pool(processes=num_cpus)
     if method_name == 'solam':
-        cv_solam(para_space[0])
-        exit()
         ms_res = pool.map(cv_solam, para_space)
     elif method_name == 'spam_l1':
         ms_res = pool.map(cv_spam_l1, para_space)
