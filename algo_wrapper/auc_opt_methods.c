@@ -846,9 +846,7 @@ void _algo_sht_am(
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     *re_len_auc = 0;
-    if (para_verbose > 0) {
-        printf("total blocks: %d", total_blocks);
-    }
+    if (para_verbose > 0) { printf("total blocks: %d", total_blocks); }
     for (int t = 1; t <= total_blocks; t++) { // for each block
         double utw = cblas_ddot(data_p, re_wt, 1, ut, 1);
         double vtw = cblas_ddot(data_p, re_wt, 1, vt, 1);
@@ -885,7 +883,6 @@ void _algo_sht_am(
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            printf("%.4f\n", re_auc[*re_len_auc]);
             re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
             *re_len_auc = *re_len_auc + 1;
         }
@@ -926,12 +923,10 @@ void _algo_sht_am_sparse(
         const double *xt_vals = x_tr_vals + x_tr_poss[i];
         if (data_y_tr[i] > 0) {
             posi_t++;
-            for (int kk = 0; kk < x_tr_lens[i]; kk++)
-                ut[xt_inds[kk]] += xt_vals[kk];
+            for (int kk = 0; kk < x_tr_lens[i]; kk++) ut[xt_inds[kk]] += xt_vals[kk];
         } else {
             nega_t++;
-            for (int kk = 0; kk < x_tr_lens[i]; kk++)
-                vt[xt_inds[kk]] += xt_vals[kk];
+            for (int kk = 0; kk < x_tr_lens[i]; kk++) vt[xt_inds[kk]] += xt_vals[kk];
         }
     }
     prob_p = posi_t / (data_tr_n * 1.0);
@@ -945,15 +940,6 @@ void _algo_sht_am_sparse(
     memset(re_wt, 0, sizeof(double) * data_p); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * data_p); // wt_bar --> 0.0
     *re_len_auc = 0;
-
-    if (false) {
-        posi_t = 0;
-        nega_t = 0;
-        prob_p = 0.0;
-        cblas_dscal(data_p, 0.0, ut, 1);
-        cblas_dscal(data_p, 0.0, vt, 1);
-    }
-
 
     for (int t = 1; t <= total_blocks; t++) { // for each block
         // block bi must be in [min_b_ind,max_b_ind-1]
@@ -972,21 +958,6 @@ void _algo_sht_am_sparse(
             for (int tt = 0; tt < x_tr_lens[ind]; tt++) {
                 xtw += (re_wt[xt_inds[tt]] * xt_vals[tt]);
             }
-            if (false) {
-                if (data_y_tr[ind] > 0) {
-                    posi_t++;
-                    for (int tt = 0; tt < x_tr_lens[ind]; tt++) {
-                        posi_ut[xt_inds[tt]] += xt_vals[tt];
-                    }
-                } else {
-                    nega_t++;
-                    for (int tt = 0; tt < x_tr_lens[ind]; tt++) {
-                        nega_vt[xt_inds[tt]] += xt_vals[tt];
-                    }
-                }
-            }
-
-
             memcpy(tmp, var, sizeof(double) * data_p);
             cblas_dscal(data_p, 1 + vtw - utw, tmp, 1);
             if (data_y_tr[ind] > 0) {
@@ -1001,15 +972,6 @@ void _algo_sht_am_sparse(
                 cblas_daxpy(data_p, -part_wei, vt, 1, tmp, 1);
             }
             cblas_daxpy(data_p, 1., tmp, 1, grad_wt, 1); // calculate the gradient
-        }
-        if (false) {
-            prob_p = posi_t / (nega_t + posi_t);
-            memcpy(ut, posi_ut, sizeof(double) * data_p);
-            memcpy(vt, nega_vt, sizeof(double) * data_p);
-            if (posi_t > 0)
-                cblas_dscal(data_p, 1. / posi_t, ut, 1);
-            if (nega_t > 0)
-                cblas_dscal(data_p, 1. / nega_t, vt, 1);
         }
         cblas_daxpy(data_p, -eta_t / cur_b_size, grad_wt, 1, re_wt, 1); // wt = wt - eta * grad(wt)
         if (para_l2_reg != 0.0) // ell_2 reg. we do not need it in our case.
@@ -1143,12 +1105,10 @@ void _algo_sht_am_sparse_old(
         const double *xt_vals = x_tr_vals + x_tr_poss[i];
         if (data_y_tr[i] > 0) {
             posi_t++;
-            for (int kk = 0; kk < x_tr_lens[i]; kk++)
-                posi_x_mean[xt_inds[kk]] += xt_vals[kk];
+            for (int kk = 0; kk < x_tr_lens[i]; kk++) posi_x_mean[xt_inds[kk]] += xt_vals[kk];
         } else {
             nega_t++;
-            for (int kk = 0; kk < x_tr_lens[i]; kk++)
-                nega_x_mean[xt_inds[kk]] += xt_vals[kk];
+            for (int kk = 0; kk < x_tr_lens[i]; kk++) nega_x_mean[xt_inds[kk]] += xt_vals[kk];
         }
     }
     prob_p = posi_t / (data_tr_n * 1.0);
