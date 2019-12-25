@@ -765,7 +765,6 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     elif method_name == 'sht_am':
         ms_res = pool.map(cv_sht_am, para_space)
     elif method_name == 'graph_am':
-        cv_graph_am(para_space[0])
         ms_res = pool.map(cv_graph_am, para_space)
     elif method_name == 'opauc':
         ms_res = pool.map(cv_opauc, para_space)
