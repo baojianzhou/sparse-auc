@@ -987,11 +987,11 @@ void _algo_sht_am_sparse_old(
 }
 
 
-void _algo_graph_am(const double *data_x_tr, const double *data_y_tr, const EdgePair *edges,
-                    const double *weights, int data_m, int data_n, int data_p, int para_sparsity,
-                    int para_b, double para_xi, double para_l2_reg, int para_num_passes,
-                    int para_step_len, int para_verbose, double *re_wt, double *re_wt_bar,
-                    double *re_auc, double *re_rts, int *re_len_auc) {
+void _algo_graph_am_old(const double *data_x_tr, const double *data_y_tr, const EdgePair *edges,
+                        const double *weights, int data_m, int data_n, int data_p, int para_sparsity,
+                        int para_b, double para_xi, double para_l2_reg, int para_num_passes,
+                        int para_step_len, int para_verbose, double *re_wt, double *re_wt_bar,
+                        double *re_auc, double *re_rts, int *re_len_auc) {
     double start_time = clock();
     openblas_set_num_threads(1); // make sure openblas uses only one cpu at a time.
 
@@ -1113,12 +1113,12 @@ void _algo_graph_am(const double *data_x_tr, const double *data_y_tr, const Edge
 }
 
 
-void _algo_graph_am_sparse(
+void _algo_graph_am_sparse_old(
         const double *x_tr_vals, const int *x_tr_inds, const int *x_tr_poss, const int *x_tr_lens,
         const double *data_y_tr, const EdgePair *edges, const double *weights, int data_m,
         int data_n, int data_p, int para_s, int para_b, double para_c, double para_l2_reg,
-        int para_num_passes, int para_step_len, int para_verbose, double *re_wt,
-        double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
+        int para_num_passes, int para_verbose, bool is_sparse, bool record_aucs,
+        double *re_wt, double *re_wt_bar, double *re_auc, double *re_rts, int *re_len_auc) {
 
     double start_time = clock();
     openblas_set_num_threads(1);  // only one cpu at a time.
@@ -1153,7 +1153,6 @@ void _algo_graph_am_sparse(
         printf("||x_posi||: %.6f ||x_nega||: %.6f\n",
                sqrt(cblas_ddot(data_p, posi_x_mean, 1, posi_x_mean, 1)),
                sqrt(cblas_ddot(data_p, nega_x_mean, 1, nega_x_mean, 1)));
-        printf("step_len: %d\n", para_step_len);
         printf("||re_wt||: %.6f\n", sqrt(cblas_ddot(data_p, re_wt, 1, re_wt, 1)));
     }
     memset(re_wt, 0, sizeof(double) * data_p);

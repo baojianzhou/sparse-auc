@@ -169,6 +169,55 @@ void _algo_sht_am(const double *x_tr_vals,
                   double *re_rts,
                   int *re_len_auc);
 
+/**
+ *
+ * @param x_values
+ * @param x_tr_inds
+ * @param x_tr_poss
+ * @param x_len_list
+ * @param data_y_tr
+ * @param edges
+ * @param weights
+ * @param data_m
+ * @param data_n
+ * @param data_p
+ * @param para_s
+ * @param para_b
+ * @param para_c
+ * @param para_l2_reg
+ * @param para_num_passes
+ * @param para_step_len
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ * @param re_rts
+ * @param re_len_auc
+ */
+void _algo_graph_am_sparse(const double *x_values,
+                           const int *x_tr_inds,
+                           const int *x_tr_poss,
+                           const int *x_len_list,
+                           const double *data_y_tr,
+                           const EdgePair *edges,
+                           const double *weights,
+                           int data_m,
+                           int data_n,
+                           int data_p,
+                           int para_s,
+                           int para_b,
+                           double para_c,
+                           double para_l2_reg,
+                           int para_num_passes,
+                           int para_verbose,
+                           bool is_sparse,
+                           bool record_aucs,
+                           double *re_wt,
+                           double *re_wt_bar,
+                           double *re_auc,
+                           double *re_rts,
+                           int *re_len_auc);
+
 void _algo_sto_iht(const double *data_x_tr,
                    const double *data_y_tr,
                    int data_n,
@@ -269,28 +318,6 @@ void _algo_graph_am(const double *data_x_tr,
                     double *re_rts,
                     int *re_len_auc);
 
-void _algo_graph_am_sparse(const double *x_values,
-                           const int *x_tr_inds,
-                           const int *x_tr_poss,
-                           const int *x_len_list,
-                           const double *data_y_tr,
-                           const EdgePair *edges,
-                           const double *weights,
-                           int data_m,
-                           int data_n,
-                           int data_p,
-                           int para_s,
-                           int para_b,
-                           double para_c,
-                           double para_l2_reg,
-                           int para_num_passes,
-                           int para_step_len,
-                           int para_verbose,
-                           double *re_wt,
-                           double *re_wt_bar,
-                           double *re_auc,
-                           double *re_rts,
-                           int *re_len_auc);
 
 void _algo_opauc(const double *data_x_tr,
                  const double *data_y_tr,

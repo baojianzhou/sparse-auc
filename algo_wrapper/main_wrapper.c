@@ -220,7 +220,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
         edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
         edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
     }
-    total_num_eval = (data_n * para_num_passes) / para_step_len + 1;
+    total_num_eval = (data_n / para_b) * (para_num_passes + 1);
     re_wt = malloc(sizeof(double) * data_p);
     re_wt_bar = malloc(sizeof(double) * data_p);
     re_auc = malloc(sizeof(double) * total_num_eval);
@@ -241,34 +241,34 @@ static PyObject *wrap_algo_graph_am_sparse(PyObject *self, PyObject *args) {
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     PyArrayObject *graph_edges, *graph_weights;
     double para_xi, para_l2_reg, *re_wt, *re_wt_bar, *re_auc, *re_rts;
-    int data_p, para_b, data_n, para_sparsity, para_num_passes,
-            para_step_len, para_verbose, re_len_auc;
-    int total_num_eval;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!O!O!iiiddiii",
+    int data_p, para_b, data_n, para_s, para_num_passes,
+            para_is_sparse, para_record_aucs, para_verbose, re_len_auc, total_num_eval;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!O!O!iiiiiddiii",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds,
                           &PyArray_Type, &x_tr_poss, &PyArray_Type, &x_tr_lens,
                           &PyArray_Type, &data_y_tr, &PyArray_Type, &graph_edges,
-                          &PyArray_Type, &graph_weights, &data_p, &para_sparsity, &para_b,
-                          &para_xi, &para_l2_reg, &para_num_passes, &para_step_len,
-                          &para_verbose)) { return NULL; }
+                          &PyArray_Type, &graph_weights, &para_is_sparse, &para_record_aucs, &data_p, &para_s,
+                          &para_b, &para_xi, &para_l2_reg, &para_num_passes, &para_verbose)) { return NULL; }
     data_n = (int) data_y_tr->dimensions[0];
     EdgePair *edges = malloc(sizeof(EdgePair) * (int) graph_weights->dimensions[0]);
     for (int i = 0; i < (int) graph_weights->dimensions[0]; i++) {
         edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
         edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
     }
-    total_num_eval = (data_n * (para_num_passes + 1)) / para_step_len;
+    bool is_sparse = false, record_aucs = false;
+    if (para_is_sparse == 1) { is_sparse = true; }
+    if (para_record_aucs == 1) { record_aucs = true; }
+    total_num_eval = (data_n / para_b) * (para_num_passes + 1);
     re_wt = calloc((size_t) data_p, sizeof(double));
     re_wt_bar = calloc((size_t) data_p, sizeof(double));
     re_auc = malloc(total_num_eval * sizeof(double));
     re_rts = malloc(total_num_eval * sizeof(double));
     _algo_graph_am_sparse((double *) PyArray_DATA(x_tr_vals), (int *) PyArray_DATA(x_tr_inds),
                           (int *) PyArray_DATA(x_tr_poss), (int *) PyArray_DATA(x_tr_lens),
-                          (double *) PyArray_DATA(data_y_tr), edges,
-                          (double *) PyArray_DATA(graph_weights),
-                          (int) graph_weights->dimensions[0], data_n, data_p, para_sparsity,
-                          para_b, para_xi, para_l2_reg, para_num_passes, para_step_len,
-                          para_verbose, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
+                          (double *) PyArray_DATA(data_y_tr), edges, (double *) PyArray_DATA(graph_weights),
+                          (int) graph_weights->dimensions[0], data_n, data_p, para_s, para_b, para_xi, para_l2_reg,
+                          para_num_passes, para_verbose, is_sparse, record_aucs, re_wt, re_wt_bar, re_auc, re_rts,
+                          &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     free(edges), free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);
     return results;
@@ -461,15 +461,14 @@ static PyMethodDef sparse_methods[] = { // hello_name
         {"c_algo_solam",             wrap_algo_solam,             METH_VARARGS, "docs"},
         {"c_algo_spam",              wrap_algo_spam,              METH_VARARGS, "docs"},
         {"c_algo_sht_am",            wrap_algo_sht_am,            METH_VARARGS, "docs"},
-        {"c_algo_sht_am_old",        wrap_algo_sht_am_old,        METH_VARARGS, "docs"},
         {"c_algo_graph_am",          wrap_algo_graph_am,          METH_VARARGS, "docs"},
+        {"c_algo_sht_am_old",        wrap_algo_sht_am_old,        METH_VARARGS, "docs"},
         {"c_algo_opauc",             wrap_algo_opauc,             METH_VARARGS, "docs"},
         {"c_algo_fsauc",             wrap_algo_fsauc,             METH_VARARGS, "docs"},
         {"c_algo_hsg_ht",            wrap_algo_hsg_ht,            METH_VARARGS, "docs"},
         {"c_algo_sto_iht",           wrap_algo_sto_iht,           METH_VARARGS, "docs"},
 
         {"c_algo_sht_am_sparse_old", wrap_algo_sht_am_sparse_old, METH_VARARGS, "docs"},
-        {"c_algo_graph_am_sparse",   wrap_algo_graph_am_sparse,   METH_VARARGS, "docs"},
         {"c_algo_opauc_sparse",      wrap_algo_opauc_sparse,      METH_VARARGS, "docs"},
         {"c_algo_fsauc_sparse",      wrap_algo_fsauc_sparse,      METH_VARARGS, "docs"},
         {"c_algo_hsg_ht_sparse",     wrap_algo_hsg_ht_sparse,     METH_VARARGS, "docs"},
