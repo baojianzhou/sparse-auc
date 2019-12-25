@@ -66,8 +66,12 @@ bool head_tail_binsearch(
  * year={2016}
  * }
  */
-bool _algo_solam(const double *data_x_tr,
+bool _algo_solam(const double *x_tr_vals,
+                 const int *x_tr_inds,
+                 const int *x_tr_poss,
+                 const int *x_tr_lens,
                  const double *data_y_tr,
+                 bool is_sparse,
                  int data_n,
                  int data_p,
                  double para_xi,
@@ -80,24 +84,6 @@ bool _algo_solam(const double *data_x_tr,
                  double *re_auc,
                  double *re_rts,
                  int *re_len_auc);
-
-bool _algo_solam_sparse(const double *x_tr_vals,
-                        const int *x_tr_inds,
-                        const int *x_tr_poss,
-                        const int *x_tr_lens,
-                        const double *data_y_tr,
-                        int data_n,
-                        int data_p,
-                        double para_c,
-                        double para_r,
-                        int para_num_passes,
-                        int para_step_len,
-                        int para_verbose,
-                        double *re_wt,
-                        double *re_wt_bar,
-                        double *re_auc,
-                        double *re_rts,
-                        int *re_len_auc);
 
 /**
  *

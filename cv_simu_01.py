@@ -58,9 +58,8 @@ def cv_solam(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            re = c_algo_solam(sub_x_tr, sub_y_tr, para_xi, para_r, num_passes, 1000000, 0)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
+            wt, wt_bar, aucs, rts = c_algo_solam(sub_x_tr, None, None, None, sub_y_tr,
+                                                 0, data['p'], para_xi, para_r, num_passes, 1000000, 0)
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             print(list_auc_wt[ind], list_auc_wt_bar[ind], time.time() - s_time)
@@ -98,9 +97,10 @@ def test_solam(para):
         _, _, _, para_xi, para_r, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         step_len, verbose = 100, 0
-        wt, wt_bar, auc, rts = c_algo_solam(np.asarray(data['x_tr'][tr_index], dtype=float),
-                                            np.asarray(data['y_tr'][tr_index], dtype=float),
+        wt, wt_bar, auc, rts = c_algo_solam(x_tr, None, None, None, y_tr, 0, data['p'],
                                             para_xi, para_r, num_passes, step_len, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_xi, para_r],
@@ -739,10 +739,10 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     results = dict()
     para_space, ms_res = [], []
-    for trial_id, num_tr, mu, posi_ratio in product(range(trial_id_low, trial_id_high),
-                                                    tr_list, mu_list, posi_ratio_list):
+    for trial_id in range(trial_id_low, trial_id_high):
         for fig_i in fig_list:
-            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
+            for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
+                para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
     pool = multiprocessing.Pool(processes=num_cpus)
     if method_name == 'solam':
         ms_res = pool.map(cv_solam, para_space)
