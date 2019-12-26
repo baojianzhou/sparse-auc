@@ -643,21 +643,12 @@ def cv_sto_iht(para):
 
 
 def test_sto_iht(para):
-    def get_ms_file():
-        if 0 <= trial_id < 5:
-            return '00_05'
-        elif 5 <= trial_id < 10:
-            return '05_10'
-        elif 10 <= trial_id < 15:
-            return '10_15'
-        else:
-            return '15_20'
 
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     method = 'sto_iht'
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    ms = pkl.load(open(data_path + 'ms_%s_%s.pkl' % (get_ms_file(), method), 'rb'))
+    ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
     results = dict()
     for fold_id in range(k_fold):
         print(trial_id, fold_id, fig_i)
