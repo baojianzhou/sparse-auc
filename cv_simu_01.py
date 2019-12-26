@@ -1306,7 +1306,7 @@ def show_result_01():
     # ax[1, 1].set_yticks([0.75, 0.8, 0.85, 0.9, 0.95, 1.0])
     plt.subplots_adjust(wspace=0.1, hspace=0.2)
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    plt.savefig(root_path + 'simu-result-01', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.savefig(root_path + 'simu-result-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
     plt.show()
 
