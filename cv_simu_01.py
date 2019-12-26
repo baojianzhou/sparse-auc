@@ -1418,6 +1418,7 @@ def merge_ms(method):
     if method == 'sto_iht':
         for ii, jj in zip(['00', '02', '04', '06', '08', '10', '12', '14', '16', '18'],
                           ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20']):
+            print(ii, jj)
             re = pkl.load(open(data_path + 'ms_%s_%s_sto_iht.pkl' % (ii, jj)))
             for key in re:
                 results[key] = re[key]
