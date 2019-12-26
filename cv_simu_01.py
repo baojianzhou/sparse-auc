@@ -600,8 +600,8 @@ def cv_sto_iht(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            b, para_l2, step_len, verbose = 50, 0.0, 1000000, 0
-            re = c_algo_sto_iht(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, step_len, verbose)
+            b, para_l2, is_sparse, record_aucs, verbose = 50, 0.0, 0, 0, 0
+            re = c_algo_sto_iht(sub_x_tr, sub_y_tr, para_s, b, 0, 0, para_c, para_l2, num_passes, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
@@ -616,7 +616,7 @@ def cv_sto_iht(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        # print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar), time.time() - s_time)
     run_time = time.time() - s_time
     print('-' * 40 + ' sht-am ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -633,7 +633,7 @@ def cv_graph_am(para):
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_s = range(20, 140, 2)
-    list_c = 10. ** np.arange(2, 3, 1, dtype=float)
+    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
@@ -661,8 +661,6 @@ def cv_graph_am(para):
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt_bar)))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(np.asarray(wt_bar))
-            print(trial_id, fold_id, para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
-            sys.stdout.flush()
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
@@ -671,6 +669,8 @@ def cv_graph_am(para):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
             auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
+        print(trial_id, fold_id, para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+        sys.stdout.flush()
     run_time = time.time() - s_time
     print('-' * 40 + ' graph-am ' + '-' * 40)
     print('run_time: %.4f' % run_time)
@@ -766,7 +766,6 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     elif method_name == 'sht_am':
         ms_res = pool.map(cv_sht_am, para_space)
     elif method_name == 'graph_am':
-        cv_graph_am(para_space[0])
         ms_res = pool.map(cv_graph_am, para_space)
     elif method_name == 'opauc':
         ms_res = pool.map(cv_opauc, para_space)

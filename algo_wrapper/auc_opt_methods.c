@@ -1621,7 +1621,8 @@ void _algo_sto_iht(const double *data_x_tr,
                    double para_c,
                    double para_l2_reg,
                    int para_num_passes,
-                   int para_step_len,
+                   bool is_sparse,
+                   bool record_aucs,
                    int para_verbose,
                    double *re_wt,
                    double *re_wt_bar,
@@ -1652,12 +1653,11 @@ void _algo_sto_iht(const double *data_x_tr,
         cblas_daxpy(data_p + 1, -eta_t / cur_b_size, loss_grad_wt + 1, 1, re_wt, 1);
         _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
         cblas_daxpy(data_p + 1, 1., re_wt, 1, re_wt_bar, 1);
-        if (para_verbose == 1) {  // to evaluate AUC score
+        if (record_aucs) {  // to evaluate AUC score
             t_eval = clock();
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
                         data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
             re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            printf("%.4f\n", re_auc[*re_len_auc]);
             re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
             *re_len_auc = *re_len_auc + 1;
         }
