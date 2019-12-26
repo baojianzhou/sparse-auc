@@ -1647,7 +1647,7 @@ void _algo_sto_iht(const double *data_x_tr,
         eta_t = para_c;
         int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data_n % para_b) : para_b);
         // calculate the gradient
-        logistic_loss_grad(re_wt, data_x_tr + bi * para_b, data_y_tr + bi * para_b,
+        logistic_loss_grad(re_wt, data_x_tr + bi * para_b * data_p, data_y_tr + bi * para_b,
                            loss_grad_wt, para_l2_reg, cur_b_size, data_p);
         // wt = wt - eta * grad(wt)
         cblas_daxpy(data_p + 1, -eta_t / cur_b_size, loss_grad_wt + 1, 1, re_wt, 1);

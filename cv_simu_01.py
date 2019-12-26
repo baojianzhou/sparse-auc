@@ -1240,14 +1240,14 @@ def show_result_01():
         ax[ii, jj].spines['right'].set_visible(False)
         ax[ii, jj].spines['top'].set_visible(False)
 
-    color_list = ['b', 'g', 'm', 'r', 'y', 'k']
-    marker_list = ['X', 'o', 'P', 's', 'H', '*']
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam']
+    color_list = ['b', 'g', 'm', 'r', 'y', 'k', 'orangered', 'olive', 'dogdeblue', 'darkgray', 'darkorange']
+    marker_list = ['X', 'o', 'P', 's', 'H', '*', 'x', 'v', '^', '+', '>']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht']
     method_label_list = ['SHT-AM', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$", 'FSAUC',
-                         r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM"]
+                         r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT"]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-
+    results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % 'sto_iht')))
     for ind_method, method in enumerate(method_list):
         results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
         for ind_fig, fig_i in enumerate(fig_list):
@@ -1411,13 +1411,17 @@ def show_result_03():
     plt.show()
 
 
-def main():
-    # show_result_02()
-    # show_result_01()
-    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    # run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]), trial_id_high=int(sys.argv[3]),
-    #        num_cpus=int(sys.argv[4]))
+def main(run_option):
+    if run_option == 'show_01':
+        show_result_01()
+    elif run_option == 'show_02':
+        show_result_02()
+    elif run_option == 'run_test':
+        run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
+    elif run_option == 'run_ms':
+        run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
+               trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
 
 
 if __name__ == '__main__':
-    main()
+    main(run_option=sys.argv[1])
