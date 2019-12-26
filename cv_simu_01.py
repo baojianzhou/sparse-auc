@@ -759,6 +759,7 @@ def cv_graph_am(para):
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_s = range(20, 140, 2)
+    list_s = [26, 46, 92, 132]
     list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
@@ -1264,14 +1265,13 @@ def show_result_01():
         ax[ii, jj].spines['right'].set_visible(False)
         ax[ii, jj].spines['top'].set_visible(False)
 
-    color_list = ['b', 'g', 'm', 'r', 'y', 'k', 'orangered', 'olive', 'dogdeblue', 'darkgray', 'darkorange']
-    marker_list = ['X', 'o', 'P', 's', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht']
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'dogdeblue', 'darkgray', 'darkorange']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
     method_label_list = ['SHT-AM', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$", 'FSAUC',
-                         r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT"]
+                         r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-    results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % 'sto_iht')))
     for ind_method, method in enumerate(method_list):
         results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
         for ind_fig, fig_i in enumerate(fig_list):
