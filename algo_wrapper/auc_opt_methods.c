@@ -922,7 +922,14 @@ void _algo_graph_am(const double *x_tr_vals, const int *x_tr_inds, const int *x_
         if (para_l2_reg != 0.0) // ell_2 reg. we do not need it in our case.
             cblas_dscal(data_p, 1. / (eta_t * para_l2_reg + 1.), re_wt, 1);
         //to do graph projection.
-        for (int kk = 0; kk < data_p; kk++) { proj_prizes[kk] = re_wt[kk] * re_wt[kk]; }
+        double total_prizes = 0.0;
+        for (int kk = 0; kk < data_p; kk++) {
+            proj_prizes[kk] = re_wt[kk] * re_wt[kk];
+            total_prizes += proj_prizes[kk];
+        }
+        if (total_prizes >= 1e6) {
+            printf("not good, large prizes detected.");
+        }
         int g = 1, s_low = para_s, s_high = para_s + 2;
         int tail_max_iter = 50, verbose = 0;
         head_tail_binsearch(edges, weights, proj_prizes, data_p, data_m, g, -1, s_low,
