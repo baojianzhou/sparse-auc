@@ -760,9 +760,9 @@ def cv_graph_am(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_s = range(20, 140, 2)
     list_s = [26, 46, 92, 132]
-    list_c = 10. ** np.arange(-2, 2, 1, dtype=float)
+    list_c = 10. ** np.arange(-2, 1, 1, dtype=float)
     s_time = time.time()
-    auc_wt, auc_wt_bar = dict(), dict()
+    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
     for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
         algo_para = (trial_id, fold_id, num_passes, para_c, para_s, k_fold)
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
@@ -781,13 +781,14 @@ def cv_graph_am(para):
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             edges, weights = np.asarray(data['edges'], dtype=np.int32), np.asarray(data['weights'], dtype=float)
             none_arr = np.asarray([0.0], dtype=np.int32)
-            b, para_l2, verbose = 100, 0.0, 0
+            b, para_l2, verbose = 50, 0.0, 0
             wt, wt_bar, _, _ = c_algo_graph_am(sub_x_tr, none_arr, none_arr, none_arr, sub_y_tr, edges, weights, 0, 0,
                                                data['p'], para_s, b, para_c, para_l2, num_passes, verbose)
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt)))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt_bar)))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(np.asarray(wt_bar))
+        cv_wt_results[ind_c, ind_s] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
@@ -806,7 +807,7 @@ def cv_graph_am(para):
     print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
     print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros'] for _ in auc_wt_bar]))
     sys.stdout.flush()
-    return auc_wt, auc_wt_bar
+    return para, auc_wt, auc_wt_bar, cv_wt_results
 
 
 def test_graph_am(trial_id, fold_id, para_c, sparsity, b, num_passes, data):
