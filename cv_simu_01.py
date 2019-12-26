@@ -633,7 +633,7 @@ def cv_graph_am(para):
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_s = range(20, 140, 2)
-    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
+    list_c = 10. ** np.arange(2, 3, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
@@ -661,7 +661,8 @@ def cv_graph_am(para):
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt_bar)))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(np.asarray(wt_bar))
-            # print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+            print(trial_id, fold_id, para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+            sys.stdout.flush()
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
@@ -765,6 +766,7 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     elif method_name == 'sht_am':
         ms_res = pool.map(cv_sht_am, para_space)
     elif method_name == 'graph_am':
+        cv_graph_am(para_space[0])
         ms_res = pool.map(cv_graph_am, para_space)
     elif method_name == 'opauc':
         ms_res = pool.map(cv_opauc, para_space)
