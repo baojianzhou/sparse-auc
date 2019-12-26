@@ -106,6 +106,7 @@ def test_solam(para):
     ms = pkl.load(open(data_path + 'ms_%s_%s.pkl' % (get_ms_file(), method), 'rb'))
     results = dict()
     for fold_id in range(k_fold):
+        print(trial_id,fold_id,fig_i)
         _, _, _, para_xi, para_r, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -123,6 +124,7 @@ def test_solam(para):
                                                      y_score=np.dot(data['x_tr'][te_index], wt_bar)),
                          'nonzero_wt': np.count_nonzero(wt),
                          'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+    sys.stdout.flush()
     return results
 
 
@@ -674,6 +676,7 @@ def test_sto_iht(para):
                                                      y_score=np.dot(data['x_tr'][te_index], wt_bar)),
                          'auc': auc, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt),
                          'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+    sys.stdout.flush()
     return results
 
 
@@ -1350,8 +1353,8 @@ def main():
     # show_result_02()
     # exit()
     # show_result_01()
-    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    # run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]), trial_id_high=int(sys.argv[3]), num_cpus=int(sys.argv[4]))
+    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]), trial_id_high=int(sys.argv[3]), num_cpus=int(sys.argv[4]))
 
 
 if __name__ == '__main__':
