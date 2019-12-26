@@ -112,7 +112,8 @@ def test_solam(para):
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         step_len, verbose = 100, 0
-        wt, wt_bar, auc, rts = c_algo_solam(x_tr, None, None, None, y_tr, 0, data['p'],
+        none_arr = np.asarray([0.0], dtype=np.int32)
+        wt, wt_bar, auc, rts = c_algo_solam(x_tr, none_arr, none_arr, none_arr, y_tr, 0, data['p'],
                                             para_xi, para_r, num_passes, step_len, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
         results[item] = {'algo_para': [trial_id, fold_id, para_xi, para_r],
