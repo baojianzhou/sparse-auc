@@ -1414,9 +1414,9 @@ def show_result_03():
 def main():
     # show_result_02()
     # show_result_01()
-    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]), trial_id_high=int(sys.argv[3]),
-           num_cpus=int(sys.argv[4]))
+    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    # run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]), trial_id_high=int(sys.argv[3]),
+    #        num_cpus=int(sys.argv[4]))
 
 
 if __name__ == '__main__':
