@@ -1679,7 +1679,6 @@ void _algo_hsg_ht(const double *data_x_tr,
                   double para_tau,
                   double para_zeta,
                   double para_step_init,
-                  double para_c,
                   double para_l2,
                   int para_num_passes,
                   int para_verbose,
@@ -1689,6 +1688,7 @@ void _algo_hsg_ht(const double *data_x_tr,
                   double *re_rts,
                   int *re_len_auc) {
 
+    int total_blocks = 0;
     double start_time = clock();
     openblas_set_num_threads(1);
     srand((unsigned int) time(NULL));
@@ -1699,28 +1699,33 @@ void _algo_hsg_ht(const double *data_x_tr,
     *re_len_auc = 0;
     double *loss_grad_wt = calloc((data_p + 2), sizeof(double));
     for (int t = 1; t <= para_num_passes; t++) { // for each block
-        int num_of_epochs = ceil(log((para_zeta - 1) * data_n / (para_tau) + 1) / log(para_zeta)) + 1;
-        int start_index = 1;
-        int batch_size_s = floor(para_tau * pow(para_zeta, (t - 1)));
-        batch_size_s = min(batch_size_s, data_n - start_index + 1);
-        // block bi must be in [min_b_ind,max_b_ind-1]
-        int bi = rand() % (max_b_ind - min_b_ind);
-        eta_t = para_c;
-        int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data_n % para_b) : para_b);
-        // calculate the gradient
-        logistic_loss_grad(re_wt, data_x_tr + bi * para_b, data_y_tr + bi * para_b,
-                           loss_grad_wt, para_l2_reg, cur_b_size, data_p);
-        // wt = wt - eta * grad(wt)
-        cblas_daxpy(data_p + 1, -eta_t / cur_b_size, loss_grad_wt + 1, 1, re_wt, 1);
-        _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
-        cblas_daxpy(data_p + 1, 1., re_wt, 1, re_wt_bar, 1);
-        if (record_aucs) {  // to evaluate AUC score
-            t_eval = clock();
-            cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                        data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
-            re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
-            re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
-            *re_len_auc = *re_len_auc + 1;
+        int num_of_batches = (int) (ceil(log((para_zeta - 1) * data_n / (para_tau) + 1) / log(para_zeta)) + 1);
+        int start_index = 0;
+        for (int tt = 0; tt < num_of_batches; tt++) {
+            int batch_size_s = floor(para_tau * pow(para_zeta, tt));
+            batch_size_s = min(batch_size_s, data_n - start_index);
+            int indices_j = start_index;
+            start_index += batch_size_s; // update for next start_index
+            eta_t = para_step_init;
+            // calculate the gradient
+            logistic_loss_grad(re_wt, data_x_tr + indices_j * data_p, data_y_tr + indices_j,
+                               loss_grad_wt, para_l2, batch_size_s, data_p);
+            // wt = wt - eta * grad(wt)
+            cblas_daxpy(data_p + 1, -eta_t / batch_size_s, loss_grad_wt + 1, 1, re_wt, 1);
+            _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
+            if (start_index >= data_n) {
+                break;
+            }
+            cblas_daxpy(data_p + 1, 1., re_wt, 1, re_wt_bar, 1);
+            total_blocks += 1;
+            if (record_aucs) {  // to evaluate AUC score
+                t_eval = clock();
+                cblas_dgemv(CblasRowMajor, CblasNoTrans,
+                            data_n, data_p, 1., data_x_tr, data_p, re_wt, 1, 0.0, y_pred, 1);
+                re_auc[*re_len_auc] = _auc_score(data_y_tr, y_pred, data_n);
+                re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
+                *re_len_auc = *re_len_auc + 1;
+            }
         }
     }
     cblas_dscal(data_p + 1, 1. / total_blocks, re_wt_bar, 1);

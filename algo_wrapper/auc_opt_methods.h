@@ -335,7 +335,7 @@ void _algo_graph_am(const double *x_tr_vals,
  * @param para_tau
  * @param para_zeta
  * @param para_step_init
- * @param para_c
+ * @param para_step_init
  * @param para_l2
  * @param para_num_passes
  * @param para_verbose
@@ -355,7 +355,6 @@ void _algo_hsg_ht(const double *data_x_tr,
                   double para_tau,
                   double para_zeta,
                   double para_step_init,
-                  double para_c,
                   double para_l2,
                   int para_num_passes,
                   int para_verbose,
