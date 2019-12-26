@@ -724,6 +724,36 @@ def cv_hsg_ht(para):
     return para, auc_wt, auc_wt_bar, cv_wt_results
 
 
+def test_hsg_ht(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    method = 'hsg_ht'
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
+    results = dict()
+    for fold_id in range(k_fold):
+        print(trial_id, fold_id, fig_i)
+        _, _, _, para_c, para_s, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        b, para_l2, is_sparse, record_aucs, verbose = 50, 0.0, 0, 1, 0
+        para_tau, para_zeta = 1.0, 1.033
+        wt, wt_bar, auc, rts = c_algo_hsg_ht(x_tr, y_tr, para_s, is_sparse, record_aucs,
+                                             para_tau, para_zeta, para_c, para_l2, num_passes, verbose)
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+        results[item] = {'algo_para': [trial_id, fold_id, para_c, para_s],
+                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
+                         'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                     y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+                         'auc': auc, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt),
+                         'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+    sys.stdout.flush()
+    return results
+
+
 def cv_graph_am(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
@@ -884,6 +914,8 @@ def run_testing(method_name, num_cpus):
         test_res = pool.map(cv_opauc, para_space)
     elif method_name == 'sto_iht':
         test_res = pool.map(test_sto_iht, para_space)
+    elif method_name == 'hsg_ht':
+        test_res = pool.map(test_hsg_ht, para_space)
     pool.close()
     pool.join()
     results = {key: val for d in test_res for key, val in d.items()}
@@ -1410,6 +1442,14 @@ def merge_ms(method):
                           ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20']):
             print(ii, jj)
             re = pkl.load(open(data_path + 'ms_%s_%s_sto_iht.pkl' % (ii, jj)))
+            for key in re:
+                results[key] = re[key]
+        pkl.dump(results, open(data_path + 'ms_%s.pkl' % method, 'wb'))
+    if method == 'hsg_ht':
+        for ii, jj in zip(['00', '05', '10', '15', '17', '19'],
+                          ['05', '10', '15', '17', '19', '20']):
+            print(ii, jj)
+            re = pkl.load(open(data_path + 'ms_%s_%s_hsg_ht.pkl' % (ii, jj)))
             for key in re:
                 results[key] = re[key]
         pkl.dump(results, open(data_path + 'ms_%s.pkl' % method, 'wb'))
