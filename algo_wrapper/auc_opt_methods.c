@@ -931,7 +931,7 @@ void _algo_graph_am(const double *x_tr_vals, const int *x_tr_inds, const int *x_
             printf("not good, large prizes detected.");
         }
         int g = 1, s_low = para_s, s_high = para_s + 2;
-        int tail_max_iter = 50, verbose = 0;
+        int tail_max_iter = 20, verbose = 0;
         head_tail_binsearch(edges, weights, proj_prizes, data_p, data_m, g, -1, s_low,
                             s_high, tail_max_iter, GWPruning, verbose, graph_stat);
         memcpy(grad_wt, re_wt, sizeof(double) * data_p);

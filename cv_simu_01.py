@@ -760,7 +760,7 @@ def cv_graph_am(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     list_s = range(20, 140, 2)
     list_s = [26, 46, 92, 132]
-    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
+    list_c = 10. ** np.arange(-2, 2, 1, dtype=float)
     s_time = time.time()
     auc_wt, auc_wt_bar = dict(), dict()
     for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
@@ -781,7 +781,7 @@ def cv_graph_am(para):
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             edges, weights = np.asarray(data['edges'], dtype=np.int32), np.asarray(data['weights'], dtype=float)
             none_arr = np.asarray([0.0], dtype=np.int32)
-            b, para_l2, verbose = 50, 0.0, 0
+            b, para_l2, verbose = 100, 0.0, 0
             wt, wt_bar, _, _ = c_algo_graph_am(sub_x_tr, none_arr, none_arr, none_arr, sub_y_tr, edges, weights, 0, 0,
                                                data['p'], para_s, b, para_c, para_l2, num_passes, verbose)
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, np.asarray(wt)))
