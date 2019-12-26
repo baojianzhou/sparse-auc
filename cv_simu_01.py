@@ -1431,7 +1431,7 @@ def main(run_option):
     elif run_option == 'show_02':
         show_result_02()
     elif run_option == 'merge_ms':
-        merge_ms(method=sys.argv[1])
+        merge_ms(method=sys.argv[2])
     elif run_option == 'run_test':
         run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
     elif run_option == 'run_ms':
