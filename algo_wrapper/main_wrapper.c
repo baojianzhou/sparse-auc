@@ -389,15 +389,15 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
     if (para_is_sparse == 1) { is_sparse = true; }
     if (para_record_aucs == 1) { record_aucs = true; }
     total_num_eval = (data_n * para_num_passes);
-    re_wt = malloc(sizeof(double) * data_p);
-    re_wt_bar = malloc(sizeof(double) * data_p);
+    re_wt = malloc(sizeof(double) * (data_p + 1));
+    re_wt_bar = malloc(sizeof(double) * (data_p + 1));
     re_auc = malloc(sizeof(double) * total_num_eval);
     re_rts = malloc(sizeof(double) * total_num_eval);
     _algo_hsg_ht((double *) PyArray_DATA(data_x_tr), (double *) PyArray_DATA(data_y_tr), data_n, data_p, para_s,
                  is_sparse, record_aucs, para_tau, para_zeta, para_c, para_l2, para_num_passes,
                  para_verbose, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
     PyObject *results = get_results(data_p, re_wt, re_wt_bar, re_auc, re_rts, &re_len_auc);
-    free(re_auc), free(re_wt_bar), free(re_wt), free(re_rts);
+    free(re_rts), free(re_auc), free(re_wt_bar), free(re_wt);
     return results;
 }
 

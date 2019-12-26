@@ -454,13 +454,3 @@ void _algo_fsauc_sparse(const double *x_tr_vals,
                         int *re_len_auc);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H
-/**
- * ell_2 regularization option proposed in the following paper:
- *
- * @inproceedings{singer2009efficient,
- * title={Efficient learning using forward-backward splitting},
- * author={Singer, Yoram and Duchi, John C},
- * booktitle={Advances in Neural Information Processing Systems},
- * pages={495--503},
- * year={2009}}
- */

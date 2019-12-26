@@ -643,7 +643,6 @@ def cv_sto_iht(para):
 
 
 def test_sto_iht(para):
-
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     method = 'sto_iht'
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
@@ -675,8 +674,8 @@ def cv_hsg_ht(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    list_s = range(20, 140, 2)
-    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
+    list_s = range(100, 501, 50)
+    list_c = [1e-3, 1e-2, 1e-1, 1e0, 3e0, 1e1]
     s_time = time.time()
     auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
     for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
@@ -696,9 +695,9 @@ def cv_hsg_ht(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             para_l2, is_sparse, record_aucs, verbose = 0.0, 0, 0, 0
-            para_tau, para_zeta, para_step_init = 1.0, 1.033, 3.0
+            para_tau, para_zeta = 1.0, 1.033
             re = c_algo_hsg_ht(sub_x_tr, sub_y_tr, para_s, is_sparse, record_aucs,
-                               para_tau, para_zeta, para_step_init, para_c, para_l2, num_passes, verbose)
+                               para_tau, para_zeta, para_c, para_l2, num_passes, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))

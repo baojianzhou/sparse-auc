@@ -1696,10 +1696,10 @@ void _algo_hsg_ht(const double *data_x_tr,
     double *y_pred = calloc((size_t) data_n, sizeof(double));
     memset(re_wt, 0, sizeof(double) * (data_p + 1)); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * (data_p + 1)); // wt_bar --> 0.0
-    *re_len_auc = 0;
+    *re_len_auc = 1;
     double *loss_grad_wt = calloc((data_p + 2), sizeof(double));
     for (int t = 1; t <= para_num_passes; t++) { // for each block
-        int num_of_batches = (int) (ceil(log((para_zeta - 1) * data_n / (para_tau) + 1) / log(para_zeta)) + 1);
+        int num_of_batches = ceil(log((para_zeta - 1) * data_n / (para_tau) + 1) / log(para_zeta)) + 1;
         int start_index = 0;
         for (int tt = 0; tt < num_of_batches; tt++) {
             int batch_size_s = floor(para_tau * pow(para_zeta, tt));
@@ -1713,9 +1713,6 @@ void _algo_hsg_ht(const double *data_x_tr,
             // wt = wt - eta * grad(wt)
             cblas_daxpy(data_p + 1, -eta_t / batch_size_s, loss_grad_wt + 1, 1, re_wt, 1);
             _hard_thresholding(re_wt, data_p, para_s); // k-sparse step.
-            if (start_index >= data_n) {
-                break;
-            }
             cblas_daxpy(data_p + 1, 1., re_wt, 1, re_wt_bar, 1);
             total_blocks += 1;
             if (record_aucs) {  // to evaluate AUC score
@@ -1726,6 +1723,7 @@ void _algo_hsg_ht(const double *data_x_tr,
                 re_rts[*re_len_auc] = clock() - start_time - (clock() - t_eval);
                 *re_len_auc = *re_len_auc + 1;
             }
+            if (start_index >= (data_n - 1)) { break; }
         }
     }
     cblas_dscal(data_p + 1, 1. / total_blocks, re_wt_bar, 1);
