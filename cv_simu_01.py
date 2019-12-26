@@ -99,21 +99,18 @@ def test_solam(para):
             return '15_20'
 
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
-
-    method = 'solam'
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    ms = pkl.load(open(data_path + 'ms_%s_%s.pkl' % (get_ms_file(), method), 'rb'))
+    ms = pkl.load(open(data_path + 'ms_%s_solam.pkl' % (get_ms_file()), 'rb'))
     results = dict()
     for fold_id in range(k_fold):
         print(trial_id, fold_id, fig_i)
-        _, _, _, para_xi, para_r, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+        _, _, _, para_xi, para_r, _ = ms[para]['solam']['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        step_len, verbose = 100, 0
-        none_arr = np.asarray([0.0], dtype=np.int32)
+        step_len, verbose, none_arr = 100, 0, np.asarray([0.0], dtype=np.int32)
         wt, wt_bar, auc, rts = c_algo_solam(x_tr, none_arr, none_arr, none_arr, y_tr, 0, data['p'],
                                             para_xi, para_r, num_passes, step_len, verbose)
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
@@ -922,316 +919,40 @@ def run_testing(method_name, num_cpus):
     pool.join()
     results = {key: val for d in test_res for key, val in d.items()}
     pkl.dump(results, open(data_path + 're_%s.pkl' % method_name, 'wb'))
-    exit(0)
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            # -----------------------
-            method = 'opauc'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = run_opauc(trial_id, fold_id, para_eta, para_lambda, data[fig_i])
-            results[key][method] = re
-            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
-            # -----------------------
-            method = 'fsauc'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_eta, para_lambda, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = run_fsauc(trial_id, fold_id, passes, para_eta, para_lambda, data[fig_i])
-            results[key][method] = re
-            print(fold_id, method, re['auc_wt'], re['auc_wt_bar'])
-    f_name = 'results_trial_%02d.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % trial_id), 'wb'))
 
 
-def run_para_sparsity():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.1, 0.5]
-    fig_list = ['fig_2']
-    results = dict()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        item = (trial_id, passes, num_tr, mu, posi_ratio, fig_i)
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            # -----------------------
-            method = 'sht_am'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_c, _, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = []
-            for sparsity in [22, 28, 34, 40, 46, 52, 58, 66, 72]:
-                _ = run_sht_am(trial_id, fold_id, para_c, sparsity, 800, passes, data[fig_i])
-                re.append(_['auc_wt'])
-            results[key][method] = re
-            print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
-            # -----------------------
-            method = 'graph_am'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_c, _, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = []
-            for sparsity in [22, 28, 34, 40, 46, 52, 58, 66, 72]:
-                _ = run_graph_am(trial_id, fold_id, para_c, sparsity, 800, passes, data[fig_i])
-                re.append(_['auc_wt'])
-            results[key][method] = re
-            print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
-    f_name = 'results_trial_%02d_sparsity.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % trial_id), 'wb'))
-
-
-def run_para_blocksize():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.1, 0.5]
-    fig_list = ['fig_2']
-    results = dict()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        item = (trial_id, passes, num_tr, mu, posi_ratio, fig_i)
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            # -----------------------
-            method = 'sht_am'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = []
-            for b in [16, 32, 40, 100, 200, 400, 800]:
-                _ = run_sht_am(trial_id, fold_id, para_c, sparsity, b, passes, data[fig_i])
-                re.append(_['auc_wt'])
-            results[key][method] = re
-            print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
-            # -----------------------
-            method = 'graph_am'
-            ms = pkl.load(open(data_path + 'ms_trial_%02d_%s.pkl' % (trial_id, method), 'rb'))
-            _, _, _, para_c, sparsity, _ = ms[item][method][0][(trial_id, fold_id)]['para']
-            re = []
-            for b in [16, 32, 40, 100, 200, 400, 800]:
-                _ = run_graph_am(trial_id, fold_id, para_c, sparsity, b, passes, data[fig_i])
-                re.append(_['auc_wt'])
-            results[key][method] = re
-            print(fold_id, method, ' '.join('%.4f' % _ for _ in re))
-    f_name = 'results_trial_%02d_blocksize.pkl'
-    pkl.dump(results, open(os.path.join(data_path, f_name % trial_id), 'wb'))
-
-
-def test_solam_simu():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.5]
-    fig_list = ['fig_4']
-    results = dict()
-    s_time = time.time()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'solam'
-            list_xi = np.arange(1, 101, 9, dtype=float)
-            list_r = 10 ** np.arange(-1, 6, 1, dtype=float)
-            best_auc = None
-            for para_xi, para_r in product(list_xi, list_r):
-                re = run_solam(trial_id, fold_id, para_xi, para_r, passes, data[fig_i])
-                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                    best_auc = re
-            results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'],
-                  best_auc['auc_wt_bar'], time.time() - s_time)
-
-
-def test_spaml1_simu():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.5]
-    fig_list = ['fig_2']
-    results = dict()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'spam'
-            list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-            list_l1 = 10. ** np.arange(-5, 3, 1, dtype=float)
-            best_auc, best_wt = 0.0, None
-            for para_c, para_l1 in product(list_c, list_l1):
-                tr_index = data[fig_i]['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-                te_index = data[fig_i]['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-                x_tr = np.asarray(data[fig_i]['x_tr'][tr_index], dtype=float)
-                y_tr = np.asarray(data[fig_i]['y_tr'][tr_index], dtype=float)
-                reg_opt, step_len, verbose, num_passes = 0, 10000000, 0, 10
-                wt, wt_bar, auc, rts = c_algo_spam(x_tr, None, None, None, y_tr, 0, data['p'],
-                                                   para_c, para_l1, 0.0, reg_opt, num_passes, step_len, verbose)
-                wt_ = []
-                for _ in wt:
-                    if abs(_) < 1e-2:
-                        wt_.append(0.0)
-                    else:
-                        wt_.append(_)
-                wt_ = np.asarray(wt_)
-                auc1 = roc_auc_score(y_true=data[fig_i]['y_tr'][te_index],
-                                     y_score=np.dot(data[fig_i]['x_tr'][te_index], wt))
-                auc2 = roc_auc_score(y_true=data[fig_i]['y_tr'][te_index],
-                                     y_score=np.dot(data[fig_i]['x_tr'][te_index], wt_))
-                print(auc1, auc2, np.count_nonzero(wt), np.count_nonzero(wt_))
-                if best_auc < auc1:
-                    best_auc = auc1
-                    best_wt = wt
-            results[key][method] = best_auc
-            import matplotlib.pyplot as plt
-            plt.plot(np.sort(np.abs(best_wt))[::-1])
-            plt.show()
-            break
-
-
-def test_spaml2_simu():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.5]
-    fig_list = ['fig_2']
-    results = dict()
-    s_time = time.time()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'spam'
-            list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-            list_beta = 10. ** np.arange(-5, 3, 1, dtype=float)
-            best_auc = None
-            for para_c, para_beta in product(list_c, list_beta):
-                re = run_spam_l2(trial_id, fold_id, para_c, para_beta, passes, data[fig_i])
-                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                    best_auc = re
-            results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'],
-                  best_auc['auc_wt_bar'], time.time() - s_time)
-
-
-def test_sht_am_simu():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list = [1000]
-    mu_list = [0.3]
-    posi_ratio_list = [0.5]
-    fig_list = ['fig_2']
-    results = dict()
-    s_time = time.time()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        for fold_id in range(k_fold):
-            key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-            results[key] = dict()
-            method = 'spam'
-            list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
-            list_sparsity = [46]
-            best_auc = None
-            for para_c, para_sparsity in product(list_c, list_sparsity):
-                re = run_sht_am(trial_id, fold_id, para_c, para_sparsity, 100, passes, data[fig_i])
-                if best_auc is None or best_auc['auc_wt'] < re['auc_wt']:
-                    best_auc = re
-            results[key][method] = best_auc
-            print(fold_id, method, best_auc['auc_wt'],
-                  best_auc['auc_wt_bar'], time.time() - s_time)
-
-
-def test_fsauc_simu():
-    if 'SLURM_ARRAY_TASK_ID' in os.environ:
-        trial_id = int(os.environ['SLURM_ARRAY_TASK_ID'])
-    else:
-        trial_id = 0
-    k_fold, passes = 5, 10
-    tr_list, mu_list, posi_ratio_list, fig_list = [1000], [0.3], [0.5], ['fig_4']
-    results = dict()
-    for num_tr, mu, posi_ratio, fig_i in product(tr_list, mu_list, posi_ratio_list, fig_list):
-        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.1f.pkl'
-        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))
-        fold_id = 0
-        key = (trial_id, fold_id, passes, num_tr, mu, posi_ratio, fig_i)
-        results[key] = dict()
-        list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
-        list_g = 2. ** np.arange(-10, -2, 1, dtype=float)
-        for para_r, para_g in product(list_r, list_g):
-            re = run_fsauc(trial_id, fold_id, passes, para_r, para_g, data[fig_i])
-            print(para_r, para_g, re['auc_wt'])
-
-
-def cv_sht_am_v1():
-    k_fold = 5
-    num_passes = 20
-    trial_id = 0
-    data = pkl.load(open(
-        os.path.join(data_path, 'data_trial_%02d_tr_1000_mu_0.3_p-ratio_0.3.pkl' % trial_id), 'r'))
-    data = data['fig_1']
-    list_c = 2. ** np.arange(-2., 1., 0.2)
-    s_time = time.time()
-    auc_wt, auc_wt_bar = dict(), dict()
-    for fold_id, para_c, sparsity, b in product(
-            range(k_fold), list_c, [20, 30, 40, 50, 60], [20, 40]):
-        # only run sub-tasks for parallel
-        algo_para = (trial_id, fold_id, num_passes, para_c, sparsity, k_fold)
+def run_para_s(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    list_s = range(20, 140, 2)
+    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
+    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
+    for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
+        algo_para = (trial_id, fold_id, num_passes, para_c, para_s, k_fold)
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        # cross validate based on tr_index
-        if (trial_id, fold_id) not in auc_wt:
+        if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
             auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-        record_aucs, verbose = 0, 0
         list_auc_wt = np.zeros(k_fold)
         list_auc_wt_bar = np.zeros(k_fold)
         list_num_nonzeros_wt = np.zeros(k_fold)
         list_num_nonzeros_wt_bar = np.zeros(k_fold)
         kf = KFold(n_splits=k_fold, shuffle=False)
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(
-                kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            re = c_algo_sht_am(np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float),
-                               np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float),
-                               sparsity, b, para_c, 0.0, num_passes, step_len, verbose)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            b, para_l2, record_aucs, verbose = 50, 0.0, 0, 0
+            re = c_algo_sht_am(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, record_aucs, verbose)
+            wt = np.asarray(re[0])
+            wt_bar = np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        cv_wt_results[ind_c, ind_s] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
@@ -1239,16 +960,77 @@ def cv_sht_am_v1():
         if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
             auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
             auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(
-                np.mean(list_num_nonzeros_wt_bar))
-    run_time = time.time() - s_time
-    print('-' * 40 + ' sht-am ' + '-' * 40)
-    print('run_time: %.4f' % run_time)
-    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
-    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
-    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
-    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros'] for _ in auc_wt_bar]))
-    return auc_wt, auc_wt_bar
+            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
+        print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+
+
+def run_para_sparsity(num_cpus):
+    k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 20, 20, [1000], [0.3]
+    posi_ratio_list, fig_list = [0.3], ['fig_2']
+    para_space = []
+    for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
+        for fig_i in fig_list:
+            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
+    pool = multiprocessing.Pool(processes=num_cpus)
+    test_res = pool.map(run_para_s, para_space)
+    pool.close()
+    pool.join()
+
+
+def run_para_b(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    list_s = range(20, 140, 2)
+    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
+    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
+    for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
+        algo_para = (trial_id, fold_id, num_passes, para_c, para_s, k_fold)
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
+            auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+            auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+        list_auc_wt = np.zeros(k_fold)
+        list_auc_wt_bar = np.zeros(k_fold)
+        list_num_nonzeros_wt = np.zeros(k_fold)
+        list_num_nonzeros_wt_bar = np.zeros(k_fold)
+        kf = KFold(n_splits=k_fold, shuffle=False)
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            b, para_l2, record_aucs, verbose = 50, 0.0, 0, 0
+            re = c_algo_sht_am(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, record_aucs, verbose)
+            wt = np.asarray(re[0])
+            wt_bar = np.asarray(re[1])
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
+            list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
+            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+        cv_wt_results[ind_c, ind_s] = np.mean(list_auc_wt)
+        if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
+            auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
+            auc_wt[(trial_id, fold_id)]['para'] = algo_para
+            auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
+        if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
+            auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
+            auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
+            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
+        print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
+
+
+def run_para_blocksize(num_cpus):
+    k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 20, 20, [1000], [0.3]
+    posi_ratio_list, fig_list = [0.3], ['fig_2']
+    para_space = []
+    for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
+        for fig_i in fig_list:
+            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
+    pool = multiprocessing.Pool(processes=num_cpus)
+    test_res = pool.map(run_para_s, para_space)
+    pool.close()
+    pool.join()
 
 
 def show_result_01():
@@ -1457,17 +1239,21 @@ def merge_ms(method):
 
 
 def main(run_option):
-    if run_option == 'show_01':
+    if run_option == 'run_ms':
+        run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
+               trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
+    elif run_option == 'run_test':
+        run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
+    elif run_option == 'run_para_s':
+        run_para_sparsity(num_cpus=int(sys.argv[2]))
+    elif run_option == 'run_para_b':
+        run_para_blocksize(num_cpus=int(sys.argv[2]))
+    elif run_option == 'show_01':
         show_result_01()
     elif run_option == 'show_02':
         show_result_02()
     elif run_option == 'merge_ms':
         merge_ms(method=sys.argv[2])
-    elif run_option == 'run_test':
-        run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
-    elif run_option == 'run_ms':
-        run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
-               trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
 
 
 if __name__ == '__main__':
