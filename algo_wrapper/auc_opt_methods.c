@@ -1674,13 +1674,14 @@ void _algo_hsg_ht(const double *data_x_tr,
                   int data_n,
                   int data_p,
                   int para_s,
-                  int para_b,
-                  double step_init, // initial step size
-                  double para_c,
-                  double para_l2_reg,
-                  int para_num_passes,
                   bool is_sparse,
                   bool record_aucs,
+                  double para_tau,
+                  double para_zeta,
+                  double para_step_init,
+                  double para_c,
+                  double para_l2,
+                  int para_num_passes,
                   int para_verbose,
                   double *re_wt,
                   double *re_wt_bar,
@@ -1693,17 +1694,10 @@ void _algo_hsg_ht(const double *data_x_tr,
     srand((unsigned int) time(NULL));
     double eta_t, t_eval;
     double *y_pred = calloc((size_t) data_n, sizeof(double));
-    int min_b_ind = 0, max_b_ind = data_n / para_b;
-    int total_blocks = para_num_passes * (data_n / para_b);
     memset(re_wt, 0, sizeof(double) * (data_p + 1)); // wt --> 0.0
     memset(re_wt_bar, 0, sizeof(double) * (data_p + 1)); // wt_bar --> 0.0
     *re_len_auc = 0;
     double *loss_grad_wt = calloc((data_p + 2), sizeof(double));
-    // options.tau=1;
-    //options.zeta=1.033;
-    //options.step_init=3;
-    double para_zeta = 1.033, para_tau = 1.;
-
     for (int t = 1; t <= para_num_passes; t++) { // for each block
         int num_of_epochs = ceil(log((para_zeta - 1) * data_n / (para_tau) + 1) / log(para_zeta)) + 1;
         int start_index = 1;

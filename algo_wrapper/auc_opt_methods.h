@@ -323,6 +323,47 @@ void _algo_graph_am(const double *x_tr_vals,
                     double *re_rts,
                     int *re_len_auc);
 
+/**
+ *
+ * @param data_x_tr
+ * @param data_y_tr
+ * @param data_n
+ * @param data_p
+ * @param para_s
+ * @param is_sparse
+ * @param record_aucs
+ * @param para_tau
+ * @param para_zeta
+ * @param para_step_init
+ * @param para_c
+ * @param para_l2
+ * @param para_num_passes
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ * @param re_rts
+ * @param re_len_auc
+ */
+void _algo_hsg_ht(const double *data_x_tr,
+                  const double *data_y_tr,
+                  int data_n,
+                  int data_p,
+                  int para_s,
+                  bool is_sparse,
+                  bool record_aucs,
+                  double para_tau,
+                  double para_zeta,
+                  double para_step_init,
+                  double para_c,
+                  double para_l2,
+                  int para_num_passes,
+                  int para_verbose,
+                  double *re_wt,
+                  double *re_wt_bar,
+                  double *re_auc,
+                  double *re_rts,
+                  int *re_len_auc);
 
 void _algo_opauc(const double *data_x_tr,
                  const double *data_y_tr,

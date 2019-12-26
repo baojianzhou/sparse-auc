@@ -21,7 +21,7 @@ try:
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sht_am_old
         from sparse_module import c_algo_sto_iht
-
+        from sparse_module import c_algo_hsg_ht
         from sparse_module import c_algo_fsauc
     except ImportError:
         print('cannot find some function(s) in sparse_module')
@@ -704,8 +704,10 @@ def cv_hsg_ht(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            b, para_l2, is_sparse, record_aucs, verbose = 50, 0.0, 0, 0, 0
-            re = c_algo_sto_iht(sub_x_tr, sub_y_tr, para_s, b, 0, 0, para_c, para_l2, num_passes, verbose)
+            para_l2, is_sparse, record_aucs, verbose = 0.0, 0, 0, 0
+            para_tau, para_zeta, para_step_init = 1.0, 1.033, 3.0
+            re = c_algo_hsg_ht(sub_x_tr, sub_y_tr, para_s, is_sparse, record_aucs,
+                               para_tau, para_zeta, para_step_init, para_c, para_l2, num_passes, verbose)
             wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
@@ -1411,11 +1413,24 @@ def show_result_03():
     plt.show()
 
 
+def merge_ms(method):
+    results = dict()
+    if method == 'sto_iht':
+        for ii, jj in zip(['00', '02', '04', '06', '08', '10', '12', '14', '16', '18'],
+                          ['02', '04', '06', '08', '10', '12', '14', '16', '18', '20']):
+            re = pkl.load(open(data_path + 'ms_%s_%s_sto_iht.pkl' % (ii, jj)))
+            for key in re:
+                results[key] = re[key]
+        pkl.dump(results, open(data_path + 'ms_%s.pkl' % method, 'wb'))
+
+
 def main(run_option):
     if run_option == 'show_01':
         show_result_01()
     elif run_option == 'show_02':
         show_result_02()
+    elif run_option == 'merge_ms':
+        merge_ms(method=sys.argv[1])
     elif run_option == 'run_test':
         run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
     elif run_option == 'run_ms':
