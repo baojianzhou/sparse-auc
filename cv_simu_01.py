@@ -88,11 +88,22 @@ def cv_solam(para):
 
 
 def test_solam(para):
+    def get_ms_file():
+        if 0 <= trial_id < 5:
+            return '00_05'
+        elif 5 <= trial_id < 10:
+            return '05_10'
+        elif 10 <= trial_id < 15:
+            return '10_15'
+        else:
+            return '15_20'
+
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+
     method = 'solam'
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
+    ms = pkl.load(open(data_path + 'ms_%s_%s.pkl' % (get_ms_file(), method), 'rb'))
     results = dict()
     for fold_id in range(k_fold):
         _, _, _, para_xi, para_r, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
@@ -1267,9 +1278,8 @@ def main():
     # show_result_02()
     # exit()
     # show_result_01()
-    # run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
-    run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]),
-           trial_id_high=int(sys.argv[3]), num_cpus=int(sys.argv[4]))
+    run_testing(method_name=sys.argv[1], num_cpus=int(sys.argv[2]))
+    # run_ms(method_name=sys.argv[1], trial_id_low=int(sys.argv[2]), trial_id_high=int(sys.argv[3]), num_cpus=int(sys.argv[4]))
 
 
 if __name__ == '__main__':
