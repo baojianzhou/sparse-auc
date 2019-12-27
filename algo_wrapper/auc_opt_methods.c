@@ -122,21 +122,6 @@ bool head_tail_binsearch(
             lambda_high *= 2.0;
         }
     }
-    if (verbose >= 1) {
-        const char *sparsity_low_text = "k_low";
-        const char *sparsity_high_text = "k_high";
-        const char *max_value_text = "max value";
-        const char *guess_text = sparsity_high_text;
-        if (using_sparsity_low) {
-            guess_text = sparsity_low_text;
-        } else if (using_max_value) {
-            guess_text = max_value_text;
-        }
-        printf("n = %d  c: %d  k_low: %d  k_high: %d  l_low: %e  l_high: %e  "
-               "max_num_iter: %d  (using %s for initial guess).\n",
-               n, target_num_clusters, sparsity_low, sparsity_high,
-               lambda_low, lambda_high, max_num_iter, guess_text);
-    }
     stat->num_iter = 0;
     lambda_high /= 2.0;
     int cur_k;
@@ -146,15 +131,6 @@ bool head_tail_binsearch(
         if (lambda_high <= 0.0) { printf("lambda_high: %.6e\n", lambda_high); }
         for (int ii = 0; ii < m; ii++) {
             cur_costs[ii] = lambda_high * costs[ii];
-        }
-        if (verbose >= 1) {
-            for (int ii = 0; ii < m; ii++) {
-                printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
-            }
-            for (int ii = 0; ii < n; ii++) printf("N %d %.15f\n", ii, prizes[ii]);
-            printf("\n");
-            printf("lambda_high: %f\n", lambda_high);
-            printf("target_num_clusters: %d\n", target_num_clusters);
         }
         PCST *pcst = make_pcst(edges, prizes, cur_costs, root, target_num_clusters,
                                1e-10, pruning, n, m, verbose);
@@ -183,18 +159,7 @@ bool head_tail_binsearch(
         run_pcst(pcst, stat->re_nodes, stat->re_edges);
         free_pcst(pcst);
         cur_k = stat->re_nodes->size;
-        if (verbose >= 1) {
-            for (int ii = 0; ii < m; ii++)
-                printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
-            for (int ii = 0; ii < n; ii++) printf("N %d %.15f\n", ii, prizes[ii]);
-            printf("bin_search: l_mid:  %e  k: %d  (lambda_low: %e  lambda_high: %e)\n",
-                   lambda_mid, cur_k, lambda_low, lambda_high);
-        }
         if (sparsity_low <= cur_k && cur_k <= sparsity_high) {
-            if (verbose >= 1) {
-                printf("Found good lambda in binary "
-                       "search phase, returning.\n");
-            }
             free(cur_costs);
             free(sorted_prizes);
             free(sorted_indices);
@@ -212,15 +177,6 @@ bool head_tail_binsearch(
                            1e-10, pruning, n, m, verbose);
     run_pcst(pcst, stat->re_nodes, stat->re_edges);
     free_pcst(pcst);
-    if (verbose >= 1) {
-        for (int ii = 0; ii < m; ii++) {
-            printf("E %d %d %.15f\n", edges[ii].first, edges[ii].second, cur_costs[ii]);
-        }
-        printf("\n");
-        for (int ii = 0; ii < n; ii++) printf("N %d %.15f\n", ii, prizes[ii]);
-        printf("\nReached the maximum number of iterations, using the last l_high: %e  k: %d\n",
-               lambda_high, stat->re_nodes->size);
-    }
     free(cur_costs);
     free(sorted_prizes);
     free(sorted_indices);
@@ -232,9 +188,7 @@ bool head_tail_binsearch(
  * calculate the TPR, FPR, and AUC score.
  *
  */
-
-void _tpr_fpr_auc(const double *true_labels,
-                  const double *scores, int n, double *tpr, double *fpr, double *auc) {
+void _tpr_fpr_auc(const double *true_labels, const double *scores, int n, double *tpr, double *fpr, double *auc) {
     double num_posi = 0.0;
     double num_nega = 0.0;
     for (int i = 0; i < n; i++) {
@@ -321,14 +275,6 @@ double _auc_score(const double *true_labels, const double *scores, int len) {
     free(fpr);
     free(tpr);
     return auc;
-}
-
-void _sparse_to_full(const double *sparse_v, const int *sparse_indices,
-                     int sparse_len, double *full_v, int full_len) {
-    cblas_dscal(full_len, 0.0, full_v, 1);
-    for (int i = 0; i < sparse_len; i++) {
-        full_v[sparse_indices[i]] = sparse_v[i];
-    }
 }
 
 /**
