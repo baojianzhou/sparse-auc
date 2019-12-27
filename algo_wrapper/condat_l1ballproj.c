@@ -1,4 +1,4 @@
-/*
+/**
  #  File            : condat_l1ballproj.c 
  #
  #  Version History : 1.0, Aug. 15, 2014 

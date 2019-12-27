@@ -36,14 +36,44 @@ typedef struct {
     int num_iter;
 } GraphStat;
 
+GraphStat *make_graph_stat(int p, int m);
+
+bool free_graph_stat(GraphStat *graph_stat);
+
 typedef struct {
     double val;
     int index;
 } data_pair;
 
-GraphStat *make_graph_stat(int p, int m);
+typedef struct {
+    double *wt;
+    double *wt_bar;
+    double *aucs;
+    double *rts;
+    int auc_len;
+} AlgoResults;
 
-bool free_graph_stat(GraphStat *graph_stat);
+typedef struct {
+    const double *x_tr_vals;
+    const int *x_tr_inds;
+    const int *x_tr_poss;
+    const int *x_tr_lens;
+    const double *y_tr;
+    bool is_sparse;
+    int n;
+    int p;
+} Data;
+
+typedef struct {
+    int num_passes;
+    int verbose;
+    int step_len;
+    int record_aucs;
+} CommonParas;
+
+AlgoResults *make_algo_results(int data_p, int total_num_eval);
+
+bool free_algo_results(AlgoResults *re);
 
 bool head_tail_binsearch(
         const EdgePair *edges, const double *costs, const double *prizes,
@@ -66,24 +96,11 @@ bool head_tail_binsearch(
  * year={2016}
  * }
  */
-bool _algo_solam(const double *x_tr_vals,
-                 const int *x_tr_inds,
-                 const int *x_tr_poss,
-                 const int *x_tr_lens,
-                 const double *data_y_tr,
-                 bool is_sparse,
-                 int data_n,
-                 int data_p,
+bool _algo_solam(Data *data,
+                 CommonParas *paras,
+                 AlgoResults *re,
                  double para_xi,
-                 double para_r,
-                 int para_num_passes,
-                 int para_step_len,
-                 int para_verbose,
-                 double *re_wt,
-                 double *re_wt_bar,
-                 double *re_auc,
-                 double *re_rts,
-                 int *re_len_auc);
+                 double para_r);
 
 /**
  *
@@ -104,26 +121,12 @@ bool _algo_solam(const double *x_tr_vals,
  * @author Baojian Zhou(Email: bzhou6@albany.edu)
  * @return
  */
-void _algo_spam(const double *x_tr_vals,
-                const int *x_tr_inds,
-                const int *x_tr_poss,
-                const int *x_tr_lens,
-                const double *data_y_tr,
-                bool is_sparse,
-                int data_n,
-                int data_p,
+void _algo_spam(Data *data,
+                CommonParas *paras,
+                AlgoResults *re,
                 double para_xi,
                 double para_l1_reg,
-                double para_l2_reg,
-                int para_num_passes,
-                int para_step_len,
-                int para_reg_opt,
-                int para_verbose,
-                double *re_wt,
-                double *re_wt_bar,
-                double *re_auc,
-                double *re_rts,
-                int *re_len_auc);
+                double para_l2_reg);
 
 /**
  * Stochastic Hard Thresholding for AUC maximization.
@@ -148,93 +151,14 @@ void _algo_spam(const double *x_tr_vals,
  * @param re_rts
  * @param re_len_auc
  */
-void _algo_sht_am(const double *x_tr_vals,
-                  const int *x_tr_inds,
-                  const int *x_tr_poss,
-                  const int *x_tr_lens,
-                  const double *data_y_tr,
-                  bool is_sparse,
-                  bool record_aucs,
-                  int data_n,
-                  int data_p,
-                  int para_s,
-                  int para_b,
-                  double para_c,
-                  double para_l2_reg,
-                  int para_num_passes,
-                  int para_verbose,
-                  double *re_wt,
-                  double *re_wt_bar,
-                  double *re_auc,
-                  double *re_rts,
-                  int *re_len_auc);
+void _algo_sht_am_v1(Data *data,
+                     CommonParas *paras,
+                     AlgoResults *re,
+                     int para_s,
+                     int para_b,
+                     double para_c,
+                     double para_l2_re);
 
-/**
- *
- * @param x_values
- * @param x_tr_inds
- * @param x_tr_poss
- * @param x_len_list
- * @param data_y_tr
- * @param edges
- * @param weights
- * @param data_m
- * @param data_n
- * @param data_p
- * @param para_s
- * @param para_b
- * @param para_c
- * @param para_l2_reg
- * @param para_num_passes
- * @param para_step_len
- * @param para_verbose
- * @param re_wt
- * @param re_wt_bar
- * @param re_auc
- * @param re_rts
- * @param re_len_auc
- */
-void _algo_graph_am_sparse(const double *x_values,
-                           const int *x_tr_inds,
-                           const int *x_tr_poss,
-                           const int *x_len_list,
-                           const double *data_y_tr,
-                           const EdgePair *edges,
-                           const double *weights,
-                           int data_m,
-                           int data_n,
-                           int data_p,
-                           int para_s,
-                           int para_b,
-                           double para_c,
-                           double para_l2_reg,
-                           int para_num_passes,
-                           int para_verbose,
-                           bool is_sparse,
-                           bool record_aucs,
-                           double *re_wt,
-                           double *re_wt_bar,
-                           double *re_auc,
-                           double *re_rts,
-                           int *re_len_auc);
-
-void _algo_sto_iht(const double *data_x_tr,
-                   const double *data_y_tr,
-                   int data_n,
-                   int data_p,
-                   int para_s,
-                   int para_b,
-                   double para_c,
-                   double para_l2_reg,
-                   int para_num_passes,
-                   bool is_sparse,
-                   bool record_aucs,
-                   int para_verbose,
-                   double *re_wt,
-                   double *re_wt_bar,
-                   double *re_auc,
-                   double *re_rts,
-                   int *re_len_auc);
 
 /**
  * Stochastic Hard Thresholding for AUC maximization.
@@ -254,74 +178,45 @@ void _algo_sto_iht(const double *data_x_tr,
  * @param re_auc
  */
 
-void _algo_sht_am_old(const double *data_x_tr,
-                      const double *data_y_tr,
-                      int data_n,
-                      int data_p,
-                      int para_s,
-                      int para_b,
-                      double para_c,
-                      double para_l2_reg,
-                      int para_num_passes,
-                      int para_step_len,
-                      int para_verbose,
-                      double *re_wt,
-                      double *re_wt_bar,
-                      double *re_auc,
-                      double *re_rts,
-                      int *re_len_auc);
+void _algo_sht_am_v2(Data *data,
+                     CommonParas *paras,
+                     AlgoResults *re,
+                     int para_s,
+                     int para_b,
+                     double para_c,
+                     double para_l2_re);
+
+void _algo_sto_iht(Data *data,
+                   CommonParas *paras,
+                   AlgoResults *re,
+                   int para_s,
+                   int para_b,
+                   double para_xi,
+                   double para_l2_reg);
 
 
-void _algo_sht_am_sparse_old(const double *x_tr_vals,
-                             const int *x_tr_inds,
-                             const int *x_tr_poss,
-                             const int *x_tr_lens,
-                             const double *data_y_tr,
-                             const double *x_te_vals,
-                             const int *x_te_inds,
-                             const int *x_te_poss,
-                             const int *x_te_lens,
-                             const double *data_y_te,
-                             int data_tr_n,
-                             int data_te_n,
-                             int data_p,
-                             int para_s,
-                             int para_b,
-                             double para_c,
-                             double para_l2_reg,
-                             int para_num_passes,
-                             int para_step_len,
-                             int para_verbose,
-                             double *re_wt,
-                             double *re_wt_bar,
-                             double *re_auc,
-                             double *re_rts,
-                             int *re_len_auc);
+void _algo_graph_am_v1(Data *data,
+                       CommonParas *paras,
+                       AlgoResults *re,
+                       const EdgePair *edges,
+                       const double *weights,
+                       int data_m,
+                       int para_s,
+                       int para_b,
+                       double para_c,
+                       double para_l2_reg);
 
 
-void _algo_graph_am(const double *x_tr_vals,
-                    const int *x_tr_inds,
-                    const int *x_tr_poss,
-                    const int *x_tr_lens,
-                    const double *data_y_tr,
-                    const EdgePair *edges,
-                    const double *weights,
-                    int data_m,
-                    int data_n,
-                    int data_p,
-                    int para_s,
-                    int para_b,
-                    double para_c,
-                    double para_l2_reg,
-                    int para_num_passes,
-                    int para_verbose,
-                    bool is_sparse,
-                    bool record_aucs,
-                    double *re_wt,
-                    double *re_wt_bar,
-                    double *re_auc,
-                    double *re_rts,
-                    int *re_len_auc);
+void _algo_graph_am_v2(Data *data,
+                       CommonParas *paras,
+                       AlgoResults *re,
+                       const EdgePair *edges,
+                       const double *weights,
+                       int data_m,
+                       int para_s,
+                       int para_b,
+                       double para_c,
+                       double para_l2_reg);
 
 /**
  *
@@ -345,63 +240,46 @@ void _algo_graph_am(const double *x_tr_vals,
  * @param re_rts
  * @param re_len_auc
  */
-void _algo_hsg_ht(const double *data_x_tr,
-                  const double *data_y_tr,
-                  int data_n,
-                  int data_p,
+void _algo_hsg_ht(Data *data,
+                  CommonParas *paras,
+                  AlgoResults *re,
                   int para_s,
-                  bool is_sparse,
-                  bool record_aucs,
                   double para_tau,
                   double para_zeta,
                   double para_step_init,
-                  double para_l2,
-                  int para_num_passes,
-                  int para_verbose,
-                  double *re_wt,
-                  double *re_wt_bar,
-                  double *re_auc,
-                  double *re_rts,
-                  int *re_len_auc);
-
-void _algo_opauc(const double *data_x_tr,
-                 const double *data_y_tr,
-                 int data_n,
-                 int data_p,
-                 double para_eta,
-                 double para_lambda,
-                 int para_num_passes,
-                 int para_step_len,
-                 bool para_is_aucs,
-                 int para_verbose,
-                 double *re_wt,
-                 double *re_wt_bar,
-                 double *re_auc,
-                 double *re_rts,
-                 int *re_len_auc);
-
-
-void _algo_opauc_sparse(const double *x_tr_vals,
-                        const int *x_tr_inds,
-                        const int *x_tr_poss,
-                        const int *x_tr_lens,
-                        const double *data_y_tr,
-                        int data_n,
-                        int data_p,
-                        int para_tau,
-                        double para_eta,
-                        double para_lambda,
-                        int para_num_passes,
-                        int para_step_len,
-                        int para_verbose,
-                        double *re_wt,
-                        double *re_wt_bar,
-                        double *re_auc,
-                        double *re_rts,
-                        int *re_len_auc);
+                  double para_l2);
 
 /**
  *
+ * @param x_tr_vals
+ * @param x_tr_inds
+ * @param x_tr_poss
+ * @param x_tr_lens
+ * @param data_y_tr
+ * @param data_n
+ * @param data_p
+ * @param is_sparse
+ * @param record_aucs
+ * @param para_tau
+ * @param para_eta
+ * @param para_lambda
+ * @param para_num_passes
+ * @param para_step_len
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ * @param re_rts
+ * @param re_len_auc
+ */
+void _algo_opauc(Data *data,
+                 CommonParas *paras,
+                 AlgoResults *re,
+                 int para_tau,
+                 double para_eta,
+                 double para_lambda);
+
+/**
  * This function implements the algorithm, FSAUC, proposed in the following paper:
  * ---
  * @inproceedings{liu2018fast,
@@ -411,46 +289,30 @@ void _algo_opauc_sparse(const double *x_tr_vals,
  * pages={3195--3203},
  * year={2018}}
  * ---
- * Do not use the function directly. Instead, call it by Python Wrapper.
- * There are two main model parameters: para_g, para_r.
- * @param data_x_tr
+ * @param x_tr_vals
+ * @param x_tr_inds
+ * @param x_tr_poss
+ * @param x_tr_lens
  * @param data_y_tr
- * @param data_p : number of features.
- * @param data_n : number of samples, i.e. len(x_tr) == n.
- * @param para_g
+ * @param data_n
+ * @param data_p
+ * @param is_sparse
+ * @param record_aucs
  * @param para_r
+ * @param para_g
+ * @param para_num_passes
+ * @param para_step_len
+ * @param para_verbose
+ * @param re_wt
+ * @param re_wt_bar
+ * @param re_auc
+ * @param re_rts
+ * @param re_len_auc
  */
-void _algo_fsauc(const double *data_x_tr,
-                 const double *data_y_tr,
-                 int data_n,
-                 int data_p,
+void _algo_fsauc(Data *data,
+                 CommonParas *paras,
+                 AlgoResults *re,
                  double para_r,
-                 double para_g,
-                 int para_num_passes,
-                 int para_step_len,
-                 int para_verbose,
-                 double *re_wt,
-                 double *re_wt_bar,
-                 double *re_auc,
-                 double *re_rts,
-                 int *re_len_auc);
-
-void _algo_fsauc_sparse(const double *x_tr_vals,
-                        const int *x_tr_inds,
-                        const int *x_tr_poss,
-                        const int *x_tr_lens,
-                        const double *data_y_tr,
-                        int data_n,
-                        int data_p,
-                        double para_r,
-                        double para_g,
-                        int para_num_passes,
-                        int para_step_len,
-                        int para_verbose,
-                        double *re_wt,
-                        double *re_wt_bar,
-                        double *re_auc,
-                        double *re_rts,
-                        int *re_len_auc);
+                 double para_g);
 
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H
