@@ -1241,7 +1241,9 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re,
             _evaluate_aucs(data, y_pred, re, start_time);
         }
         // at the end of each epoch, we check the early stop condition.
+        re->total_iterations++;
         if ((t + 1) % (data->n) == 0) {
+            re->total_epochs++;
             double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
             cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
             double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
@@ -1282,28 +1284,42 @@ void _algo_sto_iht(Data *data, GlobalParas *paras, AlgoResults *re,
     srand((int) lrand48());
     double start_time = clock();
     openblas_set_num_threads(1);
-    double t_eval;
+
     double *y_pred = calloc((size_t) data->n, sizeof(double));
-    int min_b_ind = 0, max_b_ind = data->n / para_b;
-    int total_blocks = paras->num_passes * (data->n / para_b);
     double *loss_grad_wt = calloc((data->p + 2), sizeof(double));
-    for (int t = 1; t <= total_blocks; t++) { // for each block
+    int min_b_ind = 0;
+    int max_b_ind = data->n / para_b;
+    int total_blocks = paras->num_passes * (data->n / para_b);
+    // for each block of training samples.
+    for (int t = 1; t <= total_blocks; t++) {
         // block bi must be in [min_b_ind,max_b_ind-1]
         int bi = (int) (lrand48() % (max_b_ind - min_b_ind));
         int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data->n % para_b) : para_b);
         // calculate the gradient
-        logistic_loss_grad(re->wt, data->x_tr_vals + bi * para_b * data->p, data->y_tr + bi * para_b,
-                           loss_grad_wt, para_l2_reg, cur_b_size, data->p);
+        logistic_loss_grad(re->wt, data->x_tr_vals + bi * para_b * data->p,
+                           data->y_tr + bi * para_b, loss_grad_wt, para_l2_reg, cur_b_size, data->p);
         // wt = wt - eta * grad(wt)
         cblas_daxpy(data->p + 1, -para_xi / cur_b_size, loss_grad_wt + 1, 1, re->wt, 1);
         _hard_thresholding(re->wt, data->p, para_s); // k-sparse step.
         if (paras->record_aucs == 1) {  // to evaluate AUC score
-            t_eval = clock();
-            cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                        data->n, data->p, 1., data->x_tr_vals, data->p, re->wt, 1, 0.0, y_pred, 1);
-            re->aucs[re->auc_len] = _auc_score(data->y_tr, y_pred, data->n);
-            re->rts[re->auc_len++] = clock() - start_time - (clock() - t_eval);
+            _evaluate_aucs(data, y_pred, re, start_time);
         }
+        // at the end of each epoch, we check the early stop condition.
+        re->total_iterations++;
+        if (t % (data->n / para_b) == 0) {
+            re->total_epochs++;
+            double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+            cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
+            double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+            if (norm_wt > 0.0 && (norm_diff / norm_wt <= paras->stop_eps)) {
+                if (paras->verbose > 0) {
+                    printf("early stop at: %d-th epoch where maximal epoch is: %d\n",
+                           t / data->n, paras->num_passes);
+                }
+                break;
+            }
+        }
+        memcpy(re->wt_prev, re->wt, sizeof(double) * (data->p));
     }
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(loss_grad_wt);
