@@ -342,54 +342,47 @@ def test_spam_l1l2(para):
 
 def cv_opauc(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    # get data
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    __ = np.empty(shape=(1,), dtype=float)
+    # candidate parameters
     list_eta = 2. ** np.arange(-12, -3, 1, dtype=float)
     list_lambda = 2. ** np.arange(-10, 1, 1, dtype=float)
-    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_eta), len(list_lambda)))
-    s_time = time.time()
+    auc_wt, cv_wt_results = dict(), np.zeros((len(list_eta), len(list_lambda)))
+    step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id, (ind_eta, para_eta), (ind_lambda, para_lambda) in \
             product(range(k_fold), enumerate(list_eta), enumerate(list_lambda)):
-        algo_para = (trial_id, fold_id, num_passes, para_eta, para_lambda, k_fold)
+        s_time = time.time()
+        algo_para = (para_eta, para_lambda, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-            auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
         list_auc_wt = np.zeros(k_fold)
-        list_auc_wt_bar = np.zeros(k_fold)
         list_num_nonzeros_wt = np.zeros(k_fold)
-        list_num_nonzeros_wt_bar = np.zeros(k_fold)
+        list_epochs = np.zeros(k_fold)
         kf = KFold(n_splits=k_fold, shuffle=False)
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
             sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            re = c_algo_opauc(sub_x_tr, sub_y_tr, para_eta, para_lambda, num_passes, 1000000, 0)
-            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+            _ = c_algo_opauc(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, para_eta, para_lambda, 0)
+            wt, aucs, rts, epochs = _
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
-            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
+            list_epochs[ind] = epochs[0]
         cv_wt_results[ind_eta, ind_lambda] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
             auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
-        if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
-            auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
-            auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_eta, para_lambda, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
-    run_time = time.time() - s_time
-    print('-' * 40 + ' opauc ' + '-' * 40)
-    print('run_time: %.4f' % run_time)
-    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
-    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
-    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
-    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros'] for _ in auc_wt_bar]))
+        print("trial-%d fold-%d para_eta: %.2e para_lambda: %.1e auc: %.4f epochs: %02d run_time: %.6f" %
+              (trial_id, fold_id, para_eta, para_lambda, float(np.mean(list_auc_wt)),
+               float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
-    return para, auc_wt, auc_wt_bar, cv_wt_results
+    return para, auc_wt, cv_wt_results
 
 
 def cv_fsauc(para):

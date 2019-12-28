@@ -1060,7 +1060,8 @@ void _algo_sht_am(Data *data, GlobalParas *paras, AlgoResults *re,
     free(grad_wt);
 }
 
-void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, double para_eta, double para_lambda) {
+void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re,
+                 int para_tau, double para_eta, double para_lambda) {
 
     srand((int) lrand48());
     double start_time = clock();
@@ -1112,21 +1113,30 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
         if (data->y_tr[cur_ind] > 0) {
             num_p++;
             if (data->is_sparse) {
-                cblas_dscal(data->p, (num_p - 1.) / num_p, center_p, 1); // update center_p
-                for (int tt = 0; tt < data->x_tr_lens[cur_ind]; tt++)
+                // update center_p
+                cblas_dscal(data->p, (num_p - 1.) / num_p, center_p, 1);
+                for (int tt = 0; tt < data->x_tr_lens[cur_ind]; tt++) {
                     center_p[xt_inds[tt]] += xt_vals[tt] / num_p;
-                cblas_dscal(para_tau, (num_p - 1.) / num_p, h_center_p, 1); // update h_center_p
+                }
+                // update h_center_p
+                cblas_dscal(para_tau, (num_p - 1.) / num_p, h_center_p, 1);
                 cblas_daxpy(para_tau, 1. / num_p, gaussian, 1, h_center_p, 1);
-                cblas_dger(CblasRowMajor, data->p, para_tau, 1., xt, 1, gaussian, 1, z_p, para_tau);
+                cblas_dger(CblasRowMajor, data->p, para_tau, 1.,
+                           xt, 1, gaussian, 1, z_p, para_tau);
             } else {
-                cblas_dcopy(data->p, center_p, 1, tmp_vec, 1); // copy previous center
-                cblas_dscal(data->p, (num_p - 1.) / num_p, center_p, 1); // update center_p
+                // copy previous center
+                cblas_dcopy(data->p, center_p, 1, tmp_vec, 1);
+                // update center_p
+                cblas_dscal(data->p, (num_p - 1.) / num_p, center_p, 1);
                 cblas_daxpy(data->p, 1. / num_p, cur_x, 1, center_p, 1);
-                cblas_dscal(data->p * data->p, (num_p - 1.) / num_p, cov_p, 1); // update covariance matrix
-                cblas_dger(CblasRowMajor, data->p, data->p, 1. / num_p, cur_x, 1, cur_x, 1, cov_p, data->p);
+                // update covariance matrix
+                cblas_dscal(data->p * data->p, (num_p - 1.) / num_p, cov_p, 1);
+                cblas_dger(CblasRowMajor, data->p, data->p, 1. / num_p,
+                           cur_x, 1, cur_x, 1, cov_p, data->p);
                 cblas_dger(CblasRowMajor, data->p, data->p, (num_p - 1.) / num_p,
                            tmp_vec, 1, tmp_vec, 1, cov_p, data->p);
-                cblas_dger(CblasRowMajor, data->p, data->p, -1., center_p, 1, center_p, 1, cov_p, data->p);
+                cblas_dger(CblasRowMajor, data->p, data->p, -1.,
+                           center_p, 1, center_p, 1, cov_p, data->p);
             }
             if (num_n > 0.0) {
                 if (data->is_sparse) {
@@ -1139,10 +1149,10 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
                     cblas_daxpy(data->p, -1., center_n, 1, tmp_vec, 1);
                     cblas_dscal(data->p, cblas_ddot(data->p, tmp_vec, 1, re->wt, 1), tmp_vec, 1);
                     cblas_daxpy(data->p, 1., tmp_vec, 1, grad_wt, 1);
-                    cblas_dgemv(CblasRowMajor, CblasTrans, data->p, para_tau, 1. / num_n, z_n, para_tau,
-                                re->wt, 1, 0.0, tmp_vec, 1);
-                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, para_tau, 1., z_n, para_tau,
-                                tmp_vec, 1, 1.0, grad_wt, 1);
+                    cblas_dgemv(CblasRowMajor, CblasTrans, data->p, para_tau, 1. / num_n,
+                                z_n, para_tau, re->wt, 1, 0.0, tmp_vec, 1);
+                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, para_tau, 1.,
+                                z_n, para_tau, tmp_vec, 1, 1.0, grad_wt, 1);
                     double wei = cblas_ddot(data->p, re->wt, 1, center_n, 1);
                     wei = wei * cblas_ddot(para_tau, h_center_n, 1, h_center_n, 1);
                     cblas_daxpy(data->p, wei, center_n, 1, grad_wt, 1);
@@ -1154,11 +1164,12 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
                     cblas_dcopy(data->p, cur_x, 1, tmp_vec, 1); // xt - c_t^-
                     cblas_daxpy(data->p, -1., center_n, 1, tmp_vec, 1);
                     cblas_dscal(data->p * data->p, 0.0, tmp_mat, 1); // (xt - c_t^+)(xt - c_t^+)^T
-                    cblas_dger(CblasRowMajor, data->p, data->p, 1., tmp_vec, 1, tmp_vec, 1, tmp_mat, data->p);
-                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, data->p, 1., tmp_mat, data->p, re->wt,
-                                1, 1.0, grad_wt, 1);
-                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, data->p, 1., cov_n, data->p, re->wt,
-                                1, 1.0, grad_wt, 1);
+                    cblas_dger(CblasRowMajor, data->p, data->p, 1.,
+                               tmp_vec, 1, tmp_vec, 1, tmp_mat, data->p);
+                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, data->p, 1.,
+                                tmp_mat, data->p, re->wt, 1, 1.0, grad_wt, 1);
+                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, data->p, 1.,
+                                cov_n, data->p, re->wt, 1, 1.0, grad_wt, 1);
                 }
             } else {
                 cblas_dscal(data->p, 0.0, grad_wt, 1);
@@ -1171,16 +1182,22 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
                     center_n[xt_inds[tt]] += xt_vals[tt] / num_n;
                 cblas_dscal(para_tau, (num_n - 1.) / num_n, h_center_n, 1); // update h_center_n
                 cblas_daxpy(para_tau, 1. / num_n, gaussian, 1, h_center_n, 1);
-                cblas_dger(CblasRowMajor, data->p, para_tau, 1., xt, 1, gaussian, 1, z_n, para_tau);
+                cblas_dger(CblasRowMajor, data->p, para_tau, 1.,
+                           xt, 1, gaussian, 1, z_n, para_tau);
             } else {
-                cblas_dcopy(data->p, center_n, 1, tmp_vec, 1); // copy previous center
-                cblas_dscal(data->p, (num_n - 1.) / num_n, center_n, 1); // update center_n
+                // copy previous center
+                cblas_dcopy(data->p, center_n, 1, tmp_vec, 1);
+                // update center_n
+                cblas_dscal(data->p, (num_n - 1.) / num_n, center_n, 1);
                 cblas_daxpy(data->p, 1. / num_n, cur_x, 1, center_n, 1);
-                cblas_dscal(data->p * data->p, (num_n - 1.) / num_n, cov_n, 1); // update covariance matrix
-                cblas_dger(CblasRowMajor, data->p, data->p, 1. / num_n, cur_x, 1, cur_x, 1, cov_n, data->p);
+                // update covariance matrix
+                cblas_dscal(data->p * data->p, (num_n - 1.) / num_n, cov_n, 1);
+                cblas_dger(CblasRowMajor, data->p, data->p, 1. / num_n,
+                           cur_x, 1, cur_x, 1, cov_n, data->p);
                 cblas_dger(CblasRowMajor, data->p, data->p, (num_n - 1.) / num_n,
                            tmp_vec, 1, tmp_vec, 1, cov_n, data->p);
-                cblas_dger(CblasRowMajor, data->p, data->p, -1., center_n, 1, center_n, 1, cov_n, data->p);
+                cblas_dger(CblasRowMajor, data->p, data->p, -1.,
+                           center_n, 1, center_n, 1, cov_n, data->p);
             }
             if (num_p > 0.0) {
                 if (data->is_sparse) {
@@ -1192,10 +1209,10 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
                     cblas_daxpy(data->p, -1., center_p, 1, tmp_vec, 1);
                     cblas_dscal(data->p, cblas_ddot(data->p, tmp_vec, 1, re->wt, 1), tmp_vec, 1);
                     cblas_daxpy(data->p, 1., tmp_vec, 1, grad_wt, 1);
-                    cblas_dgemv(CblasRowMajor, CblasTrans, data->p, para_tau, 1. / num_p, z_p, para_tau,
-                                re->wt, 1, 0.0, tmp_vec, 1);
-                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, para_tau, 1., z_p, para_tau,
-                                tmp_vec, 1, 1.0, grad_wt, 1);
+                    cblas_dgemv(CblasRowMajor, CblasTrans, data->p, para_tau, 1. / num_p,
+                                z_p, para_tau, re->wt, 1, 0.0, tmp_vec, 1);
+                    cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, para_tau, 1.,
+                                z_p, para_tau, tmp_vec, 1, 1.0, grad_wt, 1);
                     double wei = cblas_ddot(data->p, re->wt, 1, center_p, 1);
                     wei = wei * cblas_ddot(para_tau, h_center_p, 1, h_center_p, 1);
                     cblas_daxpy(data->p, wei, center_p, 1, grad_wt, 1);
@@ -1206,7 +1223,8 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
                     cblas_daxpy(data->p, para_lambda, re->wt, 1, grad_wt, 1);
                     cblas_dcopy(data->p, cur_x, 1, tmp_vec, 1); // xt - c_t^+
                     cblas_daxpy(data->p, -1., center_p, 1, tmp_vec, 1);
-                    cblas_dscal(data->p * data->p, 0.0, tmp_mat, 1); // (xt - c_t^+)(xt - c_t^+)^T
+                    // (xt - c_t^+)(xt - c_t^+)^T
+                    cblas_dscal(data->p * data->p, 0.0, tmp_mat, 1);
                     cblas_dger(CblasRowMajor, data->p, data->p, 1.,
                                tmp_vec, 1, tmp_vec, 1, tmp_mat, data->p);
                     cblas_dgemv(CblasRowMajor, CblasNoTrans, data->p, data->p, 1.,
@@ -1222,6 +1240,21 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
         if ((fmod(t + 1, paras->step_len) == 1.) && paras->record_aucs) { // to calculate AUC score
             _evaluate_aucs(data, y_pred, re, start_time);
         }
+        // at the end of each epoch, we check the early stop condition.
+        if ((t + 1) % (data->n) == 0) {
+            double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+            cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
+            double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+            printf("diff: %.6f\n", norm_diff / norm_wt);
+            if (norm_wt > 0.0 && (norm_diff / norm_wt <= paras->stop_eps)) {
+                if (paras->verbose > 0) {
+                    printf("early stop at: %d-th epoch where maximal epoch is: %d\n",
+                           t / data->n, paras->num_passes);
+                }
+                break;
+            }
+        }
+        memcpy(re->wt_prev, re->wt, sizeof(double) * (data->p));
     }
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(gaussian);

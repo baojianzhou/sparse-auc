@@ -129,6 +129,28 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
     return results;
 }
 
+
+static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
+    Data *data = malloc(sizeof(Data));
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
+    int para_tau;
+    double para_eta, para_lambda;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!ddi",
+                          &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
+                          &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
+                          &PyArray_Type, &global_paras,
+                          &para_eta, &para_lambda, &para_tau)) { return NULL; }
+    init_global_paras(paras, global_paras);
+    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
+    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
+    _algo_opauc(data, paras, re, para_tau, para_eta, para_lambda);
+    PyObject *results = get_results(data->p, re);
+    free(paras), free_algo_results(re), free(data);
+    return results;
+}
+
 static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
@@ -183,26 +205,6 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     free(data->proj_prizes);
     free(data->edges);
     free(paras), free_algo_results(re), free(data);
-    return results;
-}
-
-static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
-    if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
-    Data *data = malloc(sizeof(Data));
-    GlobalParas *paras = malloc(sizeof(GlobalParas));
-    int para_tau;
-    double para_eta, para_lambda;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiddi",
-                          &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
-                          &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
-                          &para_eta, &para_lambda, &para_tau)) { return NULL; }
-    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
-    _algo_opauc(data, paras, re, para_tau, para_eta, para_lambda);
-    PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
     return results;
 }
 
