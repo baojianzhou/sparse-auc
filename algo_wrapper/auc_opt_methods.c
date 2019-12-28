@@ -107,15 +107,11 @@ bool head_tail_binsearch(
     _arg_sort_descend(sorted_prizes, sorted_indices, n);
     double lambda_low = 0.0;
     double lambda_high = fabs(2.0 * sorted_prizes[sorted_indices[guess_pos]]);
-    bool using_sparsity_low = false;
-    bool using_max_value = false;
     if (lambda_high == 0.0) {
         guess_pos = n - sparsity_low;
         lambda_high = fabs(2.0 * sorted_prizes[sorted_indices[guess_pos]]);
         if (lambda_high != 0.0) {
-            using_sparsity_low = true;
         } else {
-            using_max_value = true;
             lambda_high = fabs(prizes[0]);
             for (int ii = 1; ii < n; ii++) {
                 lambda_high = fmax(lambda_high, fabs(prizes[ii]));
@@ -201,7 +197,7 @@ void _tpr_fpr_auc(const double *true_labels, const double *scores, int n, double
     }
     int *sorted_indices = malloc(sizeof(int) * n);
     _arg_sort_descend(scores, sorted_indices, n);
-    //TODO assume the score has no -infty
+    //Notice, here we assume the score has no -infty
     tpr[0] = 0.0; // initial point.
     fpr[0] = 0.0; // initial point.
     // accumulate sum
@@ -265,7 +261,7 @@ double _auc_score(const double *true_labels, const double *scores, int len) {
     }
     cblas_dscal(len, 1. / num_posi, tpr, 1);
     cblas_dscal(len, 1. / num_nega, fpr, 1);
-    //AUC score
+    // AUC score
     double auc = 0.0;
     double prev = 0.0;
     for (int i = 0; i < len; i++) {
@@ -322,20 +318,20 @@ void _floyd_rivest_select(double *array, int l, int r, int k) {
          */
         i = l;
         j = r;
-        swap(array[l], array[k]);
+        swap(array[l], array[k])
         if (array[r] < t) {
-            swap(array[r], array[l]);
+            swap(array[r], array[l])
         }
         while (i < j) {
-            swap(array[i], array[j]);
+            swap(array[i], array[j])
             do i++; while (array[i] > t);
             do j--; while (array[j] < t);
         }
         if (array[l] == t) {
-            swap(array[l], array[j]);
+            swap(array[l], array[j])
         } else {
             j++;
-            swap(array[j], array[r]);
+            swap(array[j], array[r])
         }
         /**
          * New adjust l, r so they surround the subset containing the
@@ -684,7 +680,8 @@ void _algo_spam(Data *data, GlobalParas *paras, AlgoResults *re,
 }
 
 
-void _algo_fsauc(Data *data, GlobalParas *paras, AlgoResults *re, double para_r, double para_g) {
+void _algo_fsauc(Data *data, GlobalParas *paras, AlgoResults *re,
+                 double para_r, double para_g) {
 
     double start_time = clock();
     openblas_set_num_threads(1);
@@ -702,12 +699,12 @@ void _algo_fsauc(Data *data, GlobalParas *paras, AlgoResults *re, double para_r,
     double *m_neg = calloc((size_t) data->p, sizeof(double));
     int m = (int) floor(0.5 * log2(2 * n_ids / log2(n_ids))) - 1;
     int n_0 = (int) floor(n_ids / m);
+    int t = 0;
     para_r = 2. * sqrt(3.) * R;
     double p_hat = 0.0;
     double beta = 9.0;
     double D = 2. * sqrt(2.) * para_r;
     double sp = 0.0;
-    double t = 0.0;;
     double *gd = calloc((unsigned) data->p + 2, sizeof(double));
     double gd_alpha;
     double *v_ave = calloc((unsigned) data->p + 2, sizeof(double));
@@ -716,95 +713,105 @@ void _algo_fsauc(Data *data, GlobalParas *paras, AlgoResults *re, double para_r,
     double *vd = malloc(sizeof(double) * (data->p + 2)), ad;
     double *tmp_proj = malloc(sizeof(double) * data->p), beta_new;
     double *y_pred = calloc((size_t) data->n, sizeof(double));
-
     for (int k = 0; k < m; k++) {
         memset(v_sum, 0, sizeof(double) * (data->p + 2));
         memcpy(v, v_1, sizeof(double) * (data->p + 2));
         alpha = alpha_1;
         for (int kk = 0; kk < n_0; kk++) {
             int ind = (k * n_0 + kk) % data->n;
+            double is_posi_y = is_posi(data->y_tr[ind]);
+            double is_nega_y = is_nega(data->y_tr[ind]);
             const int *xt_inds;
             const double *xt_vals, *xt;
-            double wx = 0.0;
-            if (data->is_sparse) {
-                xt_inds = data->x_tr_inds + data->x_tr_poss[ind];
-                xt_vals = data->x_tr_vals + data->x_tr_poss[ind];
-                for (int tt = 0; tt < data->x_tr_lens[ind]; tt++)
-                    wx += (v[xt_inds[tt]] * xt_vals[tt]);
-            } else {
-                xt = data->x_tr_vals + ind * data->p;
-                wx = cblas_ddot(data->p, xt, 1, v, 1);
-            }
-            double yt = data->y_tr[ind];
-            double is_posi_y = is_posi(yt), is_nega_y = is_nega(yt);
+            double xtw = 0.0, weight;
             sp = sp + is_posi_y;
             p_hat = sp / (t + 1.);
             if (data->is_sparse) {
-                if (yt > 0) {
-                    for (int tt = 0; tt < data->x_tr_lens[ind]; tt++)
+                xt_inds = data->x_tr_inds + data->x_tr_poss[ind];
+                xt_vals = data->x_tr_vals + data->x_tr_poss[ind];
+                for (int tt = 0; tt < data->x_tr_lens[ind]; tt++) {
+                    xtw += (v[xt_inds[tt]] * xt_vals[tt]);
+                }
+                if (data->y_tr[ind] > 0) {
+                    for (int tt = 0; tt < data->x_tr_lens[ind]; tt++) {
                         sx_pos[xt_inds[tt]] += xt_vals[tt];
+                    }
                 } else {
-                    for (int tt = 0; tt < data->x_tr_lens[ind]; tt++)
+                    for (int tt = 0; tt < data->x_tr_lens[ind]; tt++) {
                         sx_neg[xt_inds[tt]] += xt_vals[tt];
+                    }
+                }
+                weight = (1. - p_hat) * (xtw - v[data->p] - 1. - alpha) * is_posi_y;
+                weight += p_hat * (xtw - v[data->p + 1] + 1. + alpha) * is_nega_y;
+                memset(gd, 0, sizeof(double) * data->p);
+                for (int tt = 0; tt < data->x_tr_lens[ind]; tt++) {
+                    gd[xt_inds[tt]] = weight * xt_vals[tt];
                 }
             } else {
+                xt = data->x_tr_vals + ind * data->p;
+                xtw = cblas_ddot(data->p, xt, 1, v, 1);
                 cblas_daxpy(data->p, is_posi_y, xt, 1, sx_pos, 1);
                 cblas_daxpy(data->p, is_nega_y, xt, 1, sx_neg, 1);
-            }
-            double weight = (1. - p_hat) * (wx - v[data->p] - 1. - alpha) * is_posi_y;
-            weight += p_hat * (wx - v[data->p + 1] + 1. + alpha) * is_nega_y;
-            if (data->is_sparse) {
-                memset(gd, 0, sizeof(double) * data->p);
-                for (int tt = 0; tt < data->x_tr_lens[ind]; tt++)
-                    gd[xt_inds[tt]] = weight * xt_vals[tt];
-            } else {
-                cblas_dcopy(data->p, xt, 1, gd, 1);
+                weight = (1. - p_hat) * (xtw - v[data->p] - 1. - alpha) * is_posi_y;
+                weight += p_hat * (xtw - v[data->p + 1] + 1. + alpha) * is_nega_y;
+                memcpy(gd, xt, sizeof(double) * (data->p));
                 cblas_dscal(data->p, weight, gd, 1);
             }
-
-            gd[data->p] = (p_hat - 1.) * (wx - v[data->p]) * is_posi_y;
-            gd[data->p + 1] = p_hat * (v[data->p + 1] - wx) * is_nega_y;
-            gd_alpha = (p_hat - 1.) * (wx + p_hat * alpha) * is_posi_y +
-                       p_hat * (wx + (p_hat - 1.) * alpha) * is_nega_y;
+            gd[data->p] = (p_hat - 1.) * (xtw - v[data->p]) * is_posi_y;
+            gd[data->p + 1] = p_hat * (v[data->p + 1] - xtw) * is_nega_y;
+            gd_alpha = (p_hat - 1.) * (xtw + p_hat * alpha) * is_posi_y +
+                       p_hat * (xtw + (p_hat - 1.) * alpha) * is_nega_y;
             cblas_daxpy(data->p + 2, -eta, gd, 1, v, 1);
             alpha = alpha + eta * gd_alpha;
             _l1ballproj_condat(v, tmp_proj, data->p, R); //projection to l1-ball
             memcpy(v, tmp_proj, sizeof(double) * data->p);
-            if (fabs(v[data->p]) > R) { v[data->p] = v[data->p] * (R / fabs(v[data->p])); }
+            if (fabs(v[data->p]) > R) {
+                v[data->p] = v[data->p] * (R / fabs(v[data->p]));
+            }
             if (fabs(v[data->p + 1]) > R) {
                 v[data->p + 1] = v[data->p + 1] * (R / fabs(v[data->p + 1]));
             }
-            if (fabs(alpha) > 2. * R) { alpha = alpha * (2. * R / fabs(alpha)); }
+            if (fabs(alpha) > 2. * R) {
+                alpha = alpha * (2. * R / fabs(alpha));
+            }
             memcpy(vd, v, sizeof(double) * (data->p + 2));
             cblas_daxpy(data->p + 2, -1., v_1, 1, vd, 1);
             double norm_vd = sqrt(cblas_ddot(data->p + 2, vd, 1, vd, 1));
-            if (norm_vd > para_r) { cblas_dscal(data->p + 2, para_r / norm_vd, vd, 1); }
+            if (norm_vd > para_r) {
+                cblas_dscal(data->p + 2, para_r / norm_vd, vd, 1);
+            }
             memcpy(v, vd, sizeof(double) * (data->p + 2));
             cblas_daxpy(data->p + 2, 1., v_1, 1, v, 1);
             ad = alpha - alpha_1;
-            if (fabs(ad) > D) { ad = ad * (D / fabs(ad)); }
+            if (fabs(ad) > D) {
+                ad = ad * (D / fabs(ad));
+            }
             alpha = alpha_1 + ad;
             cblas_daxpy(data->p + 2, 1., v, 1, v_sum, 1);
             memcpy(v_ave, v_sum, sizeof(double) * (data->p + 2));
             cblas_dscal(data->p + 2, 1. / (kk + 1.), v_ave, 1);
-            t = t + 1.0;
-            if ((fmod(t, paras->step_len) == 1.) && paras->record_aucs) { // to calculate AUC score
-                double t_eval = clock();
-                if (data->is_sparse) {
-                    memset(y_pred, 0, sizeof(double) * data->n);
-                    for (int q = 0; q < data->n; q++) {
-                        xt_inds = data->x_tr_inds + data->x_tr_poss[q];
-                        xt_vals = data->x_tr_vals + data->x_tr_poss[q];
-                        for (int tt = 0; tt < data->x_tr_lens[q]; tt++)
-                            y_pred[q] += (v_ave[xt_inds[tt]] * xt_vals[tt]);
-                    }
-                } else {
-                    cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                                data->n, data->p, 1., data->x_tr_vals, data->p, re->wt, 1, 0.0, y_pred, 1);
-                }
-                re->aucs[re->auc_len] = _auc_score(data->y_tr, y_pred, data->n);
-                re->rts[re->auc_len++] = clock() - start_time - (clock() - t_eval);
+            t++;
+            // to calculate AUC score
+            if ((fmod(t, paras->step_len) == 1.) && (paras->record_aucs == 1)) {
+                memcpy(re->wt, v_ave, sizeof(double) * (data->p));
+                _evaluate_aucs(data, y_pred, re, start_time);
             }
+            // at the end of each epoch, we check the early stop condition.
+            re->total_iterations++;
+            if (t % data->n == 0) {
+                re->total_epochs++;
+                double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+                cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
+                double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+                if (norm_wt > 0.0 && (norm_diff / norm_wt <= paras->stop_eps)) {
+                    if (paras->verbose > 0) {
+                        printf("early stop at: %d-th epoch where maximal epoch is: %d\n",
+                               (int) t / data->n, paras->num_passes);
+                    }
+                    break;
+                }
+            }
+            memcpy(re->wt_prev, v_ave, sizeof(double) * (data->p));
         }
         para_r = para_r / 2.;
         double tmp1 = 12. * sqrt(2.) * (2. + sqrt(2. * log(12. / delta))) * R;
