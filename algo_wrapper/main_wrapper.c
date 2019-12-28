@@ -30,21 +30,21 @@ static PyObject *test(PyObject *self, PyObject *args) {
 PyObject *get_results(int data_p, AlgoResults *re) {
     PyObject *results = PyTuple_New(4);
     PyObject *wt = PyList_New(data_p);
-    PyObject *wt_bar = PyList_New(data_p);
     PyObject *auc = PyList_New(re->auc_len);
     PyObject *rts = PyList_New(re->auc_len);
+    PyObject *epochs = PyList_New(1);
     for (int i = 0; i < data_p; i++) {
         PyList_SetItem(wt, i, PyFloat_FromDouble(re->wt[i]));
-        PyList_SetItem(wt_bar, i, PyFloat_FromDouble(re->wt_bar[i]));
     }
     for (int i = 0; i < re->auc_len; i++) {
         PyList_SetItem(auc, i, PyFloat_FromDouble(re->aucs[i]));
         PyList_SetItem(rts, i, PyFloat_FromDouble(re->rts[i]));
     }
+    PyList_SetItem(epochs, 0, PyInt_FromLong(re->total_epochs));
     PyTuple_SetItem(results, 0, wt);
-    PyTuple_SetItem(results, 1, wt_bar);
-    PyTuple_SetItem(results, 2, auc);
-    PyTuple_SetItem(results, 3, rts);
+    PyTuple_SetItem(results, 1, auc);
+    PyTuple_SetItem(results, 2, rts);
+    PyTuple_SetItem(results, 3, epochs);
     return results;
 }
 

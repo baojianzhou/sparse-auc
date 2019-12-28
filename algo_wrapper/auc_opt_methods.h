@@ -22,11 +22,12 @@
 
 typedef struct {
     double *wt;
-    double *wt_bar;
     double *wt_prev;
     double *aucs;
     double *rts;
-    int auc_len;
+    int auc_len; // how many auc evaluated.
+    int total_iterations; // total iterations
+    int total_epochs; // total epochs executed.
 } AlgoResults;
 
 

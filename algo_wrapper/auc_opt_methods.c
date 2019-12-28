@@ -43,17 +43,17 @@ AlgoResults *make_algo_results(int data_p, int total_num_eval) {
     AlgoResults *re = malloc(sizeof(AlgoResults));
     re->wt = calloc((size_t) data_p, sizeof(double));
     re->wt_prev = calloc((size_t) data_p, sizeof(double));
-    re->wt_bar = calloc((size_t) data_p, sizeof(double));
     re->aucs = calloc((size_t) total_num_eval, sizeof(double));
     re->rts = calloc((size_t) total_num_eval, sizeof(double));
     re->auc_len = 0;
+    re->total_epochs = 0;
+    re->total_iterations = 0;
     return re;
 }
 
 bool free_algo_results(AlgoResults *re) {
     free(re->rts);
     free(re->aucs);
-    free(re->wt_bar);
     free(re->wt);
     free(re);
     return true;
@@ -484,16 +484,19 @@ bool _algo_solam(Data *data, GlobalParas *paras, AlgoResults *re, double para_xi
 
     double start_time = clock();
     openblas_set_num_threads(1);
-    double gamma_bar, gamma_bar_prev = 0.0;
-    double alpha_bar, alpha_bar_prev = 0.0;
-    double gamma, p_hat = 0.;
+    double gamma_bar;
+    double gamma_bar_prev = 0.0;
+    double alpha_bar;
+    double alpha_bar_prev = 0.0;
+    double gamma;
+    double p_hat = 0.;
     double *v, *v_prev;
     double *v_bar, *v_bar_prev;
     double alpha, alpha_prev;
     double *y_pred, *grad_v;
     double is_p_yt, is_n_yt;
     double vt_dot, wei_posi, wei_nega;
-    double weight, t_eval, grad_alpha, norm_v;
+    double weight, grad_alpha, norm_v;
     v = malloc(sizeof(double) * (data->p + 2));
     v_prev = malloc(sizeof(double) * (data->p + 2));
     for (int i = 0; i < data->p; i++) {
@@ -552,31 +555,18 @@ bool _algo_solam(Data *data, GlobalParas *paras, AlgoResults *re, double para_xi
         cblas_daxpy(data->p + 2, gamma_bar_prev / gamma_bar, v_bar_prev, 1, v_bar, 1);
         // update alpha_bar
         alpha_bar = (gamma_bar_prev * alpha_bar_prev + gamma * alpha_prev) / gamma_bar;
-        cblas_daxpy(data->p, 1., v_bar, 1, re->wt_bar, 1);
         alpha_prev = alpha, alpha_bar_prev = alpha_bar, gamma_bar_prev = gamma_bar;
         memcpy(v_bar_prev, v_bar, sizeof(double) * (data->p + 2));
         memcpy(v_prev, v, sizeof(double) * (data->p + 2));
         // to calculate AUC score, v_var is the current values.
-        if ((fmod(t, paras->step_len) == 1.) && paras->record_aucs) {
-            t_eval = clock();
-            if (data->is_sparse) {
-                memset(y_pred, 0, sizeof(double) * data->n);
-                for (int q = 0; q < data->n; q++) {
-                    xt_inds = data->x_tr_inds + data->x_tr_poss[q];
-                    xt_vals = data->x_tr_vals + data->x_tr_poss[q];
-                    for (int tt = 0; tt < data->x_tr_lens[q]; tt++) {
-                        y_pred[q] += (v_bar[xt_inds[tt]] * xt_vals[tt]);
-                    }
-                }
-            } else {
-                cblas_dgemv(CblasRowMajor, CblasNoTrans, data->n, data->p, 1.,
-                            data->x_tr_vals, data->p, v_bar, 1, 0.0, y_pred, 1);
-            }
-            re->aucs[re->auc_len] = _auc_score(data->y_tr, y_pred, data->n);
-            re->rts[re->auc_len++] = clock() - start_time - (clock() - t_eval);
+        if ((fmod(t, paras->step_len) == 1.) && (paras->record_aucs == 1)) {
+            memcpy(re->wt, v_bar, sizeof(double) * (data->p));
+            _evaluate_aucs(data, y_pred, re, start_time);
         }
         // at the end of each epoch, we check the early stop condition.
+        re->total_iterations++;
         if (t % data->n == 0) {
+            re->total_epochs++;
             double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
             cblas_daxpy(data->p, -1., v_bar, 1, re->wt_prev, 1);
             double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
@@ -591,7 +581,6 @@ bool _algo_solam(Data *data, GlobalParas *paras, AlgoResults *re, double para_xi
         memcpy(re->wt_prev, v_bar, sizeof(double) * (data->p));
     }
     memcpy(re->wt, v_bar, sizeof(double) * data->p);
-    cblas_dscal(data->p, 1. / (paras->num_passes * data->n), re->wt_bar, 1);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(y_pred);
     free(v_bar_prev);
@@ -666,7 +655,6 @@ void _algo_spam(Data *data, GlobalParas *paras, AlgoResults *re,
                 re->wt[k] = tmp_sign * fmax(0.0, fabs(re->wt[k]) - eta_t * para_l1_reg);
             }
         }
-        cblas_daxpy(data->p, 1., re->wt, 1, re->wt_bar, 1);
         if ((fmod(t, paras->step_len) == 1.) && paras->record_aucs) { // evaluate the AUC score
             _evaluate_aucs(data, y_pred, re, start_time);
         }
@@ -685,7 +673,6 @@ void _algo_spam(Data *data, GlobalParas *paras, AlgoResults *re,
         }
         memcpy(re->wt_prev, re->wt, sizeof(double) * (data->p));
     }
-    cblas_dscal(data->p, 1. / (paras->num_passes * data->n), re->wt_bar, 1);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(y_pred);
     free(nega_x);
@@ -837,11 +824,9 @@ void _algo_fsauc(Data *data, GlobalParas *paras, AlgoResults *re, double para_r,
         memcpy(tmp_proj, m_neg, sizeof(double) * data->p);
         cblas_daxpy(data->p, -1., m_pos, 1, tmp_proj, 1);
         alpha_1 = cblas_ddot(data->p, v_ave, 1, tmp_proj, 1);
-        cblas_daxpy(data->p, 1., v_ave, 1, re->wt_bar, 1);
     }
     memcpy(re->wt, v_ave, sizeof(double) * data->p);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
-    cblas_dscal(data->p, 1. / m, re->wt_bar, 1);
     free(y_pred);
     free(tmp_proj);
     free(vd);
@@ -1038,7 +1023,6 @@ void _algo_sht_am(Data *data, GlobalParas *paras, AlgoResults *re,
                 re->wt[cur_node] = grad_wt[cur_node];
             }
         }
-        cblas_daxpy(data->p, 1., re->wt, 1, re->wt_bar, 1);
         if (paras->record_aucs == 1) { // to evaluate AUC score
             _evaluate_aucs(data, y_pred, re, start_time);
         }
@@ -1057,7 +1041,6 @@ void _algo_sht_am(Data *data, GlobalParas *paras, AlgoResults *re,
         }
         memcpy(re->wt_prev, re->wt, sizeof(double) * (data->p));
     }
-    cblas_dscal(data->p, 1. / total_blocks, re->wt_bar, 1);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(var);
     free(tmp);
@@ -1226,12 +1209,10 @@ void _algo_opauc(Data *data, GlobalParas *paras, AlgoResults *re, int para_tau, 
             }
         }
         cblas_daxpy(data->p, -para_eta, grad_wt, 1, re->wt, 1); // update the solution
-        cblas_daxpy(data->p, 1., re->wt, 1, re->wt_bar, 1);
         if ((fmod(t + 1, paras->step_len) == 1.) && paras->record_aucs) { // to calculate AUC score
             _evaluate_aucs(data, y_pred, re, start_time);
         }
     }
-    cblas_dscal(data->p, 1. / (data->n * paras->num_passes), re->wt_bar, 1);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(gaussian);
     free(xt);
@@ -1265,7 +1246,7 @@ void _algo_sto_iht(Data *data, GlobalParas *paras, AlgoResults *re,
     double *loss_grad_wt = calloc((data->p + 2), sizeof(double));
     for (int t = 1; t <= total_blocks; t++) { // for each block
         // block bi must be in [min_b_ind,max_b_ind-1]
-        int bi = (int) (lrand48() % (max_b_ind - min_b_ind);
+        int bi = (int) (lrand48() % (max_b_ind - min_b_ind));
         int cur_b_size = (bi == (max_b_ind - 1) ? para_b + (data->n % para_b) : para_b);
         // calculate the gradient
         logistic_loss_grad(re->wt, data->x_tr_vals + bi * para_b * data->p, data->y_tr + bi * para_b,
@@ -1273,7 +1254,6 @@ void _algo_sto_iht(Data *data, GlobalParas *paras, AlgoResults *re,
         // wt = wt - eta * grad(wt)
         cblas_daxpy(data->p + 1, -para_xi / cur_b_size, loss_grad_wt + 1, 1, re->wt, 1);
         _hard_thresholding(re->wt, data->p, para_s); // k-sparse step.
-        cblas_daxpy(data->p + 1, 1., re->wt, 1, re->wt_bar, 1);
         if (paras->record_aucs == 1) {  // to evaluate AUC score
             t_eval = clock();
             cblas_dgemv(CblasRowMajor, CblasNoTrans,
@@ -1282,7 +1262,6 @@ void _algo_sto_iht(Data *data, GlobalParas *paras, AlgoResults *re,
             re->rts[re->auc_len++] = clock() - start_time - (clock() - t_eval);
         }
     }
-    cblas_dscal(data->p + 1, 1. / total_blocks, re->wt_bar, 1);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(loss_grad_wt);
     free(y_pred);
@@ -1314,7 +1293,6 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
             // wt = wt - eta * grad(wt)
             cblas_daxpy(data->p + 1, -para_step_init / batch_size_s, loss_grad_wt + 1, 1, re->wt, 1);
             _hard_thresholding(re->wt, data->p, para_s); // k-sparse step.
-            cblas_daxpy(data->p + 1, 1., re->wt, 1, re->wt_bar, 1);
             total_blocks += 1;
             if (paras->record_aucs) {  // to evaluate AUC score
                 t_eval = clock();
@@ -1326,7 +1304,6 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
             if (start_index >= (data->n - 1)) { break; }
         }
     }
-    cblas_dscal(data->p + 1, 1. / total_blocks, re->wt_bar, 1);
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
     free(loss_grad_wt);
     free(y_pred);
