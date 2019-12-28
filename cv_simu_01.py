@@ -109,7 +109,7 @@ def cv_solam(para):
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
             auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
             auc_wt[(trial_id, fold_id)]['epochs'] = float(np.mean(list_epochs))
-        print("trial: %d fold: %d para_xi: %.1e para_r: %.1e auc: %.4f epochs: %02d run_time: %.6f" %
+        print("trial-%d fold-%d para_xi: %.1e para_r: %.1e auc: %.4f epochs: %02d run_time: %.6f" %
               (trial_id, fold_id, para_xi, para_r, float(np.mean(list_auc_wt)),
                float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
@@ -155,7 +155,7 @@ def cv_spam_l1(para):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
             auc_wt[(trial_id, fold_id)]['epochs'] = float(np.mean(list_epochs))
-        print("trial: %d fold: %d para_xi: %.1e para_l1: %.1e auc: %.4f epochs: %02d run_time: %.6f" %
+        print("trial-%d fold-%d para_xi: %.1e para_l1: %.1e auc: %.4f epochs: %02d run_time: %.6f" %
               (trial_id, fold_id, para_xi, para_l1, float(np.mean(list_auc_wt)),
                float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
@@ -193,55 +193,47 @@ def test_spam_l1(para):
 def cv_spam_l2(para):
     """ SPAM algorithm with l2-regularization. """
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    # get data
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    __ = np.empty(shape=(1,), dtype=float)
+    # candidate parameters
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
     list_l2 = 10. ** np.arange(-5, 3, 1, dtype=float)
-    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_l2)))
-    s_time = time.time()
-    for fold_id, (ind_c, para_c), (ind_l2, para_l2) in product(range(k_fold), enumerate(list_c), enumerate(list_l2)):
-        algo_para = (trial_id, fold_id, num_passes, para_c, para_l2, k_fold)
+    auc_wt, cv_wt_results = dict(), np.zeros((len(list_c), len(list_l2)))
+    step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id, (ind_xi, para_xi), (ind_l2, para_l2) in product(range(k_fold), enumerate(list_c), enumerate(list_l2)):
+        s_time = time.time()
+        algo_para = (para_xi, para_l2, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-            auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
         list_auc_wt = np.zeros(k_fold)
-        list_auc_wt_bar = np.zeros(k_fold)
         list_num_nonzeros_wt = np.zeros(k_fold)
-        list_num_nonzeros_wt_bar = np.zeros(k_fold)
+        list_epochs = np.zeros(k_fold)
         kf = KFold(n_splits=k_fold, shuffle=False)  # Folding is fixed.
         for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
             sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            para_l1, reg_opt, step_len, verbose = 0.0, 1, 1000000, 0
-            re = c_algo_spam(sub_x_tr, None, None, None, sub_y_tr, 0, data['p'],
-                             para_c, para_l1, para_l2, reg_opt, num_passes, step_len, verbose)
-            wt, wt_bar = np.asarray(re[0]), np.asarray(re[1])
+            _ = c_algo_spam(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, para_xi, 0.0, para_l2)
+            wt, aucs, rts, epochs = _
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
-            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
-        cv_wt_results[ind_c, ind_l2] = np.mean(list_auc_wt)
+            list_epochs[ind] = epochs[0]
+        cv_wt_results[ind_xi, ind_l2] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
             auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
-        if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
-            auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
-            auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        # print(para_c, para_l2, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
-    run_time = time.time() - s_time
-    print('-' * 40 + ' spam-l2 ' + '-' * 40)
-    print('run_time: %.4f' % run_time)
-    print('AUC-wt: ' + ' '.join(['%.4f' % auc_wt[_]['auc'] for _ in auc_wt]))
-    print('AUC-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['auc'] for _ in auc_wt_bar]))
-    print('nonzeros-wt: ' + ' '.join(['%.4f' % auc_wt[_]['num_nonzeros'] for _ in auc_wt]))
-    print('nonzeros-wt-bar: ' + ' '.join(['%.4f' % auc_wt_bar[_]['num_nonzeros'] for _ in auc_wt_bar]))
+            auc_wt[(trial_id, fold_id)]['epochs'] = float(np.mean(list_epochs))
+        print("trial-%d fold-%d para_xi: %.1e para_l2: %.1e auc: %.4f epochs: %02d run_time: %.6f" %
+              (trial_id, fold_id, para_xi, para_l2, float(np.mean(list_auc_wt)),
+               float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
-    return para, auc_wt, auc_wt_bar, cv_wt_results
+    return para, auc_wt, cv_wt_results
 
 
 def test_spam_l2(para):
