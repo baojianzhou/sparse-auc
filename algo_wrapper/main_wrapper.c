@@ -58,148 +58,111 @@ void init_data(Data *data, PyArrayObject *x_tr_vals, PyArrayObject *x_tr_inds, P
     data->n = (int) data_y_tr->dimensions[0];
 }
 
+void init_global_paras(GlobalParas *paras, PyArrayObject *global_paras) {
+    double *arr_paras = (double *) PyArray_DATA(global_paras);
+    //order should be: num_passes, step_len, verbose, record_aucs, stop_eps
+    paras->num_passes = (int) arr_paras[0];
+    paras->step_len = (int) arr_paras[1];
+    paras->verbose = (int) arr_paras[2];
+    paras->record_aucs = (int) arr_paras[3];
+    paras->stop_eps = arr_paras[4];
+}
+
 static PyObject *wrap_algo_solam(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
-    //SOLAM has two parameters.
-    double para_xi, para_r;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiidd",
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
+    double para_xi, para_r; //SOLAM has two parameters.
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!dd",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
                           &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
+                          &PyArray_Type, &global_paras,
                           &para_xi, &para_r)) { return NULL; }
+    init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
     AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
     _algo_solam(data, paras, re, para_xi, para_r);
     PyObject *results = get_results(data->p, re);
-    free(paras);
-    free_algo_results(re);
-    free(data);
+    free(paras), free_algo_results(re), free(data);
     return results;
 }
 
 
 static PyObject *wrap_algo_spam(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
-    //SPAM has three parameters.
-    double para_xi, para_l1_reg, para_l2_reg;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiddd",
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
+    double para_xi, para_l1_reg, para_l2_reg; //SPAM has three parameters.
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!ddd",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
                           &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
+                          &PyArray_Type, &global_paras,
                           &para_xi, &para_l1_reg, &para_l2_reg)) { return NULL; }
+    init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
     AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
     _algo_spam(data, paras, re, para_xi, para_l1_reg, para_l2_reg);
     PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
-    free(data);
+    free(paras), free_algo_results(re), free(data);
     return results;
 }
 
-static PyObject *wrap_algo_sht_am_v1(PyObject *self, PyObject *args) {
+static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
-    //SHT-AM has four parameters.
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
     double para_xi, para_l2_reg;
-    int para_s, para_b;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiiidd",
+    int version, para_s, para_b;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!iiidd",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
                           &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
-                          &para_s, &para_b, &para_xi, &para_l2_reg)) { return NULL; }
+                          &PyArray_Type, &global_paras,
+                          &version, &para_s, &para_b, &para_xi, &para_l2_reg)) { return NULL; }
+    init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
-    _algo_sht_am_v1(data, paras, re, para_s, para_b, para_xi, para_l2_reg);
+    AlgoResults *re = make_algo_results(data->p, (data->n / para_b) * paras->num_passes + 1);
+    _algo_sht_am(data, paras, re, version, 0, para_s, para_b, para_xi, para_l2_reg);
     PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
+    free(paras), free_algo_results(re), free(data);
     return results;
 }
 
-static PyObject *wrap_algo_sht_am_v2(PyObject *self, PyObject *args) {
+static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr,
+            *graph_edges, *graph_weights, *global_paras;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
-    //SHT-AM has four parameters.
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
     double para_xi, para_l2_reg;
-    int para_s, para_b;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiiidd",
+    int version, para_s, para_b;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!O!O!iiiidd",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
                           &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
-                          &para_s, &para_b, &para_xi, &para_l2_reg)) { return NULL; }
-    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
-    _algo_sht_am_v2(data, paras, re, para_s, para_b, para_xi, para_l2_reg);
-    PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
-    return results;
-}
-
-
-static PyObject *wrap_algo_graph_am_v1(PyObject *self, PyObject *args) {
-    if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
-    Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
-    //SHT-AM has six parameters.
-    PyArrayObject *graph_edges, *graph_weights;
-    double para_xi, para_l2_reg;
-    int para_s, para_b;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiO!O!iidd",
-                          &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
-                          &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
-                          &PyArray_Type, &graph_edges, &PyArray_Type, &graph_weights, &para_s, &para_b, &para_xi,
-                          &para_l2_reg)) { return NULL; }
-    EdgePair *edges = malloc(sizeof(EdgePair) * (int) graph_weights->dimensions[0]);
+                          &PyArray_Type, &global_paras, &PyArray_Type, &graph_edges, &PyArray_Type, &graph_weights,
+                          &data->g, &version, &para_s, &para_b, &para_xi, &para_l2_reg)) { return NULL; }
+    // graph info
+    data->is_graph = true;
+    data->m = (int) graph_weights->dimensions[0];
+    data->edges = malloc(sizeof(EdgePair) * data->m);
     for (int i = 0; i < (int) graph_weights->dimensions[0]; i++) {
-        edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
-        edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
+        data->edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
+        data->edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
     }
+    // ---
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
-    _algo_graph_am_v1(data, paras, re, edges, (double *) PyArray_DATA(graph_weights),
-                      (int) graph_weights->dimensions[0], para_s, para_b, para_xi, para_l2_reg);
+    data->weights = (double *) PyArray_DATA(graph_weights);
+    data->proj_prizes = malloc(sizeof(double) * data->p);   // projected prizes.
+    data->graph_stat = make_graph_stat(data->p, data->m);   // head projection paras
+    AlgoResults *re = make_algo_results(data->p, (data->n / para_b) * paras->num_passes + 1);
+    _algo_sht_am(data, paras, re, version, 1, para_s, para_b, para_xi, para_l2_reg);
     PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
-    return results;
-}
-
-static PyObject *wrap_algo_graph_am_v2(PyObject *self, PyObject *args) {
-    if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
-    Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
-    //SHT-AM has six parameters.
-    PyArrayObject *graph_edges, *graph_weights;
-    double para_xi, para_l2_reg;
-    int para_s, para_b;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiO!O!iidd",
-                          &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
-                          &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
-                          &PyArray_Type, &graph_edges, &PyArray_Type, &graph_weights, &para_s, &para_b, &para_xi,
-                          &para_l2_reg)) { return NULL; }
-    EdgePair *edges = malloc(sizeof(EdgePair) * (int) graph_weights->dimensions[0]);
-    for (int i = 0; i < (int) graph_weights->dimensions[0]; i++) {
-        edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
-        edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
-    }
-    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
-    _algo_graph_am_v2(data, paras, re, edges, (double *) PyArray_DATA(graph_weights),
-                      (int) graph_weights->dimensions[0], para_s, para_b, para_xi, para_l2_reg);
-    PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
+    free_graph_stat(data->graph_stat);
+    free(data->proj_prizes);
+    free(data->edges);
+    free(paras), free_algo_results(re), free(data);
     return results;
 }
 
@@ -207,7 +170,7 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
     int para_tau;
     double para_eta, para_lambda;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiddi",
@@ -227,7 +190,7 @@ static PyObject *wrap_algo_fsauc(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
     double para_r, para_g;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiidd", &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds,
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
@@ -247,7 +210,7 @@ static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
     int para_s, para_b;
     double para_xi, para_l2_reg;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiiidd",
@@ -267,7 +230,7 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
     Data *data = malloc(sizeof(Data));
-    CommonParas *paras = malloc(sizeof(CommonParas));
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
     int para_s;
     double para_tau, para_zeta, para_c, para_l2;
     if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiidddd",
@@ -285,17 +248,15 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
 
 // wrap_algo_solam_sparse
 static PyMethodDef sparse_methods[] = { // hello_name
-        {"c_test",             test,                  METH_VARARGS, "docs"},
-        {"c_algo_solam",       wrap_algo_solam,       METH_VARARGS, "docs"},
-        {"c_algo_spam",        wrap_algo_spam,        METH_VARARGS, "docs"},
-        {"c_algo_sht_am_v1",   wrap_algo_sht_am_v1,   METH_VARARGS, "docs"},
-        {"c_algo_sht_am_v2",   wrap_algo_sht_am_v2,   METH_VARARGS, "docs"},
-        {"c_algo_graph_am_v1", wrap_algo_graph_am_v1, METH_VARARGS, "docs"},
-        {"c_algo_graph_am_v2", wrap_algo_graph_am_v2, METH_VARARGS, "docs"},
-        {"c_algo_opauc",       wrap_algo_opauc,       METH_VARARGS, "docs"},
-        {"c_algo_fsauc",       wrap_algo_fsauc,       METH_VARARGS, "docs"},
-        {"c_algo_sto_iht",     wrap_algo_sto_iht,     METH_VARARGS, "docs"},
-        {"c_algo_hsg_ht",      wrap_algo_hsg_ht,      METH_VARARGS, "docs"},
+        {"c_test",          test,               METH_VARARGS, "docs"},
+        {"c_algo_solam",    wrap_algo_solam,    METH_VARARGS, "docs"},
+        {"c_algo_spam",     wrap_algo_spam,     METH_VARARGS, "docs"},
+        {"c_algo_sht_am",   wrap_algo_sht_am,   METH_VARARGS, "docs"},
+        {"c_algo_graph_am", wrap_algo_graph_am, METH_VARARGS, "docs"},
+        {"c_algo_opauc",    wrap_algo_opauc,    METH_VARARGS, "docs"},
+        {"c_algo_fsauc",    wrap_algo_fsauc,    METH_VARARGS, "docs"},
+        {"c_algo_sto_iht",  wrap_algo_sto_iht,  METH_VARARGS, "docs"},
+        {"c_algo_hsg_ht",   wrap_algo_hsg_ht,   METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 

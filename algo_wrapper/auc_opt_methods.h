@@ -23,28 +23,20 @@
 typedef struct {
     double *wt;
     double *wt_bar;
+    double *wt_prev;
     double *aucs;
     double *rts;
     int auc_len;
 } AlgoResults;
 
-typedef struct {
-    const double *x_tr_vals;
-    const int *x_tr_inds;
-    const int *x_tr_poss;
-    const int *x_tr_lens;
-    const double *y_tr;
-    bool is_sparse;
-    int n;
-    int p;
-} Data;
 
 typedef struct {
     int num_passes;
     int verbose;
     int step_len;
     int record_aucs;
-} CommonParas;
+    double stop_eps;
+} GlobalParas;
 
 AlgoResults *make_algo_results(int data_p, int total_num_eval);
 
@@ -61,6 +53,25 @@ typedef struct {
     int num_iter;
 } GraphStat;
 
+typedef struct {
+    const double *x_tr_vals;
+    const int *x_tr_inds;
+    const int *x_tr_poss;
+    const int *x_tr_lens;
+    const double *y_tr;
+    bool is_sparse;
+    int n;
+    int p;
+    // this is only for the graph operator.
+    bool is_graph;
+    int m; // number of edges.
+    EdgePair *edges;
+    double *weights;
+    int g;
+    double *proj_prizes;
+    GraphStat *graph_stat;
+} Data;
+
 GraphStat *make_graph_stat(int p, int m);
 
 bool free_graph_stat(GraphStat *graph_stat);
@@ -76,75 +87,57 @@ bool head_tail_binsearch(
         int sparsity_high, int max_num_iter, PruningMethod pruning,
         int verbose, GraphStat *stat);
 
- /**
-  * SOLAM: Stochastic Online AUC Maximization
-  * ---
-  * BibTEX:
-  * @inproceedings{ying2016stochastic,
-  * title={Stochastic online AUC maximization},
-  * author={Ying, Yiming and Wen, Longyin and Lyu, Siwei},
-  * booktitle={Advances in neural information processing systems},
-  * pages={451--459},
-  * year={2016}
-  * }
-  * @param data
-  * @param paras
-  * @param re
-  * @param para_xi
-  * @param para_r
-  * @author --- (Email: ---)
-  * @return
-  */
+/**
+ * SOLAM: Stochastic Online AUC Maximization
+ * ---
+ * BibTEX:
+ * @inproceedings{ying2016stochastic,
+ * title={Stochastic online AUC maximization},
+ * author={Ying, Yiming and Wen, Longyin and Lyu, Siwei},
+ * booktitle={Advances in neural information processing systems},
+ * pages={451--459},
+ * year={2016}
+ * }
+ * @param data
+ * @param paras
+ * @param re
+ * @param para_xi
+ * @param para_r
+ * @author --- (Email: ---)
+ * @return
+ */
 bool _algo_solam(Data *data,
-                 CommonParas *paras,
+                 GlobalParas *paras,
                  AlgoResults *re,
                  double para_xi,
                  double para_r);
 
- /**
-  * This function implements the algorithm proposed in the following paper.
-  * Stochastic Proximal Algorithms for AUC Maximization.
-  * ---
-  * @inproceedings{natole2018stochastic,
-  * title={Stochastic proximal algorithms for AUC maximization},
-  * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
-  * booktitle={International Conference on Machine Learning},
-  * pages={3707--3716},
-  * year={2018}}
-  * ---
-  * Do not use the function directly. Instead, call it by Python Wrapper.
-  * @param data
-  * @param paras
-  * @param re
-  * @param para_xi
-  * @param para_l1_reg
-  * @param para_l2_reg
-  * @author --- (Email: ---)
-  */
+/**
+ * This function implements the algorithm proposed in the following paper.
+ * Stochastic Proximal Algorithms for AUC Maximization.
+ * ---
+ * @inproceedings{natole2018stochastic,
+ * title={Stochastic proximal algorithms for AUC maximization},
+ * author={Natole, Michael and Ying, Yiming and Lyu, Siwei},
+ * booktitle={International Conference on Machine Learning},
+ * pages={3707--3716},
+ * year={2018}}
+ * ---
+ * Do not use the function directly. Instead, call it by Python Wrapper.
+ * @param data
+ * @param paras
+ * @param re
+ * @param para_xi
+ * @param para_l1_reg
+ * @param para_l2_reg
+ * @author --- (Email: ---)
+ */
 void _algo_spam(Data *data,
-                CommonParas *paras,
+                GlobalParas *paras,
                 AlgoResults *re,
                 double para_xi,
                 double para_l1_reg,
                 double para_l2_reg);
-
- /**
-  * Stochastic Hard Thresholding for AUC maximization.
-  * @param data
-  * @param paras
-  * @param re
-  * @param para_s
-  * @param para_b
-  * @param para_c
-  * @param para_l2_re
-  */
-void _algo_sht_am_v1(Data *data,
-                     CommonParas *paras,
-                     AlgoResults *re,
-                     int para_s,
-                     int para_b,
-                     double para_c,
-                     double para_l2_re);
 
 /**
  * Stochastic Hard Thresholding for AUC maximization.
@@ -156,45 +149,23 @@ void _algo_sht_am_v1(Data *data,
  * @param para_c
  * @param para_l2_re
  */
-void _algo_sht_am_v2(Data *data,
-                     CommonParas *paras,
-                     AlgoResults *re,
-                     int para_s,
-                     int para_b,
-                     double para_c,
-                     double para_l2_re);
+void _algo_sht_am(Data *data,
+                  GlobalParas *paras,
+                  AlgoResults *re,
+                  int version,
+                  int operator_id,
+                  int para_s,
+                  int para_b,
+                  double para_c,
+                  double para_l2_re);
 
 void _algo_sto_iht(Data *data,
-                   CommonParas *paras,
+                   GlobalParas *paras,
                    AlgoResults *re,
                    int para_s,
                    int para_b,
                    double para_xi,
                    double para_l2_reg);
-
-
-void _algo_graph_am_v1(Data *data,
-                       CommonParas *paras,
-                       AlgoResults *re,
-                       const EdgePair *edges,
-                       const double *weights,
-                       int data_m,
-                       int para_s,
-                       int para_b,
-                       double para_c,
-                       double para_l2_reg);
-
-
-void _algo_graph_am_v2(Data *data,
-                       CommonParas *paras,
-                       AlgoResults *re,
-                       const EdgePair *edges,
-                       const double *weights,
-                       int data_m,
-                       int para_s,
-                       int para_b,
-                       double para_c,
-                       double para_l2_reg);
 
 /**
  *
@@ -208,7 +179,7 @@ void _algo_graph_am_v2(Data *data,
  * @param para_l2
  */
 void _algo_hsg_ht(Data *data,
-                  CommonParas *paras,
+                  GlobalParas *paras,
                   AlgoResults *re,
                   int para_s,
                   double para_tau,
@@ -226,7 +197,7 @@ void _algo_hsg_ht(Data *data,
  * @param para_lambda
  */
 void _algo_opauc(Data *data,
-                 CommonParas *paras,
+                 GlobalParas *paras,
                  AlgoResults *re,
                  int para_tau,
                  double para_eta,
@@ -249,7 +220,7 @@ void _algo_opauc(Data *data,
  * @param para_g
  */
 void _algo_fsauc(Data *data,
-                 CommonParas *paras,
+                 GlobalParas *paras,
                  AlgoResults *re,
                  double para_r,
                  double para_g);
