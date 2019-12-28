@@ -655,11 +655,14 @@ void _algo_spam(Data *data, GlobalParas *paras, AlgoResults *re,
                 re->wt[k] = tmp_sign * fmax(0.0, fabs(re->wt[k]) - eta_t * para_l1_reg);
             }
         }
-        if ((fmod(t, paras->step_len) == 1.) && paras->record_aucs) { // evaluate the AUC score
+        // evaluate the AUC score
+        if ((fmod(t, paras->step_len) == 1.) && (paras->record_aucs == 1)) {
             _evaluate_aucs(data, y_pred, re, start_time);
         }
         // at the end of each epoch, we check the early stop condition.
+        re->total_iterations++;
         if (t % data->n == 0) {
+            re->total_epochs++;
             double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
             cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
             double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
