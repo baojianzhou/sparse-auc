@@ -562,6 +562,50 @@ def cv_sht_am_v2(para):
     return para, auc_wt, cv_wt_results
 
 
+def cv_sht_am_v3(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    # data
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    __ = np.empty(shape=(1,), dtype=float)
+    # candidate parameters
+    list_s = range(20, 140, 5)
+    list_b = range(50, 201, 50)
+    auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
+    step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id, (ind_s, para_s), (ind_b, para_b) in product(range(k_fold), enumerate(list_s), enumerate(list_b)):
+        s_time = time.time()
+        algo_para = (para_s, para_b, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
+            auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
+        list_auc_wt = np.zeros(k_fold)
+        list_num_nonzeros_wt = np.zeros(k_fold)
+        list_epochs = np.zeros(k_fold)
+        kf = KFold(n_splits=k_fold, shuffle=False)
+        for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
+            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+            _ = c_algo_sht_am(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, 1, para_s, para_b, 1.0, 0.0)
+            wt, aucs, rts, epochs = _
+            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
+            list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
+            list_epochs[ind] = epochs[0]
+        cv_wt_results[ind_s, ind_b] = np.mean(list_auc_wt)
+        if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
+            auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
+            auc_wt[(trial_id, fold_id)]['para'] = algo_para
+            auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
+        print("trial-%d fold-%d para_s:%03d para_b:%03d auc:%.4f epochs:%02d run_time: %.6f" %
+              (trial_id, fold_id, para_s, para_b, float(np.mean(list_auc_wt)),
+               float(np.mean(list_epochs)), time.time() - s_time))
+    sys.stdout.flush()
+    return para, auc_wt, cv_wt_results
+
+
 def test_sht_am_v2(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
@@ -895,6 +939,8 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
         ms_res = pool.map(cv_sht_am_v1, para_space)
     elif method_name == 'sht_am_v2':
         ms_res = pool.map(cv_sht_am_v2, para_space)
+    elif method_name == 'sht_am_v3':
+        ms_res = pool.map(cv_sht_am_v3, para_space)
     elif method_name == 'graph_am_v1':
         ms_res = pool.map(cv_graph_am_v1, para_space)
     elif method_name == 'graph_am_v2':
