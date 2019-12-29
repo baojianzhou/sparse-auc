@@ -530,7 +530,7 @@ def cv_sht_am_v2(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            _ = c_algo_sht_am(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, 1, para_s, para_b, 1.0, 0.0)
+            _ = c_algo_sht_am(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, 2, para_s, para_b, 1.0, 0.0)
             wt, aucs, rts, epochs = _
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
