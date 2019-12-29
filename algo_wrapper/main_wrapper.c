@@ -224,8 +224,7 @@ static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
                           &para_s, &para_b, &para_xi, &para_l2_reg)) { return NULL; }
     init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p + 1,
-                                        (data->n * paras->num_passes) / paras->step_len + 1);
+    AlgoResults *re = make_algo_results(data->p + 1, (data->n * paras->num_passes) / paras->step_len + 1);
     _algo_sto_iht(data, paras, re, para_s, para_b, para_xi, para_l2_reg);
     PyObject *results = get_results(data->p, re);
     free(paras), free_algo_results(re), free(data);
@@ -234,21 +233,22 @@ static PyObject *wrap_algo_sto_iht(PyObject *self, PyObject *args) {
 
 static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
-    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr;
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
     Data *data = malloc(sizeof(Data));
     GlobalParas *paras = malloc(sizeof(GlobalParas));
     int para_s;
     double para_tau, para_zeta, para_c, para_l2;
-    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiiiiiidddd",
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!idddd",
                           &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
                           &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
-                          &paras->num_passes, &paras->step_len, &paras->verbose, &paras->record_aucs,
+                          &PyArray_Type, &global_paras,
                           &para_s, &para_tau, &para_zeta, &para_c, &para_l2)) { return NULL; }
+    init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p, (data->n * paras->num_passes) / paras->step_len + 1);
+    AlgoResults *re = make_algo_results(data->p + 1, (data->n * paras->num_passes) / paras->step_len + 1);
     _algo_hsg_ht(data, paras, re, para_s, para_tau, para_zeta, para_c, para_l2);
     PyObject *results = get_results(data->p, re);
-    free_algo_results(re);
+    free(paras), free_algo_results(re), free(data);
     return results;
 }
 

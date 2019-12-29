@@ -1343,14 +1343,26 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
             cblas_daxpy(data->p + 1, -para_step_init / batch_size_s, loss_grad_wt + 1, 1, re->wt, 1);
             _hard_thresholding(re->wt, data->p, para_s); // k-sparse step.
             total_blocks += 1;
-            if (paras->record_aucs) {  // to evaluate AUC score
-                t_eval = clock();
-                cblas_dgemv(CblasRowMajor, CblasNoTrans,
-                            data->n, data->p, 1., data->x_tr_vals, data->p, re->wt, 1, 0.0, y_pred, 1);
-                re->aucs[re->auc_len] = _auc_score(data->y_tr, y_pred, data->n);
-                re->rts[re->auc_len++] = clock() - start_time - (clock() - t_eval);
+            if (paras->record_aucs == 1) {  // to evaluate AUC score
+                _evaluate_aucs(data, y_pred, re, start_time);
             }
             if (start_index >= (data->n - 1)) { break; }
+            // at the end of each epoch, we check the early stop condition.
+            re->total_iterations++;
+            if (t == num_of_batches - 1) {
+                re->total_epochs++;
+                double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+                cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
+                double norm_diff = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
+                if (norm_wt > 0.0 && (norm_diff / norm_wt <= paras->stop_eps)) {
+                    if (paras->verbose == 0) {
+                        printf("early stop at: %d-th epoch where maximal epoch is: %d\n",
+                               t / data->n, paras->num_passes);
+                    }
+                    break;
+                }
+            }
+            memcpy(re->wt_prev, re->wt, sizeof(double) * (data->p));
         }
     }
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);
