@@ -319,7 +319,7 @@ def test_spam_l1l2(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
         wt, aucs, rts, epochs = _
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = {'algo_para': [trial_id, fold_id, para_xi, para_l1, para_l2],
+        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_xi, para_l1, para_l2],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
@@ -423,25 +423,26 @@ def test_fsauc(para):
     method = 'fsauc'
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    ms = pkl.load(open(data_path + 'ms_%s.pkl' % method, 'rb'))
+    __ = np.empty(shape=(1,), dtype=float)
+    ms = pkl.load(open(data_path + 'ms_00_05_fsauc.pkl', 'rb'))
     results = dict()
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id in range(k_fold):
-        print(trial_id, fold_id, fig_i)
-        _, _, _, para_r, para_g, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+        para_r, para_g, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        step_len, verbose = 100, 0
-        wt, wt_bar, auc, rts = c_algo_fsauc(np.asarray(data['x_tr'][tr_index], dtype=float),
-                                            np.asarray(data['y_tr'][tr_index], dtype=float),
-                                            para_r, para_g, num_passes, step_len, verbose)
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
+        wt, aucs, rts, epochs = _
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = {'algo_para': [trial_id, fold_id, para_r, para_g],
+        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_r, para_g],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
-                         'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                     y_score=np.dot(data['x_tr'][te_index], wt_bar)),
-                         'auc': auc, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt),
-                         'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+                         'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+        print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_r:%.4f para_g:%.4f' %
+              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_r, para_g))
     sys.stdout.flush()
     return results
 
