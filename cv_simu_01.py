@@ -32,44 +32,6 @@ except ImportError:
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
 
 
-def test_solam(para):
-    def get_ms_file():
-        if 0 <= trial_id < 5:
-            return '00_05'
-        elif 5 <= trial_id < 10:
-            return '05_10'
-        elif 10 <= trial_id < 15:
-            return '10_15'
-        else:
-            return '15_20'
-
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
-    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    ms = pkl.load(open(data_path + 'ms_%s_solam.pkl' % (get_ms_file()), 'rb'))
-    results = dict()
-    for fold_id in range(k_fold):
-        print(trial_id, fold_id, fig_i)
-        _, _, _, para_xi, para_r, _ = ms[para]['solam']['auc_wt'][(trial_id, fold_id)]['para']
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        step_len, verbose, none_arr = 100, 0, np.asarray([0.0], dtype=np.int32)
-        wt, wt_bar, auc, rts = c_algo_solam(x_tr, none_arr, none_arr, none_arr, y_tr, 0, data['p'],
-                                            para_xi, para_r, num_passes, step_len, verbose)
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = {'algo_para': [trial_id, fold_id, para_xi, para_r],
-                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
-                         'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                     y_score=np.dot(data['x_tr'][te_index], wt_bar)),
-                         'nonzero_wt': np.count_nonzero(wt),
-                         'nonzero_wt_bar': np.count_nonzero(wt_bar)}
-    sys.stdout.flush()
-    return results
-
-
 def cv_solam(para):
     """ SOLAM algorithm. """
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
@@ -114,6 +76,33 @@ def cv_solam(para):
                float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
     return para, auc_wt, cv_wt_results
+
+
+def test_solam(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    __ = np.empty(shape=(1,), dtype=float)
+    ms = pkl.load(open(data_path + 'ms_00_05_solam.pkl', 'rb'))
+    results = dict()
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id in range(k_fold):
+        print(trial_id, fold_id, fig_i)
+        para_xi, para_r, _ = ms[para]['solam']['auc_wt'][(trial_id, fold_id)]['para']
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_r)
+        wt, aucs, rts, epochs = _
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_xi, para_r],
+                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
+                         'nonzero_wt': np.count_nonzero(wt)}
+    sys.stdout.flush()
+    return results
 
 
 def cv_spam_l1(para):
@@ -856,8 +845,7 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
     posi_ratio_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
-    results = dict()
-    para_space, ms_res = [], []
+    para_space, ms_res, results = [], [], dict()
     for trial_id in range(trial_id_low, trial_id_high):
         for fig_i in fig_list:
             for num_tr, mu, posi_ratio in product(tr_list, mu_list, posi_ratio_list):
@@ -897,7 +885,7 @@ def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
 
 
 def run_testing(method_name, num_cpus):
-    k_fold, num_trials, num_passes, tr_list, mu_list = 5, 20, 20, [1000], [0.3]
+    k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
     posi_ratio_list = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
     para_space, test_res, results = [], [], dict()
