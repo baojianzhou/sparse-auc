@@ -580,14 +580,14 @@ def cv_sto_iht(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 2)
-    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
-    auc_wt, cv_wt_results = dict(), np.zeros((len(list_c), len(list_s)))
+    list_s = range(20, 140, 5)
+    list_b = range(50, 201, 50)
+    auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-    for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
+    for fold_id, (ind_s, para_s), (ind_b, para_b) in product(range(k_fold), enumerate(list_s), enumerate(list_b)):
         s_time = time.time()
-        algo_para = (para_c, para_s, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
+        algo_para = (para_s, para_b, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -600,18 +600,18 @@ def cv_sto_iht(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            _ = c_algo_sto_iht(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, para_s, 100, para_c, 0.0)
+            _ = c_algo_sto_iht(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, para_s, para_b, 1., 0.0)
             wt, aucs, rts, epochs = _
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
             list_epochs[ind] = epochs[0]
-        cv_wt_results[ind_c, ind_s] = np.mean(list_auc_wt)
+        cv_wt_results[ind_s, ind_b] = np.mean(list_auc_wt)
         if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
             auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
             auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
-        print("trial-%d fold-%d para_c: %.1e para_s: %03d auc: %.4f epochs: %02d run_time: %.6f" %
-              (trial_id, fold_id, para_c, para_s, float(np.mean(list_auc_wt)),
+        print("trial-%d fold-%d para_s: %03d para_b: %03d auc: %.4f epochs: %02d run_time: %.6f" %
+              (trial_id, fold_id, para_s, para_b, float(np.mean(list_auc_wt)),
                float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
     return para, auc_wt, cv_wt_results
