@@ -634,6 +634,34 @@ def test_sht_am_v2(para):
     return results
 
 
+def test_sht_am_v3(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    __ = np.empty(shape=(1,), dtype=float)
+    ms = pkl.load(open(data_path + 'ms_00_05_sht_am_v2.pkl', 'rb'))
+    results = dict()
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id in range(k_fold):
+        para_s, para_b, _ = ms[para]['sht_am_v2']['auc_wt'][(trial_id, fold_id)]['para']
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 1, para_s, para_b, 1.0, 0.0)
+        wt, aucs, rts, epochs = _
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_s, para_b],
+                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
+                         'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+        print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_s:%03d para_b:%03d' %
+              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_s, para_b))
+    sys.stdout.flush()
+    return results
+
+
 def cv_sto_iht(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     # get data
@@ -978,14 +1006,11 @@ def run_testing(method_name, num_cpus):
     elif method_name == 'fsauc':
         test_res = pool.map(test_fsauc, para_space)
     elif method_name == 'sht_am_v1':
-        tt = time.time()
-        for i in range(2):
-            test_sht_am_v1(para_space[i])
-        print(time.time() - tt)
-        exit()
         test_res = pool.map(test_sht_am_v1, para_space)
     elif method_name == 'sht_am_v2':
         test_res = pool.map(test_sht_am_v2, para_space)
+    elif method_name == 'sht_am_v3':
+        test_res = pool.map(test_sht_am_v3, para_space)
     elif method_name == 'graph_am':
         test_res = pool.map(test_graph_am, para_space)
     elif method_name == 'opauc':
