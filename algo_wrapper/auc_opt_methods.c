@@ -927,13 +927,13 @@ void _algo_sht_am(Data *data, GlobalParas *paras, AlgoResults *re,
                         break;
                     case 2:
                         if (data->y_tr[ind] > 0) {
-                            w_x = (2. * prob_p) * (xtw - vtw - 1.0);
-                            w_posi = (2. * prob_p) * utw - (2. * prob_p * (1. - prob_p)) * (utw - vtw);
-                            w_nega = -(2. * prob_p) * xtw + (2. * prob_p * (1. - prob_p)) * (utw - vtw);
+                            w_x = 2. * (1. - prob_p) * (xtw - vtw - 1.0);
+                            w_posi = 2. * (1. - prob_p) * utw - 2. * prob_p * (1. - prob_p) * (utw - vtw);
+                            w_nega = -2. * (1. - prob_p) * xtw + 2. * prob_p * (1. - prob_p) * (utw - vtw);
                         } else {
-                            w_x = (2. * (1. - prob_p)) * (xtw - utw + 1.0);
-                            w_posi = -(2. * (1. - prob_p)) * xtw + (2. * prob_p * (1. - prob_p)) * (vtw - utw);
-                            w_nega = (2. * (1. - prob_p)) * (vtw) - (2. * prob_p * (1. - prob_p)) * (vtw - utw);
+                            w_x = 2. * prob_p * (xtw - utw + 1.0);
+                            w_posi = -2. * prob_p * xtw + 2. * prob_p * (1. - prob_p) * (vtw - utw);
+                            w_nega = 2. * prob_p * vtw - 2. * prob_p * (1. - prob_p) * (vtw - utw);
                         }
                         // calculate the gradient
                         for (int tt = 0; tt < data->x_tr_lens[ind]; tt++) {
@@ -973,13 +973,13 @@ void _algo_sht_am(Data *data, GlobalParas *paras, AlgoResults *re,
                         break;
                     case 2:
                         if (data->y_tr[ind] > 0) {
-                            w_x = (2. * prob_p) * (xtw - vtw - 1.0);
-                            w_posi = (2. * prob_p) * utw - (2. * prob_p * (1. - prob_p)) * (utw - vtw);
-                            w_nega = -(2. * prob_p) * xtw + (2. * prob_p * (1. - prob_p)) * (utw - vtw);
+                            w_x = 2. * (1. - prob_p) * (xtw - vtw - 1.0);
+                            w_posi = 2. * (1. - prob_p) * utw - 2. * prob_p * (1. - prob_p) * (utw - vtw);
+                            w_nega = -2. * (1. - prob_p) * xtw + 2. * prob_p * (1. - prob_p) * (utw - vtw);
                         } else {
-                            w_x = (2. * (1. - prob_p)) * (xtw - utw + 1.0);
-                            w_posi = -(2. * (1. - prob_p)) * xtw + (2. * prob_p * (1. - prob_p)) * (vtw - utw);
-                            w_nega = (2. * (1. - prob_p)) * (vtw) - (2. * prob_p * (1. - prob_p)) * (vtw - utw);
+                            w_x = 2. * prob_p * (xtw - utw + 1.0);
+                            w_posi = -2. * prob_p * xtw + 2. * prob_p * (1. - prob_p) * (vtw - utw);
+                            w_nega = 2. * prob_p * vtw - 2. * prob_p * (1. - prob_p) * (vtw - utw);
                         }
                         // calculate the gradient
                         cblas_daxpy(data->p, w_x, cur_xt, 1, grad_wt, 1);
