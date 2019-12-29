@@ -193,11 +193,12 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
         data->edges[i].first = *(int *) PyArray_GETPTR2(graph_edges, i, 0);
         data->edges[i].second = *(int *) PyArray_GETPTR2(graph_edges, i, 1);
     }
-    // ---
-    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
     data->weights = (double *) PyArray_DATA(graph_weights);
     data->proj_prizes = malloc(sizeof(double) * data->p);   // projected prizes.
     data->graph_stat = make_graph_stat(data->p, data->m);   // head projection paras
+    // ---
+    init_global_paras(paras, global_paras);
+    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
     AlgoResults *re = make_algo_results(data->p, (data->n / para_b) * paras->num_passes + 1);
     _algo_sht_am(data, paras, re, version, 1, para_s, para_b, para_xi, para_l2_reg);
     PyObject *results = get_results(data->p, re);
