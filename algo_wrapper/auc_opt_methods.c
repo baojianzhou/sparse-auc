@@ -1325,7 +1325,6 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
     openblas_set_num_threads(1);
 
     int total_blocks = 0;
-    double t_eval;
     double *y_pred = calloc((size_t) data->n, sizeof(double));
     double *loss_grad_wt = calloc((data->p + 2), sizeof(double));
     for (int t = 1; t <= paras->num_passes; t++) { // for each block

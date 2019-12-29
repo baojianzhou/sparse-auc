@@ -245,7 +245,7 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
                           &para_s, &para_tau, &para_zeta, &para_c, &para_l2)) { return NULL; }
     init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
-    AlgoResults *re = make_algo_results(data->p + 1, (data->n * paras->num_passes) / paras->step_len + 1);
+    AlgoResults *re = make_algo_results(data->p + 1, (data->n * paras->num_passes) + 1);
     _algo_hsg_ht(data, paras, re, para_s, para_tau, para_zeta, para_c, para_l2);
     PyObject *results = get_results(data->p, re);
     free(paras), free_algo_results(re), free(data);
