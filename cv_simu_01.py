@@ -731,7 +731,7 @@ def test_hsg_ht(para):
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_s:%03d para_c:%.3e' %
+        print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_s:%03d para_c:%.2e' %
               (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_s, para_c))
     sys.stdout.flush()
     return results
