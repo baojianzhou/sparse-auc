@@ -1196,7 +1196,7 @@ def show_result_01():
     method_list = ['sht_am_v1', 'sht_am_v2', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
     # method_list = ['sht_am_v1', 'sht_am_v2', 'sht_am_v3', 'graph_am_v1']
     method_list = ['sht_am_v1', 'sht_am_v2', 'sht_am_v3', 'graph_am_v1', 'graph_am_v2']
-    method_label_list = ['SHT-AM-V1', 'SHT-AM-V2', 'SHT-AM-V3', 'Graph-AM-V1', 'SHT-AM-V2',
+    method_label_list = ['SHT-AM-V1', 'SHT-AM-V2', 'SHT-AM-V3', 'Graph-AM-V1', 'Graph-AM-V2',
                          r"SPAM-$\displaystyle \ell^1$",
                          r"SPAM-$\displaystyle \ell^2$",
                          'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
