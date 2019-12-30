@@ -1194,9 +1194,10 @@ def show_result_01():
     color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am_v1', 'sht_am_v2', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    # method_list = ['sht_am_v1', 'sht_am_v2']
-    method_list = ['sht_am_v1', 'sht_am_v2', 'sht_am_v3']
-    method_label_list = ['SHT-AM-V1', 'SHT-AM-V2', 'SHT-AM-V3', r"SPAM-$\displaystyle \ell^1$",
+    # method_list = ['sht_am_v1', 'sht_am_v2', 'sht_am_v3', 'graph_am_v1']
+    method_list = ['sht_am_v1', 'sht_am_v2', 'sht_am_v3', 'graph_am_v1', 'graph_am_v2']
+    method_label_list = ['SHT-AM-V1', 'SHT-AM-V2', 'SHT-AM-V3', 'Graph-AM-V1', 'SHT-AM-V2',
+                         r"SPAM-$\displaystyle \ell^1$",
                          r"SPAM-$\displaystyle \ell^2$",
                          'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
     fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
@@ -1235,7 +1236,7 @@ def show_result_01():
     # ax[1, 1].set_yticks([0.75, 0.8, 0.85, 0.9, 0.95, 1.0])
     plt.subplots_adjust(wspace=0.1, hspace=0.2)
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    plt.savefig(root_path + 'simu-result-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.savefig(root_path + 'simu-result-01-sht_am.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
     plt.show()
 
