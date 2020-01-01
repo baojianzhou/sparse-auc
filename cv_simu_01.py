@@ -374,6 +374,25 @@ def cv_opauc(para):
     return para, auc_wt, cv_wt_results
 
 
+def test_opauc(para):
+    trial_id, fold_id, para_eta, para_lambda, data = para
+    tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+    te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+    re = c_algo_opauc(np.asarray(data['x_tr'][tr_index], dtype=float),
+                      np.asarray(data['y_tr'][tr_index], dtype=float),
+                      para_eta, para_lambda, 1, 1000000, 0)
+    wt = np.asarray(re[0])
+    wt_bar = np.asarray(re[1])
+    return {'algo_para': [trial_id, fold_id, para_eta, para_lambda],
+            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                    y_score=np.dot(data['x_tr'][te_index], wt)),
+            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
+                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
+            't_auc': 0.0,
+            'nonzero_wt': np.count_nonzero(wt),
+            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
+
+
 def cv_fsauc(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
     # get data
@@ -453,8 +472,7 @@ def cv_sht_am_v1(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 5)
-    list_b = range(50, 201, 50)
+    list_s, list_b = range(20, 140, 6), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -497,10 +515,7 @@ def cv_sht_am_v2(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 5)
-    list_b = range(50, 201, 50)
-    list_s = [data['s']]
-    list_b = [640]
+    list_s, list_b = range(20, 140, 6), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -599,9 +614,7 @@ def cv_sto_iht(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 5)
-    list_b = range(50, 201, 50)
-    list_b = [640]
+    list_s, list_b = range(20, 140, 6), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -671,7 +684,7 @@ def cv_hsg_ht(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 5)
+    list_s = range(20, 140, 6)
     list_s.extend(range(200, 501, 100))
     list_c = [1e-3, 1e-2, 1e-1, 1e0]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_c)))
@@ -747,8 +760,7 @@ def cv_graph_am_v1(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 5)
-    list_b = range(50, 201, 50)
+    list_s, list_b = range(20, 140, 6), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -793,8 +805,7 @@ def cv_graph_am_v2(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(20, 140, 5)
-    list_b = range(50, 201, 50)
+    list_s, list_b = range(20, 140, 6), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -890,24 +901,6 @@ def test_graph_am_v2(para):
               (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_s, para_b))
     sys.stdout.flush()
     return results
-
-
-def run_opauc(trial_id, fold_id, para_eta, para_lambda, data):
-    tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-    te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-    re = c_algo_opauc(np.asarray(data['x_tr'][tr_index], dtype=float),
-                      np.asarray(data['y_tr'][tr_index], dtype=float),
-                      para_eta, para_lambda, 1, 1000000, 0)
-    wt = np.asarray(re[0])
-    wt_bar = np.asarray(re[1])
-    return {'algo_para': [trial_id, fold_id, para_eta, para_lambda],
-            'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                    y_score=np.dot(data['x_tr'][te_index], wt)),
-            'auc_wt_bar': roc_auc_score(y_true=data['y_tr'][te_index],
-                                        y_score=np.dot(data['x_tr'][te_index], wt_bar)),
-            't_auc': 0.0,
-            'nonzero_wt': np.count_nonzero(wt),
-            'nonzero_wt_bar': np.count_nonzero(wt_bar)}
 
 
 def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
