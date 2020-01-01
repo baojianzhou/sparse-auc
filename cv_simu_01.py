@@ -1112,7 +1112,7 @@ def run_para_s(para):
 
 
 def run_para_sparsity(num_cpus):
-    k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 20, 20, [1000], [0.3]
+    k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 5, 50, [1000], [0.3]
     posi_ratio_list, fig_list = [0.3], ['fig_2']
     para_space = []
     for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
