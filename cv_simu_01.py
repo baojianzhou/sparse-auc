@@ -1168,47 +1168,7 @@ def show_diff_ratio(method):
 
 
 def show_sparsity(method):
-    method_list = ['sht_am_v1', 'sht_am_v2', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
-    posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-    for ind_method, method in enumerate(method_list):
-        results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
-        for ind_fig, fig_i in enumerate(fig_list):
-            re = []
-            for posi_ratio in posi_ratio_list:
-                re.append(np.mean([results[key]['auc_wt'] for key in results
-                                   if key[-1] == fig_i and key[-2] == posi_ratio]))
-            ax[ind_fig / 2, ind_fig % 2].plot(posi_ratio_list, re,
-                                              marker=marker_list[ind_method],
-                                              color=color_list[ind_method],
-                                              label=method_label_list[ind_method])
-    for ind_fig in range(4):
-        ax[ind_fig / 2, ind_fig % 2].set_title(r"Network %d" % (ind_fig + 1))
-    ax[0, 0].set_ylabel('AUC')
-    ax[1, 0].set_ylabel('AUC')
-    ax[1, 0].set_xlabel('Positive Ratio')
-    ax[1, 1].set_xlabel('Positive Ratio')
-    ax[1, 1].legend(loc='lower right', framealpha=1., bbox_to_anchor=(1.0, 0.0),
-                    fontsize=14., frameon=True, borderpad=0.1,
-                    labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax[0, 0].set_xticks(posi_ratio_list)
-    ax[0, 1].set_xticks(posi_ratio_list)
-    ax[1, 0].set_xticks(posi_ratio_list)
-    ax[1, 1].set_xticks(posi_ratio_list)
-    ax[0, 0].set_yticks([0.55, 0.65, 0.75, 0.85, 0.95])
-    ax[0, 1].set_yticks([0.55, 0.65, 0.75, 0.85, 0.95])
-    for i in range(2):
-        ax[0, i].set_ylim([0.56, .96])
-    for i in range(2):
-        ax[1, i].set_yticks([0.8, 0.85, 0.9, 0.95, 1.0])
-        ax[1, i].set_ylim([0.81, 1.01])
-    # ax[1, 1].set_yticks([0.75, 0.8, 0.85, 0.9, 0.95, 1.0])
-    plt.subplots_adjust(wspace=0.1, hspace=0.2)
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    plt.savefig(root_path + 'simu-result-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
-    plt.close()
-    plt.show()
-    plt.show()
+    pass
 
 
 def show_result_01():
