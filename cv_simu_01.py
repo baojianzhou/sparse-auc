@@ -1356,6 +1356,7 @@ def show_diff_b():
     plt.close()
     plt.show()
 
+
 def show_diff_ratio(method):
     import matplotlib.pyplot as plt
     from matplotlib import rc
