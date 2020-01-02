@@ -31,6 +31,53 @@ except ImportError:
 
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
 
+# figure 1 in [1], it has 26 nodes.
+fig_1_nodes = [475, 505, 506, 507, 508, 509, 510, 511, 512, 539, 540, 541, 542,
+               543, 544, 545, 576, 609, 642, 643, 644, 645, 646, 647, 679, 712]
+# figure 2 in [1], it has 46 nodes.
+fig_2_nodes = [439, 440, 471, 472, 473, 474, 504, 505, 506, 537, 538, 539, 568,
+               569, 570, 571, 572, 600, 601, 602, 603, 604, 605, 633, 634, 635,
+               636, 637, 666, 667, 668, 698, 699, 700, 701, 730, 731, 732, 733,
+               763, 764, 765, 796, 797, 798, 830]
+# figure 3 in [1], it has 92 nodes.
+fig_3_nodes = [151, 183, 184, 185, 217, 218, 219, 251, 252, 285, 286, 319, 320,
+               352, 353, 385, 386, 405, 406, 407, 408, 409, 419, 420, 437, 438,
+               439, 440, 441, 442, 443, 452, 453, 470, 471, 475, 476, 485, 486,
+               502, 503, 504, 507, 508, 509, 518, 519, 535, 536, 541, 550, 551,
+               568, 569, 583, 584, 601, 602, 615, 616, 617, 635, 636, 648, 649,
+               668, 669, 670, 680, 681, 702, 703, 704, 711, 712, 713, 736, 737,
+               738, 739, 740, 741, 742, 743, 744, 745, 771, 772, 773, 774, 775,
+               776]
+# figure 4 in [1], it has 132 nodes.
+fig_4_nodes = [244, 245, 246, 247, 248, 249, 254, 255, 256, 277, 278, 279, 280,
+               281, 282, 283, 286, 287, 288, 289, 290, 310, 311, 312, 313, 314,
+               315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 343, 344, 345,
+               346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 377,
+               378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390,
+               411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423,
+               448, 449, 450, 451, 452, 453, 454, 455, 456, 481, 482, 483, 484,
+               485, 486, 487, 488, 489, 514, 515, 516, 517, 518, 519, 520, 521,
+               547, 548, 549, 550, 551, 552, 553, 579, 580, 581, 582, 583, 584,
+               585, 586, 613, 614, 615, 616, 617, 618, 646, 647, 648, 649, 650,
+               680, 681]
+fig_nodes = {'fig_1': fig_1_nodes, 'fig_2': fig_2_nodes, 'fig_3': fig_3_nodes, 'fig_4': fig_4_nodes}
+
+
+def node_pre_rec_fm(true_nodes, pred_nodes):
+    """ Return the precision, recall and f-measure.
+    :param true_nodes:
+    :param pred_nodes:
+    :return: precision, recall and f-measure """
+    true_nodes, pred_nodes = set(true_nodes), set(pred_nodes)
+    pre, rec, fm = 0.0, 0.0, 0.0
+    if len(pred_nodes) != 0:
+        pre = len(true_nodes & pred_nodes) / float(len(pred_nodes))
+    if len(true_nodes) != 0:
+        rec = len(true_nodes & pred_nodes) / float(len(true_nodes))
+    if (pre + rec) > 0.:
+        fm = (2. * pre * rec) / (pre + rec)
+    return [pre, rec, fm]
+
 
 def cv_solam(para):
     """ SOLAM algorithm. """
@@ -1136,6 +1183,67 @@ def run_diff_ratio(method):
     pkl.dump(results, open(data_path + 're_diff_p_ratio-%s.pkl' % method, 'wb'))
 
 
+def run_diff_s(para_s):
+    k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
+    posi_ratio = 0.30
+    num_tr, mu, fig_i = 1000, 0.3, 'fig_2'
+    __ = np.empty(shape=(1,), dtype=float)
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    aucs_list = dict()
+    for method in ['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht', 'hsg_ht']:
+        aucs_list[method] = np.zeros(25)
+        ms = pkl.load(open(data_path + 'ms_00_05_%s.pkl' % method, 'rb'))
+        for trial_id, fold_id in enumerate(range(5)):
+            f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+            data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+            para = (trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+            for fold_id in range(k_fold):
+                tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+                te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+                x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+                y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+                if method == 'sht_am_v1' or method == 'sht_am_v2' or \
+                        method == 'graph_am_v1' or method == 'graph_am_v2' or method == 'sto_iht':
+                    if method == 'sht_am_v1':
+                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                              global_paras, 0, para_s, para_b, 1.0, 0.0)
+                    if method == 'sht_am_v2':
+                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                              global_paras, 2, para_s, para_b, 1.0, 0.0)
+                    if method == 'graph_am_v1':
+                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        edges, weights = np.asarray(data['edges'], dtype=np.int32), \
+                                         np.asarray(data['weights'], dtype=float)
+                        wt, aucs, rts, epochs = c_algo_graph_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                                edges, weights, 1, 0, para_s, para_b, 1.0, 0.0)
+                    if method == 'graph_am_v2':
+                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        edges, weights = np.asarray(data['edges'], dtype=np.int32), \
+                                         np.asarray(data['weights'], dtype=float)
+                        wt, aucs, rts, epochs = c_algo_graph_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                                edges, weights, 1, 2, para_s, para_b, 1.0, 0.0)
+                    if method == 'sto_iht':
+                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                               para_s, para_b, 1., 0.0)
+                    aucs_list[method][trial_id * 5 + fold_id] = roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                              y_score=np.dot(data['x_tr'][te_index],
+                                                                                             wt))
+                else:
+                    para_tau, para_zeta = 1.0, 1.033
+                    _, para_c, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                    wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                          global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
+                    aucs_list[method][trial_id * 5 + fold_id] = roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                              y_score=np.dot(data['x_tr'][te_index],
+                                                                                             wt))
+                print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
+    return aucs_list
+
+
 def show_diff_ratio(method):
     import matplotlib.pyplot as plt
     from matplotlib import rc
@@ -1168,7 +1276,26 @@ def show_diff_ratio(method):
 
 
 def show_sparsity(method):
-    pass
+    method_list = ['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2',
+                   'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
+    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
+    posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    posi_ratio_list = [0.3]
+    results = {method: pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method))) for method in method_list}
+    print('-' * 100)
+    for (ind_p, posi_ratio) in enumerate(posi_ratio_list):
+        for ind_method, method in enumerate(method_list):
+            print(method),
+            for ind_fig, fig_i in enumerate(fig_list):
+                re_auc = [results[method][key]['auc_wt'] for key in results[method]
+                          if key[-1] == fig_i and key[-2] == posi_ratio]
+                print('%.4f %.4f' % (float(np.mean(re_auc)), float(np.std(re_auc)))),
+            for ind_fig, fig_i in enumerate(fig_list):
+                re_fm = [node_pre_rec_fm(true_nodes=fig_nodes[fig_i],
+                                         pred_nodes=list(np.nonzero(results[method][key]['wt'])[0]))[2]
+                         for key in results[method] if key[-1] == fig_i and key[-2] == posi_ratio]
+                print('%.4f %.4f' % (float(np.mean(re_fm)), float(np.std(re_fm)))),
+            print('')
 
 
 def show_result_01():
@@ -1246,12 +1373,18 @@ def main(run_option):
     elif run_option == 'run_diff_ratio':
         run_diff_ratio(method='sht_am_v1')
         run_diff_ratio(method='sht_am_v2')
+    elif run_option == 'run_diff_s':
+        para_s_list = range(20, 74, 2)
+        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+        ms_res = pool.map(run_diff_s, para_s_list)
+        pool.close()
+        pool.join()
+        pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
     elif run_option == 'show_diff_ratio':
         show_diff_ratio(method='sht_am_v1')
         show_diff_ratio(method='sht_am_v2')
     elif run_option == 'show_sparsity':
         show_sparsity(method='sht_am_v1')
-        show_sparsity(method='sht_am_v2')
     elif run_option == 'show_01':
         show_result_01()
 
