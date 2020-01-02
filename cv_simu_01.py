@@ -1245,9 +1245,33 @@ def run_diff_s(para_s):
 
 
 def show_diff_s():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 14
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 6, 5
     para_s_list = range(20, 74, 2)
+    fig, ax = plt.subplots(1, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
     results = pkl.load(open(data_path + 're_diff_s.pkl', 'rb'))
-    return aucs_list
+    method_label = ['SHT-AUC-V1', 'SHT-AUC-V2', 'Graph-AUC-V1', 'Graph-AUC-V2', 'StoIHT', 'HSG-HT']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    for method_ind, method in enumerate(['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht', 'hsg_ht']):
+        ax.plot(para_s_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
+                marker=marker_list[method_ind], linewidth=2.)
+    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xlabel('Sparsity (s)')
+    ax.set_ylabel('AUC Score')
+    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    f_name = root_path + 'simu_diff_s.pdf'
+    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.close()
+    plt.show()
 
 
 def run_diff_b(para_b):
@@ -1302,6 +1326,35 @@ def run_diff_b(para_b):
                 print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
     return para_b, aucs_list
 
+
+def show_diff_b():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 14
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 6, 5
+    para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
+    fig, ax = plt.subplots(1, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    results = pkl.load(open(data_path + 're_diff_b.pkl', 'rb'))
+    method_label = ['SHT-AUC-V1', 'SHT-AUC-V2', 'Graph-AUC-V1', 'Graph-AUC-V2', 'StoIHT']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    for method_ind, method in enumerate(['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht']):
+        ax.plot(para_b_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
+                marker=marker_list[method_ind], linewidth=2.)
+    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xlabel('Block Size (b)')
+    ax.set_ylabel('AUC Score')
+    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    f_name = root_path + 'simu_diff_s.pdf'
+    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.close()
+    plt.show()
 
 def show_diff_ratio(method):
     import matplotlib.pyplot as plt
@@ -1442,12 +1495,14 @@ def main(run_option):
     elif run_option == 'show_diff_s':
         show_diff_s()
     elif run_option == 'run_diff_b':
-        para_b_list = [640 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
+        para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
         ms_res = pool.map(run_diff_b, para_b_list)
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
+    elif run_option == 'show_diff_b':
+        show_diff_b()
     elif run_option == 'show_diff_ratio':
         show_diff_ratio(method='sht_am_v1')
         show_diff_ratio(method='sht_am_v2')
