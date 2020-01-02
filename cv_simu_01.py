@@ -1241,6 +1241,12 @@ def run_diff_s(para_s):
                                                                               y_score=np.dot(data['x_tr'][te_index],
                                                                                              wt))
                 print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
+    return para_s, aucs_list
+
+
+def show_diff_s():
+    para_s_list = range(20, 74, 2)
+    results = pkl.load(open(data_path + 're_diff_s.pkl', 'rb'))
     return aucs_list
 
 
@@ -1294,7 +1300,7 @@ def run_diff_b(para_b):
                                                                               y_score=np.dot(data['x_tr'][te_index],
                                                                                              wt))
                 print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
-    return aucs_list
+    return para_b, aucs_list
 
 
 def show_diff_ratio(method):
@@ -1433,6 +1439,8 @@ def main(run_option):
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
+    elif run_option == 'show_diff_s':
+        show_diff_s()
     elif run_option == 'run_diff_b':
         para_b_list = [640 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
