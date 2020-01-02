@@ -1244,6 +1244,59 @@ def run_diff_s(para_s):
     return aucs_list
 
 
+def run_diff_b(para_b):
+    k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
+    posi_ratio = 0.30
+    num_tr, mu, fig_i = 1000, 0.3, 'fig_2'
+    __ = np.empty(shape=(1,), dtype=float)
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    aucs_list = dict()
+    for method in ['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht', 'hsg_ht']:
+        aucs_list[method] = np.zeros(25)
+        ms = pkl.load(open(data_path + 'ms_00_05_%s.pkl' % method, 'rb'))
+        for trial_id, fold_id in enumerate(range(5)):
+            f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+            data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+            para = (trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+            for fold_id in range(k_fold):
+                tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+                te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+                x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+                y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+                if method == 'sht_am_v1' or method == 'sht_am_v2' or \
+                        method == 'graph_am_v1' or method == 'graph_am_v2' or method == 'sto_iht':
+                    if method == 'sht_am_v1':
+                        para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                              global_paras, 0, para_s, para_b, 1.0, 0.0)
+                    if method == 'sht_am_v2':
+                        para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                              global_paras, 2, para_s, para_b, 1.0, 0.0)
+                    if method == 'graph_am_v1':
+                        para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        edges, weights = np.asarray(data['edges'], dtype=np.int32), \
+                                         np.asarray(data['weights'], dtype=float)
+                        wt, aucs, rts, epochs = c_algo_graph_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                                edges, weights, 1, 0, para_s, para_b, 1.0, 0.0)
+                    if method == 'graph_am_v2':
+                        para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        edges, weights = np.asarray(data['edges'], dtype=np.int32), \
+                                         np.asarray(data['weights'], dtype=float)
+                        wt, aucs, rts, epochs = c_algo_graph_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                                edges, weights, 1, 2, para_s, para_b, 1.0, 0.0)
+                    if method == 'sto_iht':
+                        para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                        wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                               para_s, para_b, 1., 0.0)
+                    aucs_list[method][trial_id * 5 + fold_id] = roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                              y_score=np.dot(data['x_tr'][te_index],
+                                                                                             wt))
+                print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
+    return aucs_list
+
+
 def show_diff_ratio(method):
     import matplotlib.pyplot as plt
     from matplotlib import rc
@@ -1380,6 +1433,13 @@ def main(run_option):
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
+    elif run_option == 'run_diff_b':
+        para_b_list = [640 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
+        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+        ms_res = pool.map(run_diff_b, para_b_list)
+        pool.close()
+        pool.join()
+        pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
     elif run_option == 'show_diff_ratio':
         show_diff_ratio(method='sht_am_v1')
         show_diff_ratio(method='sht_am_v2')
