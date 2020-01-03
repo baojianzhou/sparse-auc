@@ -148,7 +148,48 @@ def cv_sht_am(para):
                 selected_b = para_b
                 best_auc = re['auc_wt']
         print('selected b: %d best_auc: %.4f' % (selected_b, best_auc))
+        tr_index = data['trial_%d' % trial_id]['tr_index']
+        te_index = data['trial_%d' % trial_id]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, selected_b, 1., 0.0)
+        wt, aucs, rts, epochs = _
+        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, selected_b],
+                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
+                                        'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+    print(para_s, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
+    return para_s, results
+
+
+def cv_sto_iht(para):
+    data, para_s = para
+    num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    __ = np.empty(shape=(1,), dtype=float)
+    results = dict()
+    for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        selected_b, best_auc = None, None
+        for para_b in range(1, 40, 1):
+            _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_b, 1., 0.0)
+            wt, aucs, rts, epochs = _
+            re = {'algo_para': [trial_id, fold_id, para_s, para_b],
+                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                          y_score=np.dot(data['x_tr'][te_index], wt)),
+                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+            if selected_b is None or best_auc is None or best_auc < re['auc_wt']:
+                selected_b = para_b
+                best_auc = re['auc_wt']
+        print('selected b: %d best_auc: %.4f' % (selected_b, best_auc))
+        tr_index = data['trial_%d' % trial_id]['tr_index']
+        te_index = data['trial_%d' % trial_id]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, selected_b, 1., 0.0)
         wt, aucs, rts, epochs = _
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, selected_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -169,6 +210,22 @@ def run_sht_am():
         para_list.append((data, para_s))
     pool = multiprocessing.Pool(processes=int(sys.argv[2]))
     ms_res = pool.map(cv_sht_am, para_list)
+    pool.close()
+    pool.join()
+    pkl.dump(ms_res, open(data_path + 're_sht_am_v1.pkl', 'wb'))
+
+
+def run_sto_iht():
+    """ https://www.genome.jp/kegg/tool/conv_id.html """
+    # process_data_20_colon()
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data = pkl.load(open(data_path + 'colon_data.pkl'))
+    __ = np.empty(shape=(1,), dtype=float)
+    para_list = []
+    for para_s in range(10, 101, 5):
+        para_list.append((data, para_s))
+    pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+    ms_res = pool.map(cv_sto_iht, para_list)
     pool.close()
     pool.join()
     pkl.dump(ms_res, open(data_path + 're_sht_am_v1.pkl', 'wb'))
@@ -232,6 +289,8 @@ def show_results():
 def main():
     if sys.argv[1] == 'run_sht_am':
         run_sht_am()
+    elif sys.argv[1] == 'run_sto_iht':
+        run_sto_iht()
 
 
 if __name__ == '__main__':
