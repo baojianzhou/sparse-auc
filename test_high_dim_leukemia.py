@@ -17,6 +17,7 @@ try:
         from sparse_module import c_algo_solam
         from sparse_module import c_algo_spam
         from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_graph_am
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sto_iht
         from sparse_module import c_algo_hsg_ht
@@ -109,6 +110,19 @@ def process_data_20_colon():
         if trial_i >= data['num_trials']:
             break
     pkl.dump(data, open(data_path + 'colon_data.pkl', 'wb'))
+
+
+def test_on_leukemia():
+    """
+    This dataset is from:
+    https://github.com/ramhiser/datamicroarray/blob/master/data/golub.RData
+    :return:
+    """
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    import pyreadr
+    result = pyreadr.read_r(data_path + 'golub')
+    print(result.keys())
+    pass
 
 
 def cv_sht_am(para):
@@ -442,28 +456,6 @@ def run_methods(method):
     pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
 
 
-def preprocess_results():
-    results = dict()
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
-    for method in ['sht_am_v1', 'sto_iht', 'hsg_ht', 'fsauc']:
-        print(method)
-        results[method] = []
-        re = pkl.load(open(data_path + 're_%s.pkl' % method))
-        for item in sorted(re):
-            results[method].append({'auc': None, 'nonzeros': None})
-            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
-            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    for method in ['spam_l1', 'spam_l2', 'spam_l1l2']:
-        print(method)
-        results[method] = []
-        re = pkl.load(open(data_path + 're_%s.pkl' % method))
-        for item in sorted(re)[::-1]:
-            results[method].append({'auc': None, 'nonzeros': None})
-            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
-            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    pkl.dump(results, open(data_path + 're_summary.pkl', 'wb'))
-
-
 def show_results():
     import matplotlib.pyplot as plt
     from matplotlib import rc
@@ -473,28 +465,34 @@ def show_results():
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 8, 8
-    fig, ax = plt.subplots(1, 1)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
-    re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
     color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
     method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"StoIHT", 'HSG-HT']
-    for method_ind, method in enumerate(['sht_am_v1', 'spam_l1', 'spam_l2',
-                                         'fsauc', 'spam_l1l2', 'sto_iht', 'hsg_ht']):
-        plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
-                 label=method_label_list[method_ind])
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparsity (s)')
-    ax.set_ylabel('AUC Score')
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'real_colon_auc.pdf'
-    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
-    plt.close()
+                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    re_sht_am = {_[0]: _[1] for _ in pkl.load(open(data_path + 're_sht_am_v1.pkl'))}
+    re_sto_iht = {_[0]: _[1] for _ in pkl.load(open(data_path + 're_sto_iht.pkl'))}
+    re_spam_l1 = {_[0]: _[1] for _ in pkl.load(open(data_path + 're_spam_l1.pkl'))}
+    re_spam_l2 = {_[0]: _[1] for _ in pkl.load(open(data_path + 're_spam_l2.pkl'))}
+    auc_sht_am = []
+    auc_sto_iht = []
+    auc_spam_l1 = []
+    auc_spam_l2 = []
+    for para_s in range(10, 101, 5):
+        auc_sht_am.append(np.mean([re_sht_am[para_s][_]['auc_wt'] for _ in re_sht_am[para_s]]))
+        auc_sto_iht.append(np.mean([re_sto_iht[para_s][_]['auc_wt'] for _ in re_sto_iht[para_s]]))
+    for para_l1 in [1e-5, 3e-5, 5e-5, 7e-5, 9e-5, 1e-4, 3e-4, 5e-4, 7e-4, 9e-4,
+                    1e-3, 3e-3, 5e-3, 7e-3, 9e-3, 1e-2, 3e-2, 5e-2, 7e-2][::-1]:
+        auc_spam_l1.append(np.mean([re_spam_l1[para_l1][_]['auc_wt'] for _ in re_spam_l1[para_l1]]))
+        auc_spam_l2.append(np.mean([re_spam_l2[para_l1][_]['auc_wt'] for _ in range(19)[::-1]]))
+    import matplotlib.pyplot as plt
+    plt.plot(range(10, 101, 5), auc_sht_am, label='SHT-AUC')
+    plt.plot(range(10, 101, 5), auc_sto_iht, label='Sto-IHT')
+    plt.plot(range(10, 101, 5), auc_spam_l1, label='SPAM-L1')
+    plt.plot(range(10, 101, 5), auc_spam_l2, label='SPAM-L2')
+    plt.legend()
+    plt.show()
 
 
 def main():
@@ -517,5 +515,4 @@ def main():
 
 
 if __name__ == '__main__':
-    preprocess_results()
     main()
