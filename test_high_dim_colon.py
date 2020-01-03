@@ -282,6 +282,48 @@ def cv_spam_l2(para):
     return para_ind, results
 
 
+def cv_spam_l1l2(para):
+    data, para_l1 = para
+    num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    __ = np.empty(shape=(1,), dtype=float)
+    results = dict()
+    for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        selected_xi, select_l2, best_auc = None, None, None
+        aver_nonzero = []
+        for para_xi, para_l2, in product(10. ** np.arange(-5, 3, 1, dtype=float),
+                                         10. ** np.arange(-5, 3, 1, dtype=float)):
+            _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
+            wt, aucs, rts, epochs = _
+            aver_nonzero.append(np.count_nonzero(wt))
+            re = {'algo_para': [trial_id, fold_id, para_xi, para_l2],
+                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                          y_score=np.dot(data['x_tr'][te_index], wt)),
+                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+            if best_auc is None or best_auc < re['auc_wt']:
+                selected_xi = para_xi
+                select_l2 = para_l2
+                best_auc = re['auc_wt']
+        tr_index = data['trial_%d' % trial_id]['tr_index']
+        te_index = data['trial_%d' % trial_id]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, selected_xi, para_l1, select_l2)
+        wt, aucs, rts, epochs = _
+        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, selected_xi, select_l2],
+                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
+                                        'aucs': aucs, 'rts': rts, 'wt': wt}
+        print('selected xi: %.4e l2: %.4e nonzero: %.4e test_auc: %.4f' %
+              (selected_xi, select_l2, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+    print(para_l1, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
+    return para_l1, results
+
+
 def run_methods(method):
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     data = pkl.load(open(data_path + 'colon_data.pkl'))
@@ -309,6 +351,14 @@ def run_methods(method):
         for para_ind in range(19):
             para_list.append((data, para_ind))
         ms_res = pool.map(cv_spam_l2, para_list)
+    elif method == 'spam_l1l2':
+        para_list = []
+        for para_l1 in [1e-5, 3e-5, 5e-5, 7e-5, 9e-5,
+                        1e-4, 3e-4, 5e-4, 7e-4, 9e-4,
+                        1e-3, 3e-3, 5e-3, 7e-3, 9e-3,
+                        1e-2, 3e-2, 5e-2, 7e-2]:
+            para_list.append((data, para_l1))
+        ms_res = pool.map(cv_spam_l1l2, para_list)
     else:
         ms_res = None
     pool.close()
@@ -349,6 +399,8 @@ def main():
         run_methods(method='spam_l1')
     elif sys.argv[1] == 'run_spam_l2':
         run_methods(method='spam_l2')
+    elif sys.argv[1] == 'run_spam_l1l2':
+        run_methods(method='spam_l1l2')
     elif sys.argv[1] == 'show_01':
         show_results()
 
