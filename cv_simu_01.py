@@ -1258,6 +1258,7 @@ def show_diff_s():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     results = pkl.load(open(data_path + 're_diff_s.pkl', 'rb'))
+    results = [_[1] for _ in results]
     method_label = ['SHT-AUC-V1', 'SHT-AUC-V2', 'Graph-AUC-V1', 'Graph-AUC-V2', 'StoIHT', 'HSG-HT']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     for method_ind, method in enumerate(['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht', 'hsg_ht']):
@@ -1336,22 +1337,26 @@ def show_diff_b():
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 6, 5
+
     para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
     fig, ax = plt.subplots(1, 1)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     results = pkl.load(open(data_path + 're_diff_b.pkl', 'rb'))
+    results = [_[1] for _ in results]
     method_label = ['SHT-AUC-V1', 'SHT-AUC-V2', 'Graph-AUC-V1', 'Graph-AUC-V2', 'StoIHT']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     for method_ind, method in enumerate(['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht']):
-        ax.plot(para_b_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
+        ax.plot(range(len(para_b_list)), [np.mean(_[method]) for _ in results], label=method_label[method_ind],
                 marker=marker_list[method_ind], linewidth=2.)
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+    ax.legend(loc='lower right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xticks(range(len([40, 44, 50, 57, 66, 80, 100, 133, 200, 400, 800])))
+    ax.set_xticklabels([40, 44, 50, 57, 66, 80, 100, 133, 200, 400, 800])
     ax.set_xlabel('Block Size (b)')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'simu_diff_s.pdf'
+    f_name = root_path + 'simu_diff_b.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
     plt.show()
