@@ -129,16 +129,16 @@ def cv_sht_am(para):
     data, para_s = para
     num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-    __ = np.empty(shape=(1,), dtype=float)
     results = dict()
     for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         selected_b, best_auc = None, None
         for para_b in range(1, 40, 1):
-            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
+            _ = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float), np.empty(shape=(1,), dtype=float),
+                              np.empty(shape=(1,), dtype=float), np.empty(shape=(1,), dtype=float),
+                              np.asarray(data['y_tr'][tr_index], dtype=float),
+                              0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
             wt, aucs, rts, epochs = _
             re = {'algo_para': [trial_id, fold_id, para_s, para_b],
                   'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -150,9 +150,10 @@ def cv_sht_am(para):
         print('selected b: %d best_auc: %.4f' % (selected_b, best_auc))
         tr_index = data['trial_%d' % trial_id]['tr_index']
         te_index = data['trial_%d' % trial_id]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, selected_b, 1., 0.0)
+        _ = c_algo_sht_am(np.asarray(data['x_tr'][tr_index], dtype=float), np.empty(shape=(1,), dtype=float),
+                          np.empty(shape=(1,), dtype=float), np.empty(shape=(1,), dtype=float),
+                          np.asarray(data['y_tr'][tr_index], dtype=float),
+                          0, data['p'], global_paras, 0, para_s, selected_b, 1., 0.0)
         wt, aucs, rts, epochs = _
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, selected_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -199,7 +200,71 @@ def cv_sto_iht(para):
     return para_s, results
 
 
-def run_sht_am():
+def cv_spam_l1(para):
+    data, para_l1 = para
+    num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    __ = np.empty(shape=(1,), dtype=float)
+    results = dict()
+    for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        selected_xi, best_auc = None, None
+        for para_xi in 10. ** np.arange(-5, 3, 1, dtype=float):
+            _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
+            wt, aucs, rts, epochs = _
+            print(np.count_nonzero(wt))
+            re = {'algo_para': [trial_id, fold_id, para_xi, para_l1],
+                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                          y_score=np.dot(data['x_tr'][te_index], wt)),
+                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+            if best_auc is None or best_auc < re['auc_wt']:
+                selected_xi = para_xi
+                best_auc = re['auc_wt']
+        print('selected xi: %.4e selected l1: %.4e best_auc: %.4f' % (selected_xi, para_l1, best_auc))
+        tr_index = data['trial_%d' % trial_id]['tr_index']
+        te_index = data['trial_%d' % trial_id]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, selected_xi, para_l1, 0.0)
+        wt, aucs, rts, epochs = _
+        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, selected_xi, para_l1],
+                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
+                                        'aucs': aucs, 'rts': rts, 'wt': wt}
+    print(para_l1, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
+    return para_l1, results
+
+
+def run_methods(method):
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data = pkl.load(open(data_path + 'colon_data.pkl'))
+    pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+    if method == 'sht_am':
+        para_list = []
+        for para_s in range(10, 101, 5):
+            para_list.append((data, para_s))
+        ms_res = pool.map(cv_sht_am, para_list)
+    elif method == 'sto_iht':
+        para_list = []
+        for para_s in range(10, 101, 5):
+            para_list.append((data, para_s))
+        ms_res = pool.map(cv_sto_iht, para_list)
+    elif method == 'spam_l1':
+        para_list = []
+        for para_l1 in np.arange(5e-2, 2e-1, 0.008):
+            para_list.append((data, para_l1))
+        ms_res = pool.map(cv_spam_l1, para_list)
+    else:
+        ms_res = None
+    pool.close()
+    pool.join()
+    pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
+
+
+def run_spam_l1():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     data = pkl.load(open(data_path + 'colon_data.pkl'))
     __ = np.empty(shape=(1,), dtype=float)
@@ -228,57 +293,18 @@ def run_sto_iht():
 
 
 def show_results():
-    results = dict()
-    k_fold, step_len, verbose, record_aucs, stop_eps = 5, 1e2, 0, 1, 1e-7
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    re_sht_am = {_[0]: _[1] for _ in pkl.load(open(data_path + 're_sht_am_v1.pkl'))}
+    re_sto_iht = {_[0]: _[1] for _ in pkl.load(open(data_path + 're_sto_iht.pkl'))}
+    auc_sht_am = []
+    auc_sto_iht = []
+    for para_s in range(10, 101, 5):
+        auc_sht_am.append(np.mean([re_sht_am[para_s][_]['auc_wt'] for _ in re_sht_am[para_s]]))
+        auc_sto_iht.append(np.mean([re_sto_iht[para_s][_]['auc_wt'] for _ in re_sto_iht[para_s]]))
     import matplotlib.pyplot as plt
-    all_res = []
-    selected_features = dict()
-    for num_passes in [50]:
-        global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-        re_aucs = []
-        for trial_id, fold_id in product(range(5), range(k_fold)):
-            tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-            te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-            para_s, para_b = 20, 7
-            x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-            y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 2., 0.0)
-            wt, aucs, rts, epochs = _
-            results = {'algo_para': [trial_id, fold_id, para_s, para_b],
-                       'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                               y_score=np.dot(data['x_tr'][te_index], wt)),
-                       'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            for ii in np.nonzero(wt)[0]:
-                if ii not in selected_features:
-                    selected_features[ii] = 0
-                selected_features[ii] += 1
-            print('trial-%d fold-%d auc: %.4f para_s:%03d para_b:%03d' %
-                  (trial_id, fold_id, results['auc_wt'], para_s, para_b))
-            re_aucs.append(results['auc_wt'])
-            plt.plot(rts, aucs)
-        all_res.append(np.mean(re_aucs))
-        plt.show()
-        plt.close()
-    xxxxx = set(selected_features.keys()).intersection(set(
-        [295, 451, 608, 1041, 1043, 1165, 1279, 918, 1352, 1386, 1393, 1870]))
-    print(xxxxx, len(xxxxx))
-    print(len(selected_features))
-
-    xxxxx = set(selected_features.keys()).intersection(set(
-        [554, 268, 250, 146, 1463, 112, 29, 829, 325, 137, 209, 158, 1143, 316, 225, 207, 860, 163, 154, 701, 534, 510,
-         512, 628, 295, 451, 608, 1041, 1043, 1165, 1279, 918, 1352, 1386, 1393, 1870]))
-    print(xxxxx, len(xxxxx))
-    print(len(selected_features))
-    exit()
-    xx = [(k, v) for k, v in sorted(selected_features.items(), key=lambda item: item[1], reverse=True)]
-    xxx = []
-    for x in xx[:25]:
-        print(x[0], data['feature_names'][x[0]])
-        xxx.append(str(data['feature_names'][x[0]]).split('Hsa.')[1])
-    for item in xxx:
-        print(item)
-    plt.plot(all_res, marker='D')
-    plt.show()
+    plt.plot(range(10, 101, 5), auc_sht_am, label='SHT-AUC')
+    plt.plot(range(10, 101, 5), auc_sto_iht, label='Sto-IHT')
+    plt.legend()
     plt.show()
 
 
@@ -287,6 +313,10 @@ def main():
         run_sht_am()
     elif sys.argv[1] == 'run_sto_iht':
         run_sto_iht()
+    elif sys.argv[1] == 'run_spam_l1':
+        run_methods(method='spam_l1')
+    elif sys.argv[1] == 'show_01':
+        show_results()
 
 
 if __name__ == '__main__':
