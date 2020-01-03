@@ -194,14 +194,12 @@ def cv_sto_iht(para):
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, selected_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+                                        'aucs': aucs, 'rts': rts, 'wt': wt}
     print(para_s, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
     return para_s, results
 
 
 def run_sht_am():
-    """ https://www.genome.jp/kegg/tool/conv_id.html """
-    # process_data_20_colon()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     data = pkl.load(open(data_path + 'colon_data.pkl'))
     __ = np.empty(shape=(1,), dtype=float)
@@ -216,8 +214,6 @@ def run_sht_am():
 
 
 def run_sto_iht():
-    """ https://www.genome.jp/kegg/tool/conv_id.html """
-    # process_data_20_colon()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     data = pkl.load(open(data_path + 'colon_data.pkl'))
     __ = np.empty(shape=(1,), dtype=float)
@@ -228,7 +224,7 @@ def run_sto_iht():
     ms_res = pool.map(cv_sto_iht, para_list)
     pool.close()
     pool.join()
-    pkl.dump(ms_res, open(data_path + 're_sht_am_v1.pkl', 'wb'))
+    pkl.dump(ms_res, open(data_path + 're_sto_iht.pkl', 'wb'))
 
 
 def show_results():
