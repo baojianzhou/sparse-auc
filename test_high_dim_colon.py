@@ -486,7 +486,8 @@ def show_results():
     for method_ind, method in enumerate(['sht_am_v1', 'spam_l1', 'spam_l2',
                                          'fsauc', 'spam_l1l2', 'sto_iht', 'hsg_ht']):
         plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
-                 label=method_label_list[method_ind])
+                 label=method_label_list[method_ind], color=color_list[method_ind],
+                 marker=marker_list[method_ind], linewidth=2.)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
     ax.set_xlabel('Sparsity (s)')
@@ -517,5 +518,4 @@ def main():
 
 
 if __name__ == '__main__':
-    preprocess_results()
     main()
