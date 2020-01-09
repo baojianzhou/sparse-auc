@@ -66,16 +66,16 @@ related_genes = {
     3763: '"1633","3764","DHPS Deoxyhypusine synthase","U79262_at"',
     # 12: G-gamma globin
     2344: '"1034","2345","G-gamma globin gene extracted from H.sapiens '
-                      'G-gamma globin and A-gamma globin genes","M91036_rna1_at",',
+          'G-gamma globin and A-gamma globin genes","M91036_rna1_at",',
     # 13: Delta-globin
     6883: '"2945","6884","Delta-globin gene extracted from Human beta'
-                      ' globin region on chromosome 11","U01317_cds4_at"',
+          ' globin region on chromosome 11","U01317_cds4_at"',
     # 14: Brain-expressed HHCPA78 homolog
     2481: '"1103","2482","Brain-expressed HHCPA78 homolog [human, HL-60 acute '
-                 'promyelocytic leukemia cells, mRNA, 2704 nt]","S73591_at"',
+          'promyelocytic leukemia cells, mRNA, 2704 nt]","S73591_at"',
     # 15:
     6214: '"2669","6215","MPO from  Human myeloperoxidase gene, '
-                        'exons 1-4./ntype=DNA /annot=exon","M19508_xpt3_s_at"',
+          'exons 1-4./ntype=DNA /annot=exon","M19508_xpt3_s_at"',
     # 16: Probable protein disulfide isomerase ER-60 precursor
     535: '"257","536","PROBABLE PROTEIN DISULFIDE ISOMERASE ER-60 PRECURSOR","D63878_at"',
     # 16: Probable protein disulfide isomerase ER-60 precursor
@@ -92,10 +92,10 @@ related_genes = {
     281: '"124","282","60S RIBOSOMAL PROTEIN L23","D21260_at"',
     # 22
     5224: '"2273","5225","5-aminolevulinic acid synthase gene extracted from Human DNA sequence '
-                      'from PAC 296K21 on chromosome X contains cytokeratin exon, delta-aminolevulinate synthase '
-                      '(erythroid); 5-aminolevulinic acid synthase.(EC 2.3.1.37). '
-                      '6-phosphofructo-2-kinase/fructose-2,6-bisphosphatase (EC 2.7.1.105, EC 3.1.3.46),'
-                      ' ESTs and STS","Z83821_cds2_at"',
+          'from PAC 296K21 on chromosome X contains cytokeratin exon, delta-aminolevulinate synthase '
+          '(erythroid); 5-aminolevulinic acid synthase.(EC 2.3.1.37). '
+          '6-phosphofructo-2-kinase/fructose-2,6-bisphosphatase (EC 2.7.1.105, EC 3.1.3.46),'
+          ' ESTs and STS","Z83821_cds2_at"',
     # 23
     4016: '"1736","4017","HLA CLASS II HISTOCOMPATIBILITY ANTIGEN, DR ALPHA CHAIN PRECURSOR","X00274_at"',
     # 24
@@ -582,6 +582,28 @@ def run_methods(method):
 def preprocess_results():
     results = dict()
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    for method in ['sht_am', 'sto_iht', 'hsg_ht', 'fsauc']:
+        print(method)
+        results[method] = []
+        re = pkl.load(open(data_path + 're_%s.pkl' % method))
+        for item in sorted(re):
+            results[method].append({'auc': None, 'nonzeros': None})
+            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
+            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
+    for method in ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam']:
+        print(method)
+        results[method] = []
+        re = pkl.load(open(data_path + 're_%s.pkl' % method))
+        for item in sorted(re)[::-1]:
+            results[method].append({'auc': None, 'nonzeros': None})
+            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
+            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
+    pkl.dump(results, open(data_path + 're_summary.pkl', 'wb'))
+
+
+def preprocess_results_2():
+    results = dict()
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
     for method in ['sht_am_v1', 'sto_iht', 'hsg_ht', 'fsauc']:
         print(method)
         results[method] = []
@@ -618,8 +640,11 @@ def show_auc():
     color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'sto_iht', 'hsg_ht']
     method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
                          'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
+                         r"StoIHT", 'HSG-HT']
     for method_ind, method in enumerate(method_list):
         plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
                  label=method_label_list[method_ind], color=color_list[method_ind],
@@ -629,7 +654,7 @@ def show_auc():
     ax.set_xlabel('Sparse parameter')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'real_colon_auc.pdf'
+    f_name = root_path + 'real_leukemia_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
 
@@ -700,6 +725,8 @@ def main():
         show_auc()
     elif sys.argv[1] == 'show_features':
         show_features()
+    elif sys.argv[1] == 'summary':
+        preprocess_results()
 
 
 if __name__ == '__main__':

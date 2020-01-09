@@ -181,7 +181,7 @@ def cv_sht_am(para):
                   'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                           y_score=np.dot(data['x_tr'][te_index], wt)),
                   'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            if selected_b is None or best_auc is None or best_auc < re['auc_wt']:
+            if selected_b is None or best_auc is None or best_auc <= re['auc_wt']:
                 selected_b = para_b
                 best_auc = re['auc_wt']
         print('selected b: %d best_auc: %.4f' % (selected_b, best_auc))
