@@ -28,8 +28,59 @@ except ImportError:
     print('cannot find the module: sparse_module')
     pass
 
+"""
+Related genes are found by the following paper:
+Agarwal, Shivani, and Shiladitya Sengupta.
+"Ranking genes by relevance to a disease."
+Proceedings of the 8th annual international 
+conference on computational systems bioinformatics. 2009.
+"""
+related_genes = {683: "01 -- Hsa.1036 -- Phospholipase A2",
+                 1235: "01 -- Hsa.290 -- Phospholipase A2",
+                 295: "01 -- Hsa.994 -- Phospholipase A2",
+                 451: "02 -- Hsa.3328 -- Keratin 6 isoform",
+                 608: "03 -- Hsa.24944 -- Protein-tyrosine phosphatase PTP-H1",
+                 1041: "04 -- Hsa.549 -- Transcription factor IIIA",
+                 1043: "05 -- Hsa.13522 -- Viral (v-raf) oncogene homolog 1",
+                 1165: "06 -- Hsa.7348 -- Dual specificity mitogen-activated protein kinase kinase 1",
+                 1279: "07 -- Hsa.1280 -- Transmembrane carcinoembryonic antigen",
+                 917: "07 -- Hsa.3068 -- Transmembrane carcinoembryonic antigen",
+                 1352: "08 -- Hsa.2957 -- Oncoprotein 18",
+                 1386: "09 -- Hsa.1902 -- Phosphoenolpyruvate carboxykinase",
+                 1870: "10 -- Hsa.865 -- Extracellular signal-regulated kinase 1",
+                 1393: "10 -- Hsa.42746 -- Extracellular signal-regulated kinase 1",
+                 554: "11 -- Hsa.1098 -- 26 kDa cell surface protein TAPA-1",
+                 268: "12 -- Hsa.2806 -- Id1",
+                 146: "13 -- Hsa.558 -- Interferon-inducible protein 9-27",
+                 1463: "14 -- Hsa.558 -- Nonspecific crossreacting antigen",
+                 112: "15 -- Hsa.68 -- cAMP response element regulatory protein (CREB2)",
+                 325: "16 -- Hsa.256 -- Splicing factor (CC1.4)",
+                 137: "17 -- Hsa.957 -- Nucleolar protein (B23)",
+                 209: "18 -- Hsa.2846 -- Lactate dehydrogenase-A (LDH-A)",
+                 158: "19 -- Hsa.45604 -- Guanine nucleotide-binding protein G(OLF)",
+                 170: "19 -- Hsa.45604 -- Guanine nucleotide-binding protein G(OLF)",
+                 175: "19 -- Hsa.25451 -- Guanine nucleotide-binding protein G(OLF)",
+                 1143: "20 -- Hsa.393 -- LI-cadherin",
+                 316: "21 -- Hsa.891 -- Lysozyme",
+                 225: "22 -- Hsa.3295 -- Prolyl 4-hydroxylase (P4HB)",
+                 207: "23 -- Hsa.338 -- Eukaryotic initiation factor 4AII",
+                 163: "24 -- Hsa.5821 -- Interferon-inducible protein 1-8D",
+                 701: "25 -- Hsa.109 -- Dipeptidase",
+                 1790: "26 -- Hsa.2794 -- Heat shock 27 kDa protein",
+                 534: "27 -- Hsa.5633 -- Tyrosine-protein kinase receptor TIE-1 precursor",
+                 512: "28 -- Hsa.831 -- Mitochondrial matrix protein P1 precursor",
+                 1: "29 -- Hsa.13491 -- Eukaryotic initiation factor EIF-4A homolog",
+                 2: "29 -- Hsa.13491 -- Eukaryotic initiation factor EIF-4A homolog",
+                 282: "29 -- Hsa.80 -- Eukaryotic initiation factor EIF-4A homolog",
+                 613: "29 -- Hsa.9251 -- Eukaryotic initiation factor EIF-4A homolog"}
+
 
 def process_data_20_colon():
+    """
+    https://github.com/ramhiser/datamicroarray
+    http://genomics-pubs.princeton.edu/oncology/affydata/index.html
+    :return:
+    """
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     data = {'feature_ids': None, 'x_tr': [], 'y_tr': [], 'feature_names': []}
     import csv
@@ -500,7 +551,7 @@ def preprocess_results():
             results[method].append({'auc': None, 'nonzeros': None})
             results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
             results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    for method in ['spam_l1', 'spam_l2', 'spam_l1l2']:
+    for method in ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam']:
         print(method)
         results[method] = []
         re = pkl.load(open(data_path + 're_%s.pkl' % method))
@@ -511,7 +562,7 @@ def preprocess_results():
     pkl.dump(results, open(data_path + 're_summary.pkl', 'wb'))
 
 
-def show_results():
+def show_auc():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -529,20 +580,64 @@ def show_results():
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
     method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"StoIHT", 'HSG-HT']
-    for method_ind, method in enumerate(['sht_am_v1', 'spam_l1', 'spam_l2',
-                                         'fsauc', 'spam_l1l2', 'sto_iht', 'hsg_ht']):
+                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    for method_ind, method in enumerate(method_list):
         plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
                  label=method_label_list[method_ind], color=color_list[method_ind],
                  marker=marker_list[method_ind], linewidth=2.)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparsity (s)')
+    ax.set_xlabel('Sparse parameter')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'real_colon_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
+
+
+def show_features():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 14
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 8, 8
+    fig, ax = plt.subplots(1, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    method_list = ['sht_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
+                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    summary_genes = dict()
+    summary_len = dict()
+    for method_ind, method in enumerate(method_list):
+        summary_genes[method] = []
+        summary_len[method] = []
+        for each_para in re_summary[method]:
+            re = []
+            re_len = []
+            for trial_i in range(20):
+                selected_genes = []
+                for (_, fold_i) in each_para['nonzeros']:
+                    if _ == trial_i:
+                        selected_genes.extend(each_para['nonzeros'][(trial_i, fold_i)])
+                re.extend(list(set(selected_genes).intersection(set(related_genes.keys()))))
+                re_len.extend(selected_genes)
+            summary_genes[method].append(set(re))
+            summary_len[method].append(set(re_len))
+    for s_ind, para_s in enumerate(range(10, 101, 5)):
+        print(para_s),
+        for method in ['sto_iht', 'hsg_ht', 'sht_am_v1']:
+            x1 = len(summary_genes[method][s_ind])
+            x2 = len(summary_len[method][s_ind])
+            print('%02d/%03d-%.4f' % (x1, x2, float(x1) / float(x2))),
+        print('')
 
 
 def main():
@@ -562,8 +657,10 @@ def main():
         run_methods(method='hsg_ht')
     elif sys.argv[1] == 'run_solam':
         run_methods(method='solam')
-    elif sys.argv[1] == 'show_01':
-        show_results()
+    elif sys.argv[1] == 'show_auc':
+        show_auc()
+    elif sys.argv[1] == 'show_features':
+        show_features()
 
 
 if __name__ == '__main__':
