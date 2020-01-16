@@ -580,6 +580,8 @@ def main():
         run_methods(method='sht_am')
     elif sys.argv[1] == 'run_sto_iht':
         run_methods(method='sto_iht')
+    elif sys.argv[1] == 'run_hsg_ht':
+        run_methods(method='hsg_ht')
     elif sys.argv[1] == 'run_spam_l1':
         run_methods(method='spam_l1')
     elif sys.argv[1] == 'run_spam_l2':
@@ -588,8 +590,6 @@ def main():
         run_methods(method='spam_l1l2')
     elif sys.argv[1] == 'run_fsauc':
         run_methods(method='fsauc')
-    elif sys.argv[1] == 'run_hsg_ht':
-        run_methods(method='hsg_ht')
     elif sys.argv[1] == 'run_solam':
         run_methods(method='solam')
     elif sys.argv[1] == 'show_auc':

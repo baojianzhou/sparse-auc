@@ -207,7 +207,7 @@ def cv_sht_am(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 3):
+    for para_s in range(1, 101, 1):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -241,7 +241,7 @@ def cv_sto_iht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 3):
+    for para_s in range(1, 101, 1):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -275,7 +275,7 @@ def cv_hsg_ht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 3):
+    for para_s in range(1, 101, 1):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -473,6 +473,8 @@ def run_methods(method):
         ms_res = pool.map(cv_sht_am, para_list)
     elif method == 'sto_iht':
         ms_res = pool.map(cv_sto_iht, para_list)
+    elif method == 'hsg_ht':
+        ms_res = pool.map(cv_hsg_ht, para_list)
     elif method == 'spam_l1':
         ms_res = pool.map(cv_spam_l1, para_list)
     elif method == 'spam_l2':
@@ -481,8 +483,6 @@ def run_methods(method):
         ms_res = pool.map(cv_spam_l1l2, para_list)
     elif method == 'fsauc':
         ms_res = pool.map(cv_fsauc, para_list)
-    elif method == 'hsg_ht':
-        ms_res = pool.map(cv_hsg_ht, para_list)
     elif method == 'solam':
         ms_res = pool.map(cv_solam, para_list)
     else:
