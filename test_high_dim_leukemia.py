@@ -469,46 +469,44 @@ def cv_fsauc(para):
 
 
 def cv_hsg_ht(para):
-    data, para_s = para
-    num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
+    data, trial_id, fold_id = para
+    num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
-    results = dict()
-    for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
+    all_results = dict()
+    for para_s in range(1, 101, 2):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        selected_c, best_auc = None, None
-        aver_nonzero = []
-        for para_c in [1e-3, 1e-2, 1e-1, 1e0]:
+        results = dict()
+        best_c, best_auc = None, None
+        for para_c in [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0]:
             para_tau, para_zeta = 1.0, 1.033
             _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
                               para_s, para_tau, para_zeta, para_c, 0.0)
             wt, aucs, rts, epochs = _
-            aver_nonzero.append(np.count_nonzero(wt))
             re = {'algo_para': [trial_id, fold_id, para_c, para_s],
                   'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                           y_score=np.dot(data['x_tr'][te_index], wt)),
                   'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
             if best_auc is None or best_auc < re['auc_wt']:
-                selected_c = para_c
-                best_auc = re['auc_wt']
+                best_c, best_auc = para_c, re['auc_wt']
         tr_index = data['trial_%d' % trial_id]['tr_index']
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                          para_s, para_tau, para_zeta, selected_c, 0.0)
+                          para_s, para_tau, para_zeta, best_c, 0.0)
         wt, aucs, rts, epochs = _
-        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, selected_c, para_s],
+        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_c, para_s],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
                                         'aucs': aucs, 'rts': rts, 'wt': wt}
-        print('selected c: %.4e s: %d nonzero: %.4e test_auc: %.4f' %
-              (selected_c, para_s, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    print(para_s, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
-    return para_s, results
+        print('best_c: %02d nonzero: %.4e test_auc: %.4f' %
+              (best_c, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
+        all_results[para_s] = results
+    return trial_id, fold_id, all_results
 
 
 def run_methods(method):
