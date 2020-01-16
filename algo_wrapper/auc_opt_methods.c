@@ -1383,4 +1383,3 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
     free(loss_grad_wt);
     free(y_pred);
 }
-

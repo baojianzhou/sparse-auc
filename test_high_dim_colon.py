@@ -582,11 +582,13 @@ def show_auc():
     method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
                          'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
     for method_ind, method in enumerate(method_list):
-        plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
+        plt.plot(range(10, 101, 5),
+                 [float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
                  label=method_label_list[method_ind], color=color_list[method_ind],
                  marker=marker_list[method_ind], linewidth=2.)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xticks([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
     ax.set_xlabel('Sparse parameter')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
@@ -609,11 +611,7 @@ def show_features():
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
-    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
-    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
     summary_genes = dict()
     summary_len = dict()
     for method_ind, method in enumerate(method_list):
@@ -648,13 +646,19 @@ def show_features():
             print('%02d/%03d-%.4f' % (x1, x2, float(x1) / float(x2))),
         print('')
     import matplotlib.pyplot as plt
-    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
-    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    plt.plot(ratio_sht_am, label='SHT-AUC', marker='D', color='r', linewidth=2., markersize=8.)
-    plt.plot(ratio_hsg_ht, label='HSG-HT', marker='P', color='b', linewidth=2., markersize=8.)
-    plt.plot(ratio_sto_iht, label='StoIHT', marker='x', color='g', linewidth=2., markersize=8.)
-    plt.ylabel('Percentage of related genes')
-    plt.xlabel('')
+    fig, ax = plt.subplots(1, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.plot(range(10, 101, 5), ratio_sht_am, label='SHT-AUC', marker='D', color='r',
+             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+    plt.plot(range(10, 101, 5), ratio_hsg_ht, label='HSG-HT', marker='P', color='b',
+             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+    plt.plot(range(10, 101, 5), ratio_sto_iht, label='StoIHT', marker='X', color='g',
+             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xlabel('Sparse parameter')
+    ax.set_ylabel('Percentage of related genes')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'real_colon_feature.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')

@@ -277,43 +277,43 @@ def cv_sto_iht(para):
 
 
 def cv_spam_l1(para):
-    data, para_l1 = para
-    num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
+    data, trial_id, fold_id = para
+    num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     results = dict()
-    for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        selected_xi, best_auc = None, None
-        aver_nonzero = []
-        for para_xi in 10. ** np.arange(-5, 3, 1, dtype=float):
-            _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
-            wt, aucs, rts, epochs = _
-            aver_nonzero.append(np.count_nonzero(wt))
-            re = {'algo_para': [trial_id, fold_id, para_xi, para_l1],
-                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                          y_score=np.dot(data['x_tr'][te_index], wt)),
-                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            if best_auc is None or best_auc <= re['auc_wt']:
-                selected_xi = para_xi
-                best_auc = re['auc_wt']
-        tr_index = data['trial_%d' % trial_id]['tr_index']
-        te_index = data['trial_%d' % trial_id]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, selected_xi, para_l1, 0.0)
+    tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+    te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+    x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+    y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+    best_xi, best_l1, best_auc = None, None, None
+    aver_nonzero = []
+    for para_xi, para_l1 in product(10. ** np.arange(-5, 3, 1, dtype=float),
+                                    10. ** np.arange(-5, 3, 1, dtype=float)):
+        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
         wt, aucs, rts, epochs = _
-        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, selected_xi, para_l1],
-                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt}
-        print('selected xi: %.4e l1: %.4e nonzero: %.4e test_auc: %.4f' %
-              (selected_xi, para_l1, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    print(para_l1, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
-    return para_l1, results
+        aver_nonzero.append(np.count_nonzero(wt))
+        re = {'algo_para': [trial_id, fold_id, para_xi, para_l1],
+              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                      y_score=np.dot(data['x_tr'][te_index], wt)),
+              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+        if best_auc is None or best_auc <= re['auc_wt']:
+            best_xi, best_l1 = para_xi, para_l1
+            best_auc = re['auc_wt']
+    tr_index = data['trial_%d' % trial_id]['tr_index']
+    te_index = data['trial_%d' % trial_id]['te_index']
+    x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+    y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+    _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_l1, 0.0)
+    wt, aucs, rts, epochs = _
+    results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_xi, best_l1],
+                                    'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                            y_score=np.dot(data['x_tr'][te_index], wt)),
+                                    'aucs': aucs, 'rts': rts, 'wt': wt}
+    print('best xi: %.4e l1: %.4e nonzero: %.4e test_auc: %.4f' %
+          (best_xi, best_l1, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+    print(best_xi, best_l1, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
+    return best_xi, best_l1, results
 
 
 def cv_spam_l2(para):
@@ -541,9 +541,8 @@ def run_methods(method):
         ms_res = pool.map(cv_sto_iht, para_list)
     elif method == 'spam_l1':
         para_list = []
-        for para_l1 in [1e-5, 3e-5, 5e-5, 7e-5, 9e-5, 1e-4, 3e-4, 5e-4, 7e-4, 9e-4,
-                        1e-3, 3e-3, 5e-3, 7e-3, 9e-3, 1e-2, 3e-2, 5e-2, 7e-2]:
-            para_list.append((data, para_l1))
+        for trial_id, fold_id in product(range(data['num_trials']), range(5)):
+            para_list.append((data, trial_id, fold_id))
         ms_res = pool.map(cv_spam_l1, para_list)
     elif method == 'spam_l2':
         para_list = []
@@ -639,12 +638,9 @@ def show_auc():
     re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
     color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'sto_iht', 'hsg_ht']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
     method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
                          'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
-    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         r"StoIHT", 'HSG-HT']
     for method_ind, method in enumerate(method_list):
         plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
                  label=method_label_list[method_ind], color=color_list[method_ind],
@@ -673,11 +669,7 @@ def show_features():
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
     re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
-    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
-    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
     summary_genes = dict()
     summary_len = dict()
     for method_ind, method in enumerate(method_list):
@@ -695,13 +687,40 @@ def show_features():
                 re_len.extend(selected_genes)
             summary_genes[method].append(set(re))
             summary_len[method].append(set(re_len))
+    ratio_sht_am = []
+    ratio_sto_iht = []
+    ratio_hsg_ht = []
     for s_ind, para_s in enumerate(range(10, 101, 5)):
         print(para_s),
-        for method in ['sto_iht', 'hsg_ht', 'sht_am_v1']:
+        for method in ['sto_iht', 'hsg_ht', 'sht_am']:
             x1 = len(summary_genes[method][s_ind])
             x2 = len(summary_len[method][s_ind])
+            if method == 'sht_am':
+                ratio_sht_am.append(float(x1) / float(x2))
+            elif method == 'sto_iht':
+                ratio_sto_iht.append(float(x1) / float(x2))
+            elif method == 'hsg_ht':
+                ratio_hsg_ht.append(float(x1) / float(x2))
             print('%02d/%03d-%.4f' % (x1, x2, float(x1) / float(x2))),
         print('')
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    plt.plot(range(10, 101, 5), ratio_sht_am, label='SHT-AUC', marker='D', color='r',
+             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+    plt.plot(range(10, 101, 5), ratio_hsg_ht, label='HSG-HT', marker='P', color='b',
+             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+    plt.plot(range(10, 101, 5), ratio_sto_iht, label='StoIHT', marker='X', color='g',
+             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xlabel('Sparse parameter')
+    ax.set_ylabel('Percentage of related genes')
+    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    f_name = root_path + 'real_leukemia_feature.pdf'
+    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.close()
 
 
 def main():

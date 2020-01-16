@@ -226,4 +226,13 @@ void _algo_fsauc(Data *data,
                  double para_r,
                  double para_g);
 
+void _algo_ftrl_auc(Data *data,
+                    GlobalParas *paras,
+                    AlgoResults *re,
+                    int para_s,
+                    double para_tau,
+                    double para_zeta,
+                    double para_step_init,
+                    double para_l2);
+
 #endif //SPARSE_AUC_AUC_OPT_METHODS_H

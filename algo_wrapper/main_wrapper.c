@@ -252,6 +252,28 @@ static PyObject *wrap_algo_hsg_ht(PyObject *self, PyObject *args) {
     return results;
 }
 
+
+static PyObject *wrap_algo_ftrl_auc(PyObject *self, PyObject *args) {
+    if (self != NULL) { printf("%zd", self->ob_refcnt); }
+    PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
+    Data *data = malloc(sizeof(Data));
+    GlobalParas *paras = malloc(sizeof(GlobalParas));
+    int para_s;
+    double para_tau, para_zeta, para_c, para_l2;
+    if (!PyArg_ParseTuple(args, "O!O!O!O!O!iiO!idddd",
+                          &PyArray_Type, &x_tr_vals, &PyArray_Type, &x_tr_inds, &PyArray_Type, &x_tr_poss,
+                          &PyArray_Type, &x_tr_lens, &PyArray_Type, &data_y_tr, &data->is_sparse, &data->p,
+                          &PyArray_Type, &global_paras,
+                          &para_s, &para_tau, &para_zeta, &para_c, &para_l2)) { return NULL; }
+    init_global_paras(paras, global_paras);
+    init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
+    AlgoResults *re = make_algo_results(data->p + 1, (data->n * paras->num_passes) + 1);
+    _algo_ftrl_auc(data, paras, re, para_s, para_tau, para_zeta, para_c, para_l2);
+    PyObject *results = get_results(data->p, re);
+    free(paras), free_algo_results(re), free(data);
+    return results;
+}
+
 // wrap_algo_solam_sparse
 static PyMethodDef sparse_methods[] = { // hello_name
         {"c_test",          test,               METH_VARARGS, "docs"},
@@ -263,6 +285,7 @@ static PyMethodDef sparse_methods[] = { // hello_name
         {"c_algo_fsauc",    wrap_algo_fsauc,    METH_VARARGS, "docs"},
         {"c_algo_sto_iht",  wrap_algo_sto_iht,  METH_VARARGS, "docs"},
         {"c_algo_hsg_ht",   wrap_algo_hsg_ht,   METH_VARARGS, "docs"},
+        {"c_algo_ftrl_auc",  wrap_algo_ftrl_auc, METH_VARARGS, "docs"},
         {NULL, NULL, 0, NULL}};
 
 
