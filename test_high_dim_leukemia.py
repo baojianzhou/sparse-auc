@@ -492,48 +492,55 @@ def run_methods(method):
     pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
 
 
-def preprocess_results():
-    results = dict()
+def summary_auc_results():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
-    for method in ['sht_am', 'sto_iht', 'hsg_ht', 'fsauc']:
-        print(method)
-        results[method] = []
-        re = pkl.load(open(data_path + 're_%s.pkl' % method))
-        for item in sorted(re):
-            results[method].append({'auc': None, 'nonzeros': None})
-            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
-            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    for method in ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam']:
-        print(method)
-        results[method] = []
-        re = pkl.load(open(data_path + 're_%s.pkl' % method))
-        for item in sorted(re)[::-1]:
-            results[method].append({'auc': None, 'nonzeros': None})
-            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
-            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    pkl.dump(results, open(data_path + 're_summary.pkl', 'wb'))
+    all_aus = dict()
+    for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
+        re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
+        all_aus[method] = dict()
+        for trial_id, fold_id, re in re_summary:
+            all_aus[method][(trial_id, fold_id)] = re[(trial_id, fold_id)]['auc_wt']
+        print(method, np.mean(np.asarray(all_aus[method].values())))
+    for method_ind, method in enumerate(['sht_am', 'sto_iht', 'hsg_ht']):
+        re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
+        all_aus[method] = dict()
+        for trial_id, fold_id, re in re_summary:
+            for s in re:
+                if s not in all_aus[method]:
+                    all_aus[method][s] = dict()
+                all_aus[method][s][(trial_id, fold_id)] = re[s][(trial_id, fold_id)]['auc_wt']
+        for s in all_aus[method].keys():
+            print(method, s, np.mean(np.asarray(all_aus[method][s].values())))
+    pkl.dump(all_aus, open(data_path + 're_summary_all_aucs.pkl', 'wb'))
 
 
-def preprocess_results_2():
-    results = dict()
+def summary_feature_results():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
-    for method in ['sht_am_v1', 'sto_iht', 'hsg_ht', 'fsauc']:
-        print(method)
-        results[method] = []
-        re = pkl.load(open(data_path + 're_%s.pkl' % method))
-        for item in sorted(re):
-            results[method].append({'auc': None, 'nonzeros': None})
-            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
-            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    for method in ['spam_l1', 'spam_l2', 'spam_l1l2', 'solam']:
-        print(method)
-        results[method] = []
-        re = pkl.load(open(data_path + 're_%s.pkl' % method))
-        for item in sorted(re)[::-1]:
-            results[method].append({'auc': None, 'nonzeros': None})
-            results[method][-1]['auc'] = {_: item[1][_]['auc_wt'] for _ in item[1]}
-            results[method][-1]['nonzeros'] = {_: np.nonzero(item[1][_]['wt'])[0] for _ in item[1]}
-    pkl.dump(results, open(data_path + 're_summary.pkl', 'wb'))
+    all_features = dict()
+    for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
+        re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
+        all_features[method] = dict()
+        for trial_id, fold_id, re in re_summary:
+            re_features = set(np.nonzero(re[(trial_id, fold_id)]['wt'])[0])
+            inter = set(related_genes.keys()).intersection(re_features)
+            all_features[method][(trial_id, fold_id)] = float(len(inter)) / float(len(re_features))
+        print(method, np.mean(np.asarray(all_features[method].values())))
+    for method_ind, method in enumerate(['sht_am', 'sto_iht', 'hsg_ht']):
+        re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
+        all_features[method] = dict()
+        for trial_id, fold_id, re in re_summary:
+            for s in re:
+                if s not in all_features[method]:
+                    all_features[method][s] = dict()
+                re_features = set(np.nonzero(re[s][(trial_id, fold_id)]['wt'])[0])
+                inter = set(related_genes.keys()).intersection(re_features)
+                if len(re_features) == 0:
+                    all_features[method][s][(trial_id, fold_id)] = 0.0
+                else:
+                    all_features[method][s][(trial_id, fold_id)] = float(len(inter)) / float(len(re_features))
+        for s in all_features[method].keys():
+            print(method, s, np.mean(np.asarray(all_features[method][s].values())))
+    pkl.dump(all_features, open(data_path + 're_summary_all_features.pkl', 'wb'))
 
 
 def show_auc():
@@ -549,64 +556,23 @@ def show_auc():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
-    re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
-    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
-    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    s_list = range(1, 101, 2)
+    all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
+    method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
+    color_list = ['b', 'y', 'k', 'orangered', 'olive', 'r', 'g', 'm']
     for method_ind, method in enumerate(method_list):
-        plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
-                 label=method_label_list[method_ind], color=color_list[method_ind],
-                 marker=marker_list[method_ind], linewidth=2.)
+        if method in ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']:
+            plt.plot(s_list, [np.mean(all_aucs[method].values())] * len(s_list),
+                     label=method_label_list[method_ind], color=color_list[method_ind], linewidth=1.5)
+        if method in ['sht_am', 'sto_iht', 'hsg_ht']:
+            aucs = []
+            for s in s_list:
+                aucs.append(np.mean(all_aucs[method][s].values()))
+            plt.plot(s_list, aucs, label=method_label_list[method_ind], color=color_list[method_ind], linewidth=1.5)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparse parameter')
-    ax.set_ylabel('AUC Score')
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'real_leukemia_auc.pdf'
-    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
-    plt.close()
-
-
-def show_all_auc():
-    import matplotlib.pyplot as plt
-    from matplotlib import rc
-    from pylab import rcParams
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = "Times"
-    plt.rcParams["font.size"] = 14
-    rc('text', usetex=True)
-    rcParams['figure.figsize'] = 8, 8
-    fig, ax = plt.subplots(1, 1)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
-    all_aus = dict()
-    method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC']
-    for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
-        all_aus[method] = []
-        re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
-        for trial_id, fold_id, re in re_summary:
-            all_aus[method].append(re[(trial_id, fold_id)]['auc_wt'])
-        plt.plot(sorted(all_aus[method])[:50], label=method_label_list[method_ind])
-    plt.legend()
-    plt.show()
-    exit()
-
-    re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
-    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
-    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
-    for method_ind, method in enumerate(method_list):
-        plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
-                 label=method_label_list[method_ind], color=color_list[method_ind],
-                 marker=marker_list[method_ind], linewidth=2.)
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparse parameter')
+    ax.set_xlabel('Sparsity')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'real_leukemia_auc.pdf'
@@ -627,57 +593,23 @@ def show_features():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
-    re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    summary_genes = dict()
-    summary_len = dict()
+    s_list = range(1, 101, 2)
+    all_features = pkl.load(open(data_path + 're_summary_all_features.pkl'))
+    method_list = ['sht_am', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SHT-AM', 'StoIHT', 'HSG-HT']
+    color_list = ['r', 'g', 'm']
     for method_ind, method in enumerate(method_list):
-        summary_genes[method] = []
-        summary_len[method] = []
-        for each_para in re_summary[method]:
-            re = []
-            re_len = []
-            for trial_i in range(20):
-                selected_genes = []
-                for (_, fold_i) in each_para['nonzeros']:
-                    if _ == trial_i:
-                        selected_genes.extend(each_para['nonzeros'][(trial_i, fold_i)])
-                re.extend(list(set(selected_genes).intersection(set(related_genes.keys()))))
-                re_len.extend(selected_genes)
-            summary_genes[method].append(set(re))
-            summary_len[method].append(set(re_len))
-    ratio_sht_am = []
-    ratio_sto_iht = []
-    ratio_hsg_ht = []
-    for s_ind, para_s in enumerate(range(10, 101, 5)):
-        print(para_s),
-        for method in ['sto_iht', 'hsg_ht', 'sht_am']:
-            x1 = len(summary_genes[method][s_ind])
-            x2 = len(summary_len[method][s_ind])
-            if method == 'sht_am':
-                ratio_sht_am.append(float(x1) / float(x2))
-            elif method == 'sto_iht':
-                ratio_sto_iht.append(float(x1) / float(x2))
-            elif method == 'hsg_ht':
-                ratio_hsg_ht.append(float(x1) / float(x2))
-            print('%02d/%03d-%.4f' % (x1, x2, float(x1) / float(x2))),
-        print('')
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    plt.plot(range(10, 101, 5), ratio_sht_am, label='SHT-AUC', marker='D', color='r',
-             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
-    plt.plot(range(10, 101, 5), ratio_hsg_ht, label='HSG-HT', marker='P', color='b',
-             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
-    plt.plot(range(10, 101, 5), ratio_sto_iht, label='StoIHT', marker='X', color='g',
-             linewidth=2., markersize=10., markerfacecolor='white', markeredgewidth=2.)
+        ratio_features = []
+        for s in s_list:
+            ratio_features.append(np.mean(all_features[method][s].values()))
+        plt.plot(s_list, ratio_features, label=method_label_list[method_ind],
+                 color=color_list[method_ind], linewidth=1.5)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparse parameter')
-    ax.set_ylabel('Percentage of related genes')
+    ax.set_xlabel('Sparsity')
+    ax.set_ylabel('Ratio of Related Features')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'real_leukemia_feature.pdf'
+    f_name = root_path + 'real_leukemia_features.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
 
@@ -700,13 +632,11 @@ def main():
     elif sys.argv[1] == 'run_solam':
         run_methods(method='solam')
     elif sys.argv[1] == 'show_auc':
+        # summary_auc_results()
         show_auc()
-    elif sys.argv[1] == 'show_all_auc':
-        show_all_auc()
     elif sys.argv[1] == 'show_features':
+        # summary_feature_results()
         show_features()
-    elif sys.argv[1] == 'summary':
-        preprocess_results()
 
 
 if __name__ == '__main__':
