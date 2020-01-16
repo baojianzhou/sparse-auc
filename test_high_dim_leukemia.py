@@ -310,9 +310,8 @@ def cv_spam_l1(para):
                                     'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                             y_score=np.dot(data['x_tr'][te_index], wt)),
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
-    print('best xi: %.4e l1: %.4e nonzero: %.4e test_auc: %.4f' %
+    print('best_xi: %.1e best_l1: %.1e nonzero: %.4e test_auc: %.4f' %
           (best_xi, best_l1, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    print(best_xi, best_l1, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
     return best_xi, best_l1, results
 
 
