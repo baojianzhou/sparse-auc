@@ -215,20 +215,16 @@ def cv_sht_am(para):
         results = dict()
         best_b, best_auc = None, None
         for para_b in range(1, 40, 1):
-            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
-            wt, aucs, rts, epochs = _
-            re = {'algo_para': [trial_id, fold_id, para_s, para_b],
-                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                          y_score=np.dot(data['x_tr'][te_index], wt)),
-                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            if best_b is None or best_auc is None or best_auc < re['auc_wt']:
-                best_b, best_auc = para_b, re['auc_wt']
+            wt, _, _, _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
+            auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+            if best_b is None or best_auc is None or best_auc < auc_score:
+                best_b, best_auc = para_b, auc_score
         tr_index = data['trial_%d' % trial_id]['tr_index']
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, best_b, 1., 0.0)
-        wt, aucs, rts, epochs = _
+        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                              0, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -253,20 +249,16 @@ def cv_sto_iht(para):
         results = dict()
         best_b, best_auc = None, None
         for para_b in range(1, 40, 1):
-            _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_b, 1., 0.0)
-            wt, aucs, rts, epochs = _
-            re = {'algo_para': [trial_id, fold_id, para_s, para_b],
-                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                          y_score=np.dot(data['x_tr'][te_index], wt)),
-                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            if best_b is None or best_auc is None or best_auc < re['auc_wt']:
-                best_b, best_auc = para_b, re['auc_wt']
+            wt, _, _, _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_b, 1., 0.0)
+            auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+            if best_b is None or best_auc is None or best_auc < auc_score:
+                best_b, best_auc = para_b, auc_score
         tr_index = data['trial_%d' % trial_id]['tr_index']
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, best_b, 1., 0.0)
-        wt, aucs, rts, epochs = _
+        wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'],
+                                               global_paras, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -288,30 +280,23 @@ def cv_spam_l1(para):
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
     best_xi, best_l1, best_auc = None, None, None
-    aver_nonzero = []
     for para_xi, para_l1 in product(10. ** np.arange(-5, 3, 1, dtype=float),
                                     10. ** np.arange(-5, 3, 1, dtype=float)):
-        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
-        wt, aucs, rts, epochs = _
-        aver_nonzero.append(np.count_nonzero(wt))
-        re = {'algo_para': [trial_id, fold_id, para_xi, para_l1],
-              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                      y_score=np.dot(data['x_tr'][te_index], wt)),
-              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        if best_auc is None or best_auc < re['auc_wt']:
-            best_xi, best_l1, best_auc = para_xi, para_l1, re['auc_wt']
+        wt, _, _, _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
+        auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+        if best_auc is None or best_auc < auc_score:
+            best_xi, best_l1, best_auc = para_xi, para_l1, auc_score
     tr_index = data['trial_%d' % trial_id]['tr_index']
     te_index = data['trial_%d' % trial_id]['te_index']
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-    _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_l1, 0.0)
-    wt, aucs, rts, epochs = _
+    wt, aucs, rts, epochs = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_l1, 0.0)
     results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_xi, best_l1],
                                     'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                             y_score=np.dot(data['x_tr'][te_index], wt)),
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_l1: %.1e nonzero: %.4e test_auc: %.4f' %
-          (best_xi, best_l1, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+          (best_xi, best_l1, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
     return trial_id, fold_id, results
 
 
@@ -326,30 +311,23 @@ def cv_spam_l2(para):
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
     best_xi, best_l2, best_auc = None, None, None
-    aver_nonzero = []
     for para_xi, para_l2, in product(10. ** np.arange(-5, 3, 1, dtype=float),
                                      10. ** np.arange(-5, 3, 1, dtype=float)):
-        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, 0.0, para_l2)
-        wt, aucs, rts, epochs = _
-        aver_nonzero.append(np.count_nonzero(wt))
-        re = {'algo_para': [trial_id, fold_id, para_xi, para_l2],
-              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                      y_score=np.dot(data['x_tr'][te_index], wt)),
-              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        if best_auc is None or best_auc < re['auc_wt']:
-            best_xi, best_l2, best_auc = para_xi, para_l2, re['auc_wt']
+        wt, _, _, _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, 0.0, para_l2)
+        auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+        if best_auc is None or best_auc < auc_score:
+            best_xi, best_l2, best_auc = para_xi, para_l2, auc_score
     tr_index = data['trial_%d' % trial_id]['tr_index']
     te_index = data['trial_%d' % trial_id]['te_index']
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-    _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, 0.0, best_l2)
-    wt, aucs, rts, epochs = _
+    wt, aucs, rts, epochs = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, 0.0, best_l2)
     results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_xi, best_l2],
                                     'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                             y_score=np.dot(data['x_tr'][te_index], wt)),
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_l2: %.1e nonzero: %.4e test_auc: %.4f' %
-          (best_xi, best_l2, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+          (best_xi, best_l2, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
     return trial_id, fold_id, results
 
 
@@ -364,31 +342,24 @@ def cv_spam_l1l2(para):
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
     best_xi, best_l1, best_l2, best_auc = None, None, None, None
-    aver_nonzero = []
     for para_xi, para_l1, para_l2, in product(10. ** np.arange(-5, 3, 1, dtype=float),
                                               10. ** np.arange(-5, 3, 1, dtype=float),
                                               10. ** np.arange(-5, 3, 1, dtype=float)):
-        _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
-        wt, aucs, rts, epochs = _
-        aver_nonzero.append(np.count_nonzero(wt))
-        re = {'algo_para': [trial_id, fold_id, para_xi, para_l2],
-              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                      y_score=np.dot(data['x_tr'][te_index], wt)),
-              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        if best_auc is None or best_auc < re['auc_wt']:
-            best_xi, best_l1, best_l2, best_auc = para_xi, para_l1, para_l2, re['auc_wt']
+        wt, _, _, _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
+        auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+        if best_auc is None or best_auc < auc_score:
+            best_xi, best_l1, best_l2, best_auc = para_xi, para_l1, para_l2, auc_score
     tr_index = data['trial_%d' % trial_id]['tr_index']
     te_index = data['trial_%d' % trial_id]['te_index']
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-    _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_l1, best_l2)
-    wt, aucs, rts, epochs = _
+    wt, aucs, rts, epochs = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_l1, best_l2)
     results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_xi, best_l1, best_l2],
                                     'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                             y_score=np.dot(data['x_tr'][te_index], wt)),
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_l1: %.1e best_l2: %.1e nonzero: %.4e test_auc: %.4f' %
-          (best_xi, best_l1, best_l2, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+          (best_xi, best_l1, best_l2, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
     return trial_id, fold_id, results
 
 
@@ -403,30 +374,23 @@ def cv_solam(para):
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
     best_xi, best_r, best_auc = None, None, None
-    aver_nonzero = []
     for para_xi, para_r, in product(np.arange(1, 101, 9, dtype=float),
                                     10. ** np.arange(-1, 6, 1, dtype=float)):
-        _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_r)
-        wt, aucs, rts, epochs = _
-        aver_nonzero.append(np.count_nonzero(wt))
-        re = {'algo_para': [trial_id, fold_id, para_xi, para_r],
-              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                      y_score=np.dot(data['x_tr'][te_index], wt)),
-              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        if best_auc is None or best_auc < re['auc_wt']:
-            best_xi, best_r, best_auc = para_xi, para_r, re['auc_wt']
+        wt, _, _, _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_r)
+        auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+        if best_auc is None or best_auc < auc_score:
+            best_xi, best_r, best_auc = para_xi, para_r, auc_score
     tr_index = data['trial_%d' % trial_id]['tr_index']
     te_index = data['trial_%d' % trial_id]['te_index']
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-    _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_r)
-    wt, aucs, rts, epochs = _
+    wt, aucs, rts, epochs = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_xi, best_r)
     results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_xi, best_r],
                                     'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                             y_score=np.dot(data['x_tr'][te_index], wt)),
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_r: %.1e nonzero: %.4e test_auc: %.4f' %
-          (best_xi, best_r, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+          (best_xi, best_r, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
     return trial_id, fold_id, results
 
 
@@ -444,21 +408,15 @@ def cv_fsauc(para):
     aver_nonzero = []
     for para_g, para_r in product(2. ** np.arange(-10, 11, 1, dtype=float),
                                   10. ** np.arange(-1, 6, 1, dtype=float)):
-        _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
-        wt, aucs, rts, epochs = _
-        aver_nonzero.append(np.count_nonzero(wt))
-        re = {'algo_para': [trial_id, fold_id, para_r, para_g],
-              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                      y_score=np.dot(data['x_tr'][te_index], wt)),
-              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        if best_auc is None or best_auc < re['auc_wt']:
-            best_g, best_r, best_auc = para_g, para_r, re['auc_wt']
+        wt, _, _, _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
+        auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+        if best_auc is None or best_auc < auc_score:
+            best_g, best_r, best_auc = para_g, para_r, auc_score
     tr_index = data['trial_%d' % trial_id]['tr_index']
     te_index = data['trial_%d' % trial_id]['te_index']
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-    _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_r, best_g)
-    wt, aucs, rts, epochs = _
+    wt, aucs, rts, epochs = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_r, best_g)
     results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_g, best_r],
                                     'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                             y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -483,22 +441,17 @@ def cv_hsg_ht(para):
         best_c, best_auc = None, None
         for para_c in [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0]:
             para_tau, para_zeta = 1.0, 1.033
-            _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                              para_s, para_tau, para_zeta, para_c, 0.0)
-            wt, aucs, rts, epochs = _
-            re = {'algo_para': [trial_id, fold_id, para_c, para_s],
-                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                          y_score=np.dot(data['x_tr'][te_index], wt)),
-                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            if best_auc is None or best_auc < re['auc_wt']:
-                best_c, best_auc = para_c, re['auc_wt']
+            wt, _, _, _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                        para_s, para_tau, para_zeta, para_c, 0.0)
+            auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+            if best_auc is None or best_auc < auc_score:
+                best_c, best_auc = para_c, auc_score
         tr_index = data['trial_%d' % trial_id]['tr_index']
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                          para_s, para_tau, para_zeta, best_c, 0.0)
-        wt, aucs, rts, epochs = _
+        wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                              para_s, para_tau, para_zeta, best_c, 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_c, para_s],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
