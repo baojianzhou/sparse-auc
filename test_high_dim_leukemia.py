@@ -468,7 +468,7 @@ def cv_fsauc(para):
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_g: %.1e best_r: %.1e nonzero: %.4e test_auc: %.4f' %
           (best_g, best_r, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    return best_g, best_r, results
+    return trial_id, fold_id, results
 
 
 def cv_hsg_ht(para):
