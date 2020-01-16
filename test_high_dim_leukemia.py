@@ -311,7 +311,7 @@ def cv_spam_l1(para):
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_l1: %.1e nonzero: %.4e test_auc: %.4f' %
           (best_xi, best_l1, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    return best_xi, best_l1, results
+    return trial_id, fold_id, results
 
 
 def cv_spam_l2(para):
@@ -349,7 +349,7 @@ def cv_spam_l2(para):
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_l2: %.1e nonzero: %.4e test_auc: %.4f' %
           (best_xi, best_l2, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    return best_xi, best_l2, results
+    return trial_id, fold_id, results
 
 
 def cv_spam_l1l2(para):
@@ -388,7 +388,7 @@ def cv_spam_l1l2(para):
                                     'aucs': aucs, 'rts': rts, 'wt': wt}
     print('best_xi: %.1e best_l1: %.1e best_l2: %.1e nonzero: %.4e test_auc: %.4f' %
           (best_xi, best_l1, best_l2, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    return best_xi, best_l1, best_l2, results
+    return trial_id, fold_id, results
 
 
 def cv_solam(para):
@@ -434,43 +434,41 @@ def cv_solam(para):
 
 
 def cv_fsauc(para):
-    data, para_r = para
-    num_passes, k_fold, step_len, verbose, record_aucs, stop_eps = 100, 5, 1e2, 0, 1, 1e-6
+    data, trial_id, fold_id = para
+    num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     results = dict()
-    for trial_id, fold_id in product(range(data['num_trials']), range(k_fold)):
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        selected_g, select_l2, best_auc = None, None, None
-        aver_nonzero = []
-        for para_g, in product(2. ** np.arange(-10, 11, 1, dtype=float)):
-            _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
-            wt, aucs, rts, epochs = _
-            aver_nonzero.append(np.count_nonzero(wt))
-            re = {'algo_para': [trial_id, fold_id, para_r, para_g],
-                  'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                          y_score=np.dot(data['x_tr'][te_index], wt)),
-                  'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-            if best_auc is None or best_auc <= re['auc_wt']:
-                selected_g = para_g
-                best_auc = re['auc_wt']
-        tr_index = data['trial_%d' % trial_id]['tr_index']
-        te_index = data['trial_%d' % trial_id]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, selected_g)
+    tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+    te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+    x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+    y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+    best_g, best_r, best_auc = None, None, None
+    aver_nonzero = []
+    for para_g, para_r in product(2. ** np.arange(-10, 11, 1, dtype=float),
+                                  10. ** np.arange(-1, 6, 1, dtype=float)):
+        _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
         wt, aucs, rts, epochs = _
-        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, selected_g, select_l2],
-                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt}
-        print('selected g: %.4e r: %.4e nonzero: %.4e test_auc: %.4f' %
-              (selected_g, para_r, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
-    print(para_r, '%.5f' % np.mean(np.asarray([results[_]['auc_wt'] for _ in results])))
-    return para_r, results
+        aver_nonzero.append(np.count_nonzero(wt))
+        re = {'algo_para': [trial_id, fold_id, para_r, para_g],
+              'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                      y_score=np.dot(data['x_tr'][te_index], wt)),
+              'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+        if best_auc is None or best_auc <= re['auc_wt']:
+            best_g, best_r, best_auc = para_g, para_r, re['auc_wt']
+    tr_index = data['trial_%d' % trial_id]['tr_index']
+    te_index = data['trial_%d' % trial_id]['te_index']
+    x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+    y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+    _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, best_r, best_g)
+    wt, aucs, rts, epochs = _
+    results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_g, best_r],
+                                    'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                            y_score=np.dot(data['x_tr'][te_index], wt)),
+                                    'aucs': aucs, 'rts': rts, 'wt': wt}
+    print('best_g: %.1e best_r: %.1e nonzero: %.4e test_auc: %.4f' %
+          (best_g, best_r, float(np.mean(aver_nonzero)), results[(trial_id, fold_id)]['auc_wt']))
+    return best_g, best_r, results
 
 
 def cv_hsg_ht(para):
@@ -547,9 +545,8 @@ def run_methods(method):
         ms_res = pool.map(cv_spam_l1l2, para_list)
     elif method == 'fsauc':
         para_list = []
-        for para_r in [1e-5, 5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2, 5e-2, 1e-1, 5e-1,
-                       1e0, 5e0, 1e1, 5e1, 1e2, 5e2, 1e3, 5e3, 1e4]:
-            para_list.append((data, para_r))
+        for trial_id, fold_id in product(range(data['num_trials']), range(5)):
+            para_list.append((data, trial_id, fold_id))
         ms_res = pool.map(cv_fsauc, para_list)
     elif method == 'hsg_ht':
         para_list = []
