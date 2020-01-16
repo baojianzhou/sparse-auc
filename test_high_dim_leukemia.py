@@ -227,8 +227,7 @@ def cv_sht_am(para):
                                               0, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)), 'wt': wt}
         print('best_b: %02d nonzero: %.4e test_auc: %.4f' %
               (best_b, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
         all_results[para_s] = results
@@ -261,8 +260,7 @@ def cv_sto_iht(para):
                                                global_paras, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt}
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)), 'wt': wt}
         print('best_b: %02d nonzero: %.4e test_auc: %.4f' %
               (best_b, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
         all_results[para_s] = results
@@ -297,8 +295,7 @@ def cv_hsg_ht(para):
                                               para_s, para_tau, para_zeta, best_c, 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_c, para_s],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt}
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)), 'wt': wt}
         print('best_c: %02d nonzero: %.4e test_auc: %.4f' %
               (best_c, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
         all_results[para_s] = results
