@@ -207,7 +207,7 @@ def cv_sht_am(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 2):
+    for para_s in range(1, 101, 3):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -241,7 +241,7 @@ def cv_sto_iht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 2):
+    for para_s in range(1, 101, 3):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -265,6 +265,42 @@ def cv_sto_iht(para):
                                         'aucs': aucs, 'rts': rts, 'wt': wt}
         print('best_b: %02d nonzero: %.4e test_auc: %.4f' %
               (best_b, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
+        all_results[para_s] = results
+    return trial_id, fold_id, all_results
+
+
+def cv_hsg_ht(para):
+    data, trial_id, fold_id = para
+    num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    __ = np.empty(shape=(1,), dtype=float)
+    all_results = dict()
+    for para_s in range(1, 101, 3):
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        results = dict()
+        best_c, best_auc = None, None
+        for para_c in [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0]:
+            para_tau, para_zeta = 1.0, 1.033
+            wt, _, _, _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                        para_s, para_tau, para_zeta, para_c, 0.0)
+            auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+            if best_auc is None or best_auc < auc_score:
+                best_c, best_auc = para_c, auc_score
+        tr_index = data['trial_%d' % trial_id]['tr_index']
+        te_index = data['trial_%d' % trial_id]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                              para_s, para_tau, para_zeta, best_c, 0.0)
+        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_c, para_s],
+                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
+                                        'aucs': aucs, 'rts': rts, 'wt': wt}
+        print('best_c: %02d nonzero: %.4e test_auc: %.4f' %
+              (best_c, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
         all_results[para_s] = results
     return trial_id, fold_id, all_results
 
@@ -426,42 +462,6 @@ def cv_fsauc(para):
     return trial_id, fold_id, results
 
 
-def cv_hsg_ht(para):
-    data, trial_id, fold_id = para
-    num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
-    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-    __ = np.empty(shape=(1,), dtype=float)
-    all_results = dict()
-    for para_s in range(1, 101, 2):
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        results = dict()
-        best_c, best_auc = None, None
-        for para_c in [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1e0]:
-            para_tau, para_zeta = 1.0, 1.033
-            wt, _, _, _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                        para_s, para_tau, para_zeta, para_c, 0.0)
-            auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
-            if best_auc is None or best_auc < auc_score:
-                best_c, best_auc = para_c, auc_score
-        tr_index = data['trial_%d' % trial_id]['tr_index']
-        te_index = data['trial_%d' % trial_id]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                              para_s, para_tau, para_zeta, best_c, 0.0)
-        results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, best_c, para_s],
-                                        'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
-                                        'aucs': aucs, 'rts': rts, 'wt': wt}
-        print('best_c: %02d nonzero: %.4e test_auc: %.4f' %
-              (best_c, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
-        all_results[para_s] = results
-    return trial_id, fold_id, all_results
-
-
 def run_methods(method):
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
     data = pkl.load(open(data_path + 'leukemia_data.pkl'))
@@ -569,6 +569,51 @@ def show_auc():
     plt.close()
 
 
+def show_all_auc():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 14
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 8, 8
+    fig, ax = plt.subplots(1, 1)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    all_aus = dict()
+    method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC']
+    for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
+        all_aus[method] = []
+        re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
+        for trial_id, fold_id, re in re_summary:
+            all_aus[method].append(re[(trial_id, fold_id)]['auc_wt'])
+        plt.plot(sorted(all_aus[method])[:50], label=method_label_list[method_ind])
+    plt.legend()
+    plt.show()
+    exit()
+
+    re_summary = pkl.load(open(data_path + 're_summary.pkl', 'rb'))
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'blue', 'darkgray', 'darkorange']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
+                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
+    for method_ind, method in enumerate(method_list):
+        plt.plot([float(np.mean(np.asarray([_['auc'][key] for key in _['auc']]))) for _ in re_summary[method]],
+                 label=method_label_list[method_ind], color=color_list[method_ind],
+                 marker=marker_list[method_ind], linewidth=2.)
+    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+    ax.set_xlabel('Sparse parameter')
+    ax.set_ylabel('AUC Score')
+    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    f_name = root_path + 'real_leukemia_auc.pdf'
+    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.close()
+
+
 def show_features():
     import matplotlib.pyplot as plt
     from matplotlib import rc
@@ -656,6 +701,8 @@ def main():
         run_methods(method='solam')
     elif sys.argv[1] == 'show_auc':
         show_auc()
+    elif sys.argv[1] == 'show_all_auc':
+        show_all_auc()
     elif sys.argv[1] == 'show_features':
         show_features()
     elif sys.argv[1] == 'summary':
