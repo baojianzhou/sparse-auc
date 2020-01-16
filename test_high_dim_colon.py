@@ -168,7 +168,7 @@ def cv_sht_am(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 3):
+    for para_s in range(1, 101, 1):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -202,7 +202,7 @@ def cv_sto_iht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 3):
+    for para_s in range(1, 101, 1):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -236,7 +236,7 @@ def cv_hsg_ht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in range(1, 101, 3):
+    for para_s in range(1, 101, 1):
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
