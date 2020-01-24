@@ -51,17 +51,7 @@ def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0
     """
     number of classes: 2
     number of samples: 1,000
-    number of features: 1,089
-    ---
-    @article{arias2011detection,
-    title={Detection of an anomalous cluster in a network},
-    author={Arias-Castro, Ery and Candes, Emmanuel J and Durand, Arnaud and others},
-    journal={The Annals of Statistics},
-    volume={39},
-    number={1},
-    pages={278--304},
-    year={2011},
-    publisher={Institute of Mathematical Statistics}}
+    number of features: 1,000
     ---
     :param data_path:
     :param num_tr:
@@ -72,53 +62,12 @@ def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0
     :param noise_std:
     :return:
     """
-    bench_data = {
-        # figure 1 in [1], it has 26 nodes.
-        'fig_1': [475, 505, 506, 507, 508, 509, 510, 511, 512, 539, 540, 541, 542,
-                  543, 544, 545, 576, 609, 642, 643, 644, 645, 646, 647, 679, 712],
-        # figure 2 in [1], it has 46 nodes.
-        'fig_2': [439, 440, 471, 472, 473, 474, 504, 505, 506, 537, 538, 539, 568,
-                  569, 570, 571, 572, 600, 601, 602, 603, 604, 605, 633, 634, 635,
-                  636, 637, 666, 667, 668, 698, 699, 700, 701, 730, 731, 732, 733,
-                  763, 764, 765, 796, 797, 798, 830],
-        # figure 3 in [1], it has 92 nodes.
-        'fig_3': [151, 183, 184, 185, 217, 218, 219, 251, 252, 285, 286, 319, 320,
-                  352, 353, 385, 386, 405, 406, 407, 408, 409, 419, 420, 437, 438,
-                  439, 440, 441, 442, 443, 452, 453, 470, 471, 475, 476, 485, 486,
-                  502, 503, 504, 507, 508, 509, 518, 519, 535, 536, 541, 550, 551,
-                  568, 569, 583, 584, 601, 602, 615, 616, 617, 635, 636, 648, 649,
-                  668, 669, 670, 680, 681, 702, 703, 704, 711, 712, 713, 736, 737,
-                  738, 739, 740, 741, 742, 743, 744, 745, 771, 772, 773, 774, 775,
-                  776],
-        # figure 4 in [1], it has 132 nodes.
-        'fig_4': [244, 245, 246, 247, 248, 249, 254, 255, 256, 277, 278, 279, 280,
-                  281, 282, 283, 286, 287, 288, 289, 290, 310, 311, 312, 313, 314,
-                  315, 316, 317, 318, 319, 320, 321, 322, 323, 324, 343, 344, 345,
-                  346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356, 357, 377,
-                  378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390,
-                  411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423,
-                  448, 449, 450, 451, 452, 453, 454, 455, 456, 481, 482, 483, 484,
-                  485, 486, 487, 488, 489, 514, 515, 516, 517, 518, 519, 520, 521,
-                  547, 548, 549, 550, 551, 552, 553, 579, 580, 581, 582, 583, 584,
-                  585, 586, 613, 614, 615, 616, 617, 618, 646, 647, 648, 649, 650,
-                  680, 681],
-        # grid size (length).
-        'height': 33,
-        # grid width (width).
-        'width': 33,
-        # the dimension of grid graph is 33 x 33.
-        'p': 33 * 33,
-        # sparsity list of these 4 figures.
-        's': {'fig_1': 26, 'fig_2': 46, 'fig_3': 92, 'fig_4': 132},
-        # sparsity list
-        's_list': [26, 46, 92, 132],
-        'graph': __simu_grid_graph(height=33, width=33)}
-    p = int(bench_data['width'] * bench_data['height'])
-    posi_label, nega_label, k_fold = +1, -1, 5
+    posi_label, nega_label, k_fold, p = +1, -1, 5, 1000
     all_data = dict()
-    for fig_id in ['fig_1', 'fig_2', 'fig_3', 'fig_4']:
-        sub_graph = bench_data[fig_id]
-        s, n = len(sub_graph), num_tr
+    for s in [20, 40, 60, 80]:
+        perm = np.random.permutation(p)
+        subset_nodes = perm[:s]
+        n = num_tr
         num_posi, num_nega = int(n * posi_ratio), int(n * (1. - posi_ratio))
         assert (num_posi + num_nega) == n
         # generate training samples and labels
@@ -126,28 +75,25 @@ def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0
         y_labels = np.asarray(labels, dtype=np.float64)
         x_data = np.random.normal(noise_mu, noise_std, n * p).reshape(n, p)
         anomalous_data = np.random.normal(mu, noise_std, s * num_posi).reshape(num_posi, s)
-        x_data[:num_posi, sub_graph] = anomalous_data
+        x_data[:num_posi, subset_nodes] = anomalous_data
         rand_indices = np.random.permutation(len(y_labels))
         x_tr, y_tr = x_data[rand_indices], y_labels[rand_indices]
+        print(trial_id, posi_ratio, s, np.linalg.norm(x_tr), subset_nodes[:5])
         # normalize data by z-score
         x_mean = np.tile(np.mean(x_tr, axis=0), (len(x_tr), 1))
         x_std = np.tile(np.std(x_tr, axis=0), (len(x_tr), 1))
         x_tr = np.nan_to_num(np.divide(x_tr - x_mean, x_std))
+
         # normalize samples to unit length.
         for i in range(len(x_tr)):
             x_tr[i] = x_tr[i] / np.linalg.norm(x_tr[i])
-        edges, weights = bench_data['graph']
         data = {'x_tr': x_tr,
                 'y_tr': y_tr,
-                'subgraph': sub_graph,
-                'height': bench_data['height'],
-                'width': bench_data['width'],
-                'edges': edges,
-                'weights': weights,
+                'subset': subset_nodes,
                 'mu': mu,
                 'p': p,
                 'n': num_tr,
-                's': len(sub_graph),
+                's': len(subset_nodes),
                 'noise_mu': noise_mu,
                 'noise_std': noise_std,
                 'trial_id': trial_id,
@@ -161,7 +107,7 @@ def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0
             rand_perm = np.random.permutation(data['n'])
             data['trial_%d_fold_%d' % (trial_id, fold_index)] = {'tr_index': rand_perm[train_index],
                                                                  'te_index': rand_perm[test_index]}
-        all_data[fig_id] = data
+        all_data[s] = data
     pkl.dump(all_data, open(data_path + '/data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
                             % (trial_id, num_tr, mu, posi_ratio), 'wb'))
 

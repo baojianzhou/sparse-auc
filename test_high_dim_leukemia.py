@@ -626,7 +626,7 @@ def show_features():
     plt.rcParams["font.serif"] = "Times"
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
-    rcParams['figure.figsize'] = 8, 8
+    rcParams['figure.figsize'] = 4, 4
     fig, ax = plt.subplots(1, 1)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -673,7 +673,7 @@ def main():
         summary_auc_results()
         show_auc()
     elif sys.argv[1] == 'show_features':
-        summary_feature_results()
+        # summary_feature_results()
         show_features()
     elif sys.argv[1] == 'show_auc_scores':
         show_auc_scores()
