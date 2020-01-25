@@ -1303,6 +1303,7 @@ void _algo_sto_iht(Data *data, GlobalParas *paras, AlgoResults *re,
         // calculate the gradient
         logistic_loss_grad(re->wt, data->x_tr_vals + bi * para_b * data->p,
                            data->y_tr + bi * para_b, loss_grad_wt, para_l2_reg, cur_b_size, data->p);
+        printf("loss: %.4f\n", loss_grad_wt[0]);
         // wt = wt - eta * grad(wt)
         cblas_daxpy(data->p + 1, -para_xi / cur_b_size, loss_grad_wt + 1, 1, re->wt, 1);
         _hard_thresholding(re->wt, data->p, para_s); // k-sparse step.
@@ -1347,10 +1348,12 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
         int start_index = 0;
         for (int tt = 0; tt < num_of_batches; tt++) {
             int batch_size_s = floor(para_tau * pow(para_zeta, tt));
+
             batch_size_s = min(batch_size_s, data->n - start_index);
             int indices_j = start_index;
             start_index += batch_size_s; // update for next start_index
             // calculate the gradient
+
             logistic_loss_grad(re->wt, data->x_tr_vals + indices_j * data->p, data->y_tr + indices_j,
                                loss_grad_wt, para_l2, batch_size_s, data->p);
             // wt = wt - eta * grad(wt)
@@ -1363,7 +1366,7 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
             if (start_index >= (data->n - 1)) { break; }
             // at the end of each epoch, we check the early stop condition.
             re->total_iterations++;
-            if (t == num_of_batches - 1) {
+            if (tt == num_of_batches - 1) {
                 re->total_epochs++;
                 double norm_wt = sqrt(cblas_ddot(data->p, re->wt_prev, 1, re->wt_prev, 1));
                 cblas_daxpy(data->p, -1., re->wt, 1, re->wt_prev, 1);
@@ -1377,6 +1380,7 @@ void _algo_hsg_ht(Data *data, GlobalParas *paras, AlgoResults *re,
                 }
             }
             memcpy(re->wt_prev, re->wt, sizeof(double) * (data->p));
+            //printf("norm(wt): %.4f\n", sqrt(cblas_ddot(data->p, re->wt, 1, re->wt, 1)));
         }
     }
     cblas_dscal(re->auc_len, 1. / CLOCKS_PER_SEC, re->rts, 1);

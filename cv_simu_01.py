@@ -744,75 +744,6 @@ def run_para_s(para):
         print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
 
 
-def run_para_sparsity(num_cpus):
-    k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 5, 50, [1000], [0.3]
-    posi_ratio_list, s_list = [0.1], [20]
-    para_space = []
-    for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
-        for s in s_list:
-            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
-    pool = multiprocessing.Pool(processes=num_cpus)
-    test_res = pool.map(run_para_s, para_space)
-    pool.close()
-    pool.join()
-
-
-def run_para_b(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
-    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-    list_s = range(20, 140, 2)
-    list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
-    auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
-    for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
-        algo_para = (trial_id, fold_id, num_passes, para_c, para_s, k_fold)
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
-            auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-            auc_wt_bar[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
-        list_auc_wt = np.zeros(k_fold)
-        list_auc_wt_bar = np.zeros(k_fold)
-        list_num_nonzeros_wt = np.zeros(k_fold)
-        list_num_nonzeros_wt_bar = np.zeros(k_fold)
-        kf = KFold(n_splits=k_fold, shuffle=False)
-        for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
-            sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
-            sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
-            sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
-            sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            b, para_l2, record_aucs, verbose = 50, 0.0, 0, 0
-            re = c_algo_sht_am(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, record_aucs, verbose)
-            wt = np.asarray(re[0])
-            wt_bar = np.asarray(re[1])
-            list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
-            list_auc_wt_bar[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt_bar))
-            list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
-            list_num_nonzeros_wt_bar[ind] = np.count_nonzero(wt_bar)
-        cv_wt_results[ind_c, ind_s] = np.mean(list_auc_wt)
-        if auc_wt[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt):
-            auc_wt[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt))
-            auc_wt[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
-        if auc_wt_bar[(trial_id, fold_id)]['auc'] < np.mean(list_auc_wt_bar):
-            auc_wt_bar[(trial_id, fold_id)]['auc'] = float(np.mean(list_auc_wt_bar))
-            auc_wt_bar[(trial_id, fold_id)]['para'] = algo_para
-            auc_wt_bar[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt_bar))
-        print(para_c, para_s, np.mean(list_auc_wt), np.mean(list_auc_wt_bar))
-
-
-def run_para_blocksize(num_cpus):
-    k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 20, 20, [1000], [0.3]
-    posi_ratio_list, fig_list = [0.3], ['fig_2']
-    para_space = []
-    for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
-        for fig_i in fig_list:
-            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
-    pool = multiprocessing.Pool(processes=num_cpus)
-    test_res = pool.map(run_para_s, para_space)
-    pool.close()
-    pool.join()
-
-
 def run_diff_ratio(method):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
     posi_ratio_list = [0.10, 0.20, 0.30, 0.40, 0.50]
@@ -884,6 +815,7 @@ def run_diff_s(para_s):
             aucs_list[method][trial_id * 5 + fold_id] = re
             print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
     return para_s, aucs_list
+
 
 def show_diff_s():
     import matplotlib.pyplot as plt
@@ -1121,10 +1053,10 @@ def show_result_01():
     ax.spines['top'].set_visible(False)
     color_list = ['g', 'r', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'darkorange']
     marker_list = ['o', 's', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
-                         'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
-    fig_list = ['fig_1']
+    method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2', 'spam_l1l2']
+    method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
+                         r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$", ]
+    fig_list = [80]
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     for ind_method, method in enumerate(method_list):
         results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
@@ -1157,10 +1089,6 @@ def main(run_option):
                trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
     elif run_option == 'run_test':
         run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
-    elif run_option == 'run_para_s':
-        run_para_sparsity(num_cpus=int(sys.argv[2]))
-    elif run_option == 'run_para_b':
-        run_para_blocksize(num_cpus=int(sys.argv[2]))
     elif run_option == 'run_diff_ratio':
         run_diff_ratio(method='sht_am_v1')
         run_diff_ratio(method='sht_am_v2')
@@ -1190,5 +1118,51 @@ def main(run_option):
         show_result_01()
 
 
+def test_single():
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.5, 80
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
+    __ = np.empty(shape=(1,), dtype=float)
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id in range(k_fold):
+        para_s, para_c, _ = 80, 1., None
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, 100, 1., 0.0)
+        wt, aucs, rts, epochs = _
+        import matplotlib.pyplot as plt
+        plt.plot(rts, aucs)
+        plt.show()
+        print(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
+        break
+
+
+def test_single_2():
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.5, 80
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
+    __ = np.empty(shape=(1,), dtype=float)
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id in range(k_fold):
+        para_s, para_c, _ = 100, .5, None
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        para_tau, para_zeta = 100., 1.51
+        _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
+        wt, aucs, rts, epochs = _
+        import matplotlib.pyplot as plt
+        plt.plot(rts, aucs)
+        plt.show()
+        print(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
+        break
+
+
 if __name__ == '__main__':
-    main(run_option=sys.argv[1])
+    test_single_2()
+    # main(run_option=sys.argv[1])
