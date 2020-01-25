@@ -464,12 +464,12 @@ def test_sht_am(para):
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
-    ms = pkl.load(open(data_path + 'ms_00_05_sht_am_v1.pkl', 'rb'))
+    ms = pkl.load(open(data_path + 'ms_00_05_sht_am.pkl', 'rb'))
     results = dict()
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id in range(k_fold):
-        para_s, para_b, _ = ms[para]['sht_am_v1']['auc_wt'][(trial_id, fold_id)]['para']
+        para_s, para_b, _ = ms[para]['sht_am']['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
