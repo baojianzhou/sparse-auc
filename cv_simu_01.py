@@ -597,7 +597,7 @@ def cv_hsg_ht(para):
             auc_wt[(trial_id, fold_id)]['para'] = algo_para
             auc_wt[(trial_id, fold_id)]['num_nonzeros'] = float(np.mean(list_num_nonzeros_wt))
         print("trial-%d fold-%d para_s: %03d para_c: %.3e auc: %.4f epochs: %02d run_time: %.6f" %
-              (trial_id, fold_id, para_s, para_c, float(np.mean(list_auc_wt)),
+              (trial_id, fold_id, para_s, para_tau, float(np.mean(list_auc_wt)),
                float(np.mean(list_epochs)), time.time() - s_time))
     sys.stdout.flush()
     return para, auc_wt, cv_wt_results
@@ -613,21 +613,21 @@ def test_hsg_ht(para):
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id in range(k_fold):
-        para_s, para_c, _ = ms[para]['hsg_ht']['auc_wt'][(trial_id, fold_id)]['para']
+        para_s, para_tau, _ = ms[para]['hsg_ht']['auc_wt'][(trial_id, fold_id)]['para']
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        para_tau, para_zeta = 1.0, 1.0003
+        para_c, para_zeta = 3.0, 1.033
         _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
         wt, aucs, rts, epochs = _
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = {'algo_para': [trial_id, fold_id, para_c, para_s],
+        results[item] = {'algo_para': [trial_id, fold_id, para_s, para_tau],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
         print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_s:%03d para_c:%.2e' %
-              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_s, para_c))
+              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_s, para_tau))
     sys.stdout.flush()
     return results
 
