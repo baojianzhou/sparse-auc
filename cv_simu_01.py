@@ -565,13 +565,13 @@ def cv_hsg_ht(para):
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
     list_s = range(5, 101, 5)
-    list_c = [1e-3, 1e-2, 1e-1, 1e0]
-    auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_c)))
+    list_tau = [1., 10., 100., 1000.]
+    auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_tau)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-    for fold_id, (ind_s, para_s), (ind_c, para_c) in product(range(k_fold), enumerate(list_s), enumerate(list_c)):
+    for fold_id, (ind_s, para_s), (ind_c, para_tau) in product(range(k_fold), enumerate(list_s), enumerate(list_tau)):
         s_time = time.time()
-        algo_para = (para_s, para_c, (trial_id, fold_id, s, num_passes, posi_ratio, stop_eps))
+        algo_para = (para_s, para_tau, (trial_id, fold_id, s, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -584,7 +584,7 @@ def cv_hsg_ht(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            para_tau, para_zeta = 1.0, 1.0003
+            para_c, para_zeta = 3.0, 1.033
             _ = c_algo_hsg_ht(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras,
                               para_s, para_tau, para_zeta, para_c, 0.0)
             wt, aucs, rts, epochs = _
@@ -1148,12 +1148,12 @@ def test_single_2():
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id in range(k_fold):
-        para_s, para_c, _ = 100, .5, None
+        para_s, para_c, _ = 100, 3., None
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        para_tau, para_zeta = 100., 1.51
+        para_tau, para_zeta = 1000., 1.033
         _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
         wt, aucs, rts, epochs = _
         import matplotlib.pyplot as plt
@@ -1163,6 +1163,28 @@ def test_single_2():
         break
 
 
+def test_single_3():
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.5, 80
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
+    __ = np.empty(shape=(1,), dtype=float)
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id in range(k_fold):
+        para_s, para_b, _ = 80, 100, None
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        para_tau, para_zeta = 1000., 1.033
+        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
+        wt, aucs, rts, epochs = _
+        import matplotlib.pyplot as plt
+        plt.plot(rts, aucs)
+        plt.show()
+        print(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
+        break
+
+
 if __name__ == '__main__':
-    test_single_2()
-    # main(run_option=sys.argv[1])
+    main(run_option=sys.argv[1])
