@@ -1249,7 +1249,7 @@ def main(run_option):
         run_diff_ratio(method='sht_am_v1')
         run_diff_ratio(method='sht_am_v2')
     elif run_option == 'run_diff_s':
-        para_s_list = range(20, 61, 2)
+        para_s_list = range(20, 61, 5)
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
         ms_res = pool.map(run_diff_s, para_s_list)
         pool.close()
