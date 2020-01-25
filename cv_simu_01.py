@@ -746,11 +746,11 @@ def run_para_s(para):
 
 def run_para_sparsity(num_cpus):
     k_fold, num_trials, num_passes, tr_list, mu_list, = 5, 5, 50, [1000], [0.3]
-    posi_ratio_list, fig_list = [0.3], ['fig_2']
+    posi_ratio_list, s_list = [0.1], [20]
     para_space = []
     for trial_id, num_tr, mu, posi_ratio in product(range(num_trials), tr_list, mu_list, posi_ratio_list):
-        for fig_i in fig_list:
-            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i))
+        for s in s_list:
+            para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
     pool = multiprocessing.Pool(processes=num_cpus)
     test_res = pool.map(run_para_s, para_space)
     pool.close()
@@ -851,62 +851,38 @@ def run_diff_ratio(method):
 
 def run_diff_s(para_s):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
-    posi_ratio = 0.30
-    num_tr, mu, fig_i = 1000, 0.3, 'fig_2'
+    posi_ratio, num_tr, mu, s = 0.1, 1000, 0.3, 40
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     aucs_list = dict()
-    for method in ['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht', 'hsg_ht']:
+    for method in ['sht_am', 'sto_iht', 'hsg_ht']:
         aucs_list[method] = np.zeros(25)
         ms = pkl.load(open(data_path + 'ms_00_05_%s.pkl' % method, 'rb'))
-        for trial_id, fold_id in enumerate(range(5)):
+        for trial_id, fold_id in product(range(5), range(5)):
             f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-            data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
-            para = (trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-            for fold_id in range(k_fold):
-                tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-                te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-                x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-                y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-                if method == 'sht_am_v1' or method == 'sht_am_v2' or \
-                        method == 'graph_am_v1' or method == 'graph_am_v2' or method == 'sto_iht':
-                    if method == 'sht_am_v1':
-                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
-                                                              global_paras, 0, para_s, para_b, 1.0, 0.0)
-                    if method == 'sht_am_v2':
-                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
-                                                              global_paras, 2, para_s, para_b, 1.0, 0.0)
-                    if method == 'graph_am_v1':
-                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                        edges, weights = np.asarray(data['edges'], dtype=np.int32), \
-                                         np.asarray(data['weights'], dtype=float)
-                        wt, aucs, rts, epochs = c_algo_graph_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                                                edges, weights, 1, 0, para_s, para_b, 1.0, 0.0)
-                    if method == 'graph_am_v2':
-                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                        edges, weights = np.asarray(data['edges'], dtype=np.int32), \
-                                         np.asarray(data['weights'], dtype=float)
-                        wt, aucs, rts, epochs = c_algo_graph_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                                                edges, weights, 1, 2, para_s, para_b, 1.0, 0.0)
-                    if method == 'sto_iht':
-                        _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                        wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                                               para_s, para_b, 1., 0.0)
-                    aucs_list[method][trial_id * 5 + fold_id] = roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                              y_score=np.dot(data['x_tr'][te_index],
-                                                                                             wt))
-                else:
-                    para_tau, para_zeta = 1.0, 1.033
-                    _, para_c, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                    wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'],
-                                                          global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
-                    aucs_list[method][trial_id * 5 + fold_id] = roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                              y_score=np.dot(data['x_tr'][te_index],
-                                                                                             wt))
-                print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
+            data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
+            para = (trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
+            tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+            te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+            x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+            y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+            if method == 'sht_am':
+                _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                      global_paras, 0, para_s, para_b, 1.0, 0.0)
+            elif method == 'sto_iht':
+                _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                                       para_s, para_b, 1., 0.0)
+            else:
+                para_tau, para_zeta = 1.0, 1.0003
+                _, para_c, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'],
+                                                      global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
+            re = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
+            aucs_list[method][trial_id * 5 + fold_id] = re
+            print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
     return para_s, aucs_list
 
 
@@ -1273,7 +1249,7 @@ def main(run_option):
         run_diff_ratio(method='sht_am_v1')
         run_diff_ratio(method='sht_am_v2')
     elif run_option == 'run_diff_s':
-        para_s_list = range(20, 74, 2)
+        para_s_list = range(20, 61, 2)
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
         ms_res = pool.map(run_diff_s, para_s_list)
         pool.close()
