@@ -618,7 +618,7 @@ def test_hsg_ht(para):
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        para_tau, para_zeta = 1.0, 1.033
+        para_tau, para_zeta = 1.0, 1.0003
         _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
         wt, aucs, rts, epochs = _
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
@@ -1229,9 +1229,8 @@ def show_result_01():
     ax.spines['top'].set_visible(False)
     color_list = ['g', 'r', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'darkorange']
     marker_list = ['o', 's', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am_v1', 'graph_am_v1', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht',
-                   'hsg_ht']
-    method_label_list = ['SHT-AUC', 'Graph-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SHT-AUC', r"SPAM-$\displaystyle \ell^1$", r"SPAM-$\displaystyle \ell^2$",
                          'FSAUC', r"SPAM-$\displaystyle \ell^1/\ell^2$", r"SOLAM", r"StoIHT", 'HSG-HT']
     fig_list = ['fig_1']
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
