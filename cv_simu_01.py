@@ -885,38 +885,6 @@ def run_diff_s(para_s):
             print(trial_id, fold_id, method, aucs_list[method][trial_id * 5 + fold_id])
     return para_s, aucs_list
 
-
-def show_diff_s_2():
-    import matplotlib.pyplot as plt
-    from matplotlib import rc
-    from pylab import rcParams
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = "Times"
-    plt.rcParams["font.size"] = 14
-    rc('text', usetex=True)
-    rcParams['figure.figsize'] = 6, 5
-    para_s_list = range(20, 74, 2)
-    fig, ax = plt.subplots(1, 1)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    results = pkl.load(open(data_path + 're_diff_s.pkl', 'rb'))
-    results = [_[1] for _ in results]
-    method_label = ['SHT-AUC-V1', 'SHT-AUC-V2', 'Graph-AUC-V1', 'Graph-AUC-V2', 'StoIHT', 'HSG-HT']
-    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    for method_ind, method in enumerate(['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2', 'sto_iht', 'hsg_ht']):
-        ax.plot(para_s_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
-                marker=marker_list[method_ind], linewidth=2.)
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparsity (s)')
-    ax.set_ylabel('AUC Score')
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'simu_diff_s.pdf'
-    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
-    plt.close()
-    plt.show()
-
-
 def show_diff_s():
     import matplotlib.pyplot as plt
     from matplotlib import rc
@@ -926,22 +894,22 @@ def show_diff_s():
     plt.rcParams["font.size"] = 16
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 6, 5
-    para_s_list = range(20, 74, 2)
+    para_s_list = range(20, 61, 5)
     fig, ax = plt.subplots(1, 1)
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     results = pkl.load(open(data_path + 're_diff_s.pkl', 'rb'))
     results = [_[1] for _ in results]
-    method_label = ['SHT-AUC', 'Graph-AUC', 'StoIHT', 'HSG-HT']
-    marker_list = ['D', 's', 'o', 'H']
-    color_list = ['g', 'r', 'b', 'gray']
-    for method_ind, method in enumerate(['sht_am_v1', 'graph_am_v1', 'sto_iht', 'hsg_ht']):
+    method_label = ['SHT-AUC', 'StoIHT', 'HSG-HT']
+    marker_list = ['D', 's', 'o']
+    color_list = ['r', 'g', 'b']
+    for method_ind, method in enumerate(['sht_am', 'sto_iht', 'hsg_ht']):
         ax.plot(para_s_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
                 marker=marker_list[method_ind], markersize=6., markerfacecolor='white', color=color_list[method_ind],
                 linewidth=2., markeredgewidth=2.)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+              labelspacing=0.5, handletextpad=0.1, markerfirst=True)
     ax.set_xlabel('Sparsity (s)')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
@@ -1001,13 +969,14 @@ def show_diff_b():
     ax.spines['top'].set_visible(False)
     results = pkl.load(open(data_path + 're_diff_b.pkl', 'rb'))
     results = [_[1] for _ in results]
-    method_label = ['SHT-AUC', 'Graph-AUC', 'StoIHT']
-    marker_list = ['D', 's', 'o']
-    color_list = ['g', 'r', 'b']
-    for method_ind, method in enumerate(['sht_am_v1', 'graph_am_v1', 'sto_iht']):
-        ax.plot(range(len(para_b_list)), [np.mean(_[method]) for _ in results], label=method_label[method_ind],
-                marker=marker_list[method_ind], markersize=6., markerfacecolor='white', color=color_list[method_ind],
-                linewidth=2., markeredgewidth=2., )
+    method_label = ['SHT-AUC', 'StoIHT']
+    marker_list = ['D', 's']
+    color_list = ['r', 'g']
+    for method_ind, method in enumerate(['sht_am', 'sto_iht']):
+        y = [np.mean(_[method]) for _ in results]
+        ax.plot(range(len(para_b_list)), y, label=method_label[method_ind],
+                marker=marker_list[method_ind], markersize=6., markerfacecolor='white',
+                color=color_list[method_ind], linewidth=2., markeredgewidth=2.)
     ax.legend(loc='lower right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.5, handletextpad=0.1, markerfirst=True)
     ax.set_xticks(range(len([40, 44, 50, 57, 66, 80, 100, 133, 200, 400, 800])))
@@ -1215,39 +1184,10 @@ def main(run_option):
         show_diff_b()
     elif run_option == 'show_diff_ratio':
         show_diff_ratio(method='sht_am_v1')
-        # show_diff_ratio(method='sht_am_v2')
     elif run_option == 'show_sparsity':
         show_sparsity(method='sht_am_v1')
     elif run_option == 'show_01':
         show_result_01()
-
-
-def test_case():
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.5, 80
-    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
-    __ = np.empty(shape=(1,), dtype=float)
-    results = dict()
-    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
-    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-    for fold_id in range(k_fold):
-        para_s, para_c, _ = 80, 1., None
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        para_tau, para_zeta = 1.0, 1.0003
-        _ = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
-        wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
-        results[item] = {'algo_para': [trial_id, fold_id, para_c, para_s],
-                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
-                         'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_s:%03d para_c:%.2e' %
-              (trial_id, fold_id, s, posi_ratio, results[item]['auc_wt'], para_s, para_c))
-    sys.stdout.flush()
-    return results
 
 
 if __name__ == '__main__':
