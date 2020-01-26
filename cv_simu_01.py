@@ -112,7 +112,7 @@ def test_solam(para):
         wt, aucs, rts, epochs = _
         # indices = np.argsort(np.abs(wt))[::-1]
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-3)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
@@ -192,7 +192,7 @@ def test_spam_l1(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-3)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
@@ -272,7 +272,7 @@ def test_spam_l2(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, 0.0, para_l2)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-3)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
@@ -353,7 +353,7 @@ def test_spam_l1l2(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-3)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
@@ -431,7 +431,7 @@ def test_fsauc(para):
         _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-3)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
@@ -717,7 +717,6 @@ def run_testing(method_name, num_cpus):
             para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
     pool = multiprocessing.Pool(processes=num_cpus)
     if method_name == 'solam':
-        test_solam(para_space[0])
         test_res = pool.map(test_solam, para_space)
     elif method_name == 'spam_l1':
         test_res = pool.map(test_spam_l1, para_space)
