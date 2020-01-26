@@ -1230,6 +1230,6 @@ def test_single_3(trial_id):
 
 
 if __name__ == '__main__':
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.2, 60
-    cv_sht_am((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
-    # main(run_option=sys.argv[1])
+    # trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.2, 60
+    # cv_sht_am((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
+    main(run_option=sys.argv[1])
