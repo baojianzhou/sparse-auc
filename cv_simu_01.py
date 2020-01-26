@@ -842,7 +842,7 @@ def run_diff_ratio(method):
 
 def run_diff_s(para_s):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
-    posi_ratio, num_tr, mu, s = 0.1, 1000, 0.3, 40
+    posi_ratio, num_tr, mu, s = 0.05, 1000, 0.3, 40
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -1167,7 +1167,7 @@ def main(run_option):
         run_diff_ratio(method='sht_am_v1')
         run_diff_ratio(method='sht_am_v2')
     elif run_option == 'run_diff_s':
-        para_s_list = range(20, 61, 5)
+        para_s_list = range(10, 101, 5)
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
         ms_res = pool.map(run_diff_s, para_s_list)
         pool.close()
