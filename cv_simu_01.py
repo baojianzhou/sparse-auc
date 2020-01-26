@@ -481,8 +481,8 @@ def test_sht_am(para):
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        print('trial-%d fold-%d p-ratio:%.2f para_s: %d para_b: %d auc: %.4f para_s:%03d para_b:%03d' %
-              (trial_id, fold_id, posi_ratio, para_s, para_b, results[item]['auc_wt'], para_s, para_b))
+        print('trial-%d fold-%d p-ratio:%.2f s: %d para_s: %d para_b: %d auc: %.4f para_s:%03d para_b:%03d' %
+              (trial_id, fold_id, posi_ratio, s, para_s, para_b, results[item]['auc_wt'], para_s, para_b))
     sys.stdout.flush()
     return results
 
