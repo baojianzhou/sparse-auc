@@ -996,25 +996,23 @@ def show_diff_ratio(method):
     plt.show()
 
 
-def show_sparsity(method):
-    method_list = ['sht_am_v1', 'sht_am_v2', 'graph_am_v1', 'graph_am_v2',
-                   'spam_l1', 'spam_l2', 'fsauc', 'spam_l1l2', 'solam', 'sto_iht', 'hsg_ht']
-    fig_list = ['fig_1', 'fig_2', 'fig_3', 'fig_4']
-    posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-    posi_ratio_list = [0.3]
+def show_sparsity():
+    method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'solam', 'sto_iht', 'hsg_ht']
+    s_list = [20, 40, 60, 80]
+    posi_ratio_list = [0.1]
     results = {method: pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method))) for method in method_list}
     print('-' * 100)
     for (ind_p, posi_ratio) in enumerate(posi_ratio_list):
         for ind_method, method in enumerate(method_list):
             print(method),
-            for ind_fig, fig_i in enumerate(fig_list):
+            for ind_fig, s in enumerate(s_list):
                 re_auc = [results[method][key]['auc_wt'] for key in results[method]
-                          if key[-1] == fig_i and key[-2] == posi_ratio]
+                          if key[-1] == s and key[-2] == posi_ratio]
                 print('%.4f %.4f' % (float(np.mean(re_auc)), float(np.std(re_auc)))),
-            for ind_fig, fig_i in enumerate(fig_list):
-                re_fm = [node_pre_rec_fm(true_nodes=fig_nodes[fig_i],
+            for ind_fig, s in enumerate(s_list):
+                re_fm = [node_pre_rec_fm(true_nodes=range(20),
                                          pred_nodes=list(np.nonzero(results[method][key]['wt'])[0]))[2]
-                         for key in results[method] if key[-1] == fig_i and key[-2] == posi_ratio]
+                         for key in results[method] if key[-1] == s and key[-2] == posi_ratio]
                 print('%.4f %.4f' % (float(np.mean(re_fm)), float(np.std(re_fm)))),
             print('')
 
@@ -1160,7 +1158,7 @@ def main(run_option):
     elif run_option == 'show_diff_ratio':
         show_diff_ratio(method='sht_am_v1')
     elif run_option == 'show_sparsity':
-        show_sparsity(method='sht_am_v1')
+        show_sparsity()
     elif run_option == 'show_01':
         show_result_01()
 
@@ -1259,4 +1257,5 @@ def run_all_model_selection():
 
 
 if __name__ == '__main__':
+    data = pkl.load(open(data_path + 'ms_00_05_fsauc.pkl'))
     main(run_option=sys.argv[1])
