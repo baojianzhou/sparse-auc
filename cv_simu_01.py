@@ -842,7 +842,7 @@ def run_diff_ratio(method):
 
 def run_diff_s(para_s):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
-    posi_ratio, num_tr, mu, s = 0.3, 1000, 0.3, 40
+    posi_ratio, num_tr, mu, s = 0.1, 1000, 0.3, 40
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -900,7 +900,7 @@ def show_diff_s():
         ax.plot(para_s_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
                 marker=marker_list[method_ind], markersize=6., markerfacecolor='white', color=color_list[method_ind],
                 linewidth=2., markeredgewidth=2.)
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+    ax.legend(loc='lower right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.5, handletextpad=0.1, markerfirst=True)
     ax.set_xlabel('Sparsity (s)')
     ax.set_ylabel('AUC Score')
