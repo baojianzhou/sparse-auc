@@ -460,9 +460,9 @@ def cv_sht_am(para):
 
 
 def test_sht_am(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     ms = pkl.load(open(data_path + 'ms_00_05_sht_am.pkl', 'rb'))
     results = dict()
@@ -476,13 +476,13 @@ def test_sht_am(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_s, para_b],
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
+        results[item] = {'algo_para': [trial_id, fold_id, s, para_s, para_b],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
-        print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_s:%03d para_b:%03d' %
-              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_s, para_b))
+        print('trial-%d fold-%d p-ratio:%.2f para_s: %d para_b: %d auc: %.4f para_s:%03d para_b:%03d' %
+              (trial_id, fold_id, posi_ratio, para_s, para_b, results[item]['auc_wt'], para_s, para_b))
     sys.stdout.flush()
     return results
 
