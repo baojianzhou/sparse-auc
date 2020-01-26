@@ -345,10 +345,10 @@ def test_spam_l1l2(para):
 
 
 def cv_fsauc(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     # get data
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
     list_r = 10. ** np.arange(-1, 6, 1, dtype=float)
@@ -358,7 +358,7 @@ def cv_fsauc(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id, (ind_r, para_r), (ind_g, para_g) in product(range(k_fold), enumerate(list_r), enumerate(list_g)):
         s_time = time.time()
-        algo_para = (para_r, para_g, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
+        algo_para = (para_r, para_g, (trial_id, fold_id, s, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -389,9 +389,9 @@ def cv_fsauc(para):
 
 
 def test_fsauc(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     ms = pkl.load(open(data_path + 'ms_00_05_fsauc.pkl', 'rb'))
     results = dict()
@@ -405,13 +405,13 @@ def test_fsauc(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
-        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_r, para_g],
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
+        results[item] = {'algo_para': [trial_id, fold_id, s, para_r, para_g],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
         print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_r:%.4f para_g:%.4f' %
-              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_r, para_g))
+              (trial_id, fold_id, s, posi_ratio, results[item]['auc_wt'], para_r, para_g))
     sys.stdout.flush()
     return results
 
@@ -1099,15 +1099,19 @@ def show_result_01():
     method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2', 'spam_l1l2']
     method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
                          r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$", ]
-    s_list = [80]
+    method_list = ['sht_am', 'fsauc']
+    method_label_list = ['SHT-AUC', 'FSAUC']
+    s_list = [20]
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     for ind_method, method in enumerate(method_list):
         results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
-        for ind_fig, fig_i in enumerate(s_list):
+        if method == 'fsauc':
+            pass
+        for ind_fig, s in enumerate(s_list):
             re = []
             for posi_ratio in posi_ratio_list:
                 re.append(np.mean([results[key]['auc_wt'] for key in results
-                                   if key[-1] == fig_i and key[-2] == posi_ratio]))
+                                   if key[-1] == s and key[-2] == posi_ratio]))
             ax.plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
                     markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
                     markeredgewidth=2., )
@@ -1118,10 +1122,10 @@ def show_result_01():
               fontsize=14., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
     ax.set_xticks(posi_ratio_list)
-    ax.set_yticks([0.5, 0.55, 0.65, 0.75, 0.85, 0.95])
-    ax.set_ylim([0.5, .99])
+    # ax.set_yticks([0.5, 0.55, 0.65, 0.75, 0.85, 0.95])
+    # ax.set_ylim([0.5, .99])
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    plt.savefig(root_path + 'simu-result-01-04.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.savefig(root_path + 'simu-result-01-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
     plt.show()
 
@@ -1222,11 +1226,36 @@ def test_single_3(trial_id):
             te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
             x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
             y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b,
-                              1., 0.0)
+            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
             wt, aucs, rts, epochs = _
             aver_auc.append(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
         print(para_s, np.mean(aver_auc))
+
+
+def run_all_model_selection():
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio = 0, 5, 50, 1000, 0.3, 0.2
+    step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
+    kf = KFold(n_splits=k_fold, shuffle=False)
+    __ = np.empty(shape=(1,), dtype=float)
+    for (s_ind, s), fold_id in product(enumerate([20, 40, 60, 80]), range(k_fold)):
+        f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+        data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        # solam
+        for (ind_xi, para_xi), (ind_r, para_r) in product(
+                enumerate(np.arange(1, 101, 9, dtype=float)),
+                enumerate(10. ** np.arange(-1, 6, 1, dtype=float))):
+            for ind, (sub_tr_ind, sub_te_ind) in enumerate(kf.split(np.zeros(shape=(len(tr_index), 1)))):
+                sub_x_tr = np.asarray(data['x_tr'][tr_index[sub_tr_ind]], dtype=float)
+                sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
+                sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
+                sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
+                global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+                _ = c_algo_solam(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, para_xi, para_r)
+                wt, aucs, rts, epochs = _
+                print(roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt)))
+            break
+        break
 
 
 if __name__ == '__main__':

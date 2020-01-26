@@ -407,8 +407,7 @@ def cv_solam(para):
     x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
     y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
     best_xi, best_r, best_auc = None, None, None
-    for para_xi, para_r, in product(np.arange(1, 101, 9, dtype=float),
-                                    10. ** np.arange(-1, 6, 1, dtype=float)):
+    for para_xi, para_r, in product(np.arange(1, 101, 9, dtype=float), 10. ** np.arange(-1, 6, 1, dtype=float)):
         wt, _, _, _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_r)
         auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
         if best_auc is None or best_auc < auc_score:
