@@ -115,7 +115,11 @@ def test_solam(para):
         wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
+        if float(len(indices)) != 0.0:
+            pre = float(len(xx)) / float(len(indices))
+        else:
+            pre = 0.0
+        rec = float(len(xx)) / float(len(data['subset']))
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_r],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -195,7 +199,11 @@ def test_spam_l1(para):
         wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
+        if float(len(indices)) != 0.0:
+            pre = float(len(xx)) / float(len(indices))
+        else:
+            pre = 0.0
+        rec = float(len(xx)) / float(len(data['subset']))
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l1],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -275,7 +283,11 @@ def test_spam_l2(para):
         wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
+        if float(len(indices)) != 0.0:
+            pre = float(len(xx)) / float(len(indices))
+        else:
+            pre = 0.0
+        rec = float(len(xx)) / float(len(data['subset']))
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l2],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -356,7 +368,11 @@ def test_spam_l1l2(para):
         wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
+        if float(len(indices)) != 0.0:
+            pre = float(len(xx)) / float(len(indices))
+        else:
+            pre = 0.0
+        rec = float(len(xx)) / float(len(data['subset']))
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l1, para_l2],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
@@ -434,7 +450,11 @@ def test_fsauc(para):
         wt[np.where(np.abs(wt) < 1e-5)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) / float(len(indices)), float(len(xx)) / float(len(data['subset']))
+        if float(len(indices)) != 0.0:
+            pre = float(len(xx)) / float(len(indices))
+        else:
+            pre = 0.0
+        rec = float(len(xx)) / float(len(data['subset']))
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_r, para_g],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
