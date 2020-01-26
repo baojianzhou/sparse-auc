@@ -1163,8 +1163,8 @@ def test_single_2():
         break
 
 
-def test_single_3():
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.1, 60
+def test_single_3(trial_id):
+    k_fold, num_passes, num_tr, mu, posi_ratio, s = 5, 50, 1000, 0.3, 0.1, 60
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
@@ -1185,5 +1185,5 @@ def test_single_3():
 
 
 if __name__ == '__main__':
-    test_single_3()
+    test_single_3(trial_id=int(sys.argv[1]))
     # main(run_option=sys.argv[1])
