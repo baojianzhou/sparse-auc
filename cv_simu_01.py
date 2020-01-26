@@ -1056,11 +1056,11 @@ def show_result_01():
     method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2', 'spam_l1l2']
     method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
                          r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$", ]
-    fig_list = [20]
+    s_list = [80]
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     for ind_method, method in enumerate(method_list):
         results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
-        for ind_fig, fig_i in enumerate(fig_list):
+        for ind_fig, fig_i in enumerate(s_list):
             re = []
             for posi_ratio in posi_ratio_list:
                 re.append(np.mean([results[key]['auc_wt'] for key in results
@@ -1078,7 +1078,7 @@ def show_result_01():
     ax.set_yticks([0.5, 0.55, 0.65, 0.75, 0.85, 0.95])
     ax.set_ylim([0.5, .99])
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    plt.savefig(root_path + 'simu-result-01-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+    plt.savefig(root_path + 'simu-result-01-04.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
     plt.show()
 
