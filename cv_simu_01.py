@@ -447,7 +447,7 @@ def test_fsauc(para):
         _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-4)] = 0.0
+        wt[np.where(np.abs(wt) < 1.)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         if float(len(indices)) != 0.0:
