@@ -423,7 +423,7 @@ def cv_sht_am(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s, list_b = range(10, 101, 10), [640 / _ for _ in [1, 2, 4, 8, 10]]
+    list_s, list_b = range(10, 101, 10), [50]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -1170,18 +1170,20 @@ def test_single_3(trial_id):
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
-    aver_auc = []
-    for fold_id in range(k_fold):
-        para_s, para_b, _ = 60, 20, None
-        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
-        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
-        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
-        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b,
-                          1., 0.0)
-        wt, aucs, rts, epochs = _
-        aver_auc.append(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
-    print(np.mean(aver_auc))
+
+    for para_s in [20, 30, 40, 50, 60, 70, 80, 90]:
+        aver_auc = []
+        for fold_id in range(k_fold):
+            para_b = 50
+            tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+            te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+            x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+            y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b,
+                              1., 0.0)
+            wt, aucs, rts, epochs = _
+            aver_auc.append(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
+        print(para_s, np.mean(aver_auc))
 
 
 if __name__ == '__main__':
