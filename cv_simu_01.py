@@ -110,12 +110,11 @@ def test_solam(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_r)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
+        xx = set(np.nonzero(wt)[0]).intersection(set(data['subset']))
+        pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
         auc_original = roc_auc_score(y_true=data['y_tr'][te_index],
                                      y_score=np.dot(data['x_tr'][te_index], wt))
-        indices = np.argsort(np.abs(wt))[::-1]
-        xx = set(indices[:s]).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_r],
                          'auc_wt': auc_original,
                          'f1_score': 2. * pre * rec / (pre + rec) if (pre + rec) > 0 else 0.0,
@@ -192,7 +191,7 @@ def test_spam_l1(para):
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
+        pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l1],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -270,7 +269,7 @@ def test_spam_l2(para):
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
+        pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l2],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -330,9 +329,9 @@ def cv_spam_l1l2(para):
 
 
 def test_spam_l1l2(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     ms = pkl.load(open(data_path + 'ms_00_05_spam_l1l2.pkl', 'rb'))
     results = dict()
@@ -346,17 +345,17 @@ def test_spam_l1l2(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
-        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_xi, para_l1, para_l2],
+        pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
+        results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l1, para_l2],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'f1_score': 2. * pre * rec / (pre + rec) if (pre + rec) > 0 else 0.0,
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
         print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_xi:%.4f para_l1:%.4f para_l2:%.4f' %
-              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_xi, para_l1, para_l2))
+              (trial_id, fold_id, s, posi_ratio, results[item]['auc_wt'], para_xi, para_l1, para_l2))
     sys.stdout.flush()
     return results
 
@@ -425,7 +424,7 @@ def test_fsauc(para):
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
-        pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
+        pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
         results[item] = {'algo_para': [trial_id, fold_id, s, para_r, para_g],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
@@ -994,20 +993,20 @@ def show_sparsity():
             print(method),
             str_list = []
             for ind_fig, s in enumerate(s_list):
-                re_auc = [results[method][key]['auc_wt'] for key in results[method]
-                          if key[-1] == s and key[-2] == posi_ratio]
+                re_auc = [results[method][key]['auc_wt'] for key in results[method] if
+                          key[-1] == s and key[-2] == posi_ratio]
                 str_list.append('%.3f$\pm$%.3f' % (float(np.mean(re_auc)), float(np.std(re_auc))))
             print(' & '.join(str_list))
     print('---')
     for (ind_p, posi_ratio) in enumerate(posi_ratio_list):
         for ind_method, method in enumerate(method_list):
             print(method),
+            str_list = []
             for ind_fig, s in enumerate(s_list):
-                re_fm = [node_pre_rec_fm(true_nodes=range(20),
-                                         pred_nodes=list(np.nonzero(results[method][key]['wt'])[0]))[2]
-                         for key in results[method] if key[-1] == s and key[-2] == posi_ratio]
-                print('%.4f %.4f' % (float(np.mean(re_fm)), float(np.std(re_fm)))),
-            print('')
+                re_fm = [results[method][key]['f1_score'] for key in results[method] if
+                         key[-1] == s and key[-2] == posi_ratio]
+                str_list.append('%.3f$\pm$%.3f' % (float(np.mean(re_fm)), float(np.std(re_fm))))
+            print(' & '.join(str_list))
 
 
 def show_result_01_2():
