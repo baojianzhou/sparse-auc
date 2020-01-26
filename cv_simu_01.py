@@ -197,10 +197,10 @@ def test_spam_l1(para):
 
 def cv_spam_l2(para):
     """ SPAM algorithm with l2-regularization. """
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     # get data
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
@@ -210,7 +210,7 @@ def cv_spam_l2(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     for fold_id, (ind_xi, para_xi), (ind_l2, para_l2) in product(range(k_fold), enumerate(list_c), enumerate(list_l2)):
         s_time = time.time()
-        algo_para = (para_xi, para_l2, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
+        algo_para = (para_xi, para_l2, (trial_id, fold_id, s, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -271,10 +271,10 @@ def test_spam_l2(para):
 
 def cv_spam_l1l2(para):
     """SPAM algorithm with elastic-net """
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     # get data
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
     list_c = 10. ** np.arange(-5, 3, 1, dtype=float)
@@ -286,7 +286,7 @@ def cv_spam_l1l2(para):
     for fold_id, (ind_xi, para_xi), (ind_l1, para_l1), (ind_l2, para_l2) in \
             product(range(k_fold), enumerate(list_c), enumerate(list_l1), enumerate(list_l2)):
         s_time = time.time()
-        algo_para = (para_xi, para_l1, para_l2, (trial_id, fold_id, fig_i, num_passes, posi_ratio, stop_eps))
+        algo_para = (para_xi, para_l1, para_l2, (trial_id, fold_id, s, num_passes, posi_ratio, stop_eps))
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         if (trial_id, fold_id) not in auc_wt:  # cross validate based on tr_index
             auc_wt[(trial_id, fold_id)] = {'auc': 0.0, 'para': algo_para, 'num_nonzeros': 0.0}
@@ -465,7 +465,7 @@ def cv_sht_am(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s, list_b = [s], [640]
+    list_s, list_b = range(10, 101, 10), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -537,7 +537,7 @@ def cv_sto_iht(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s, list_b = range(5, 101, 5), [640 / _ for _ in [1, 2, 4, 8, 10]]
+    list_s, list_b = range(10, 101, 10), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -607,7 +607,7 @@ def cv_hsg_ht(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s = range(5, 101, 5)
+    list_s = range(10, 101, 10)
     list_tau = [1., 10., 100., 1000.]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_tau)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
@@ -1259,6 +1259,4 @@ def run_all_model_selection():
 
 
 if __name__ == '__main__':
-    # trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.2, 60
-    # cv_sht_am((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
     main(run_option=sys.argv[1])
