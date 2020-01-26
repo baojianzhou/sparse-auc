@@ -168,7 +168,9 @@ def cv_sht_am(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]:
+    s_list = range(1, 101, 2)
+    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -201,7 +203,9 @@ def cv_sto_iht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]:
+    s_list = range(1, 101, 2)
+    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -234,7 +238,9 @@ def cv_hsg_ht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    for para_s in [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]:
+    s_list = range(1, 101, 2)
+    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
@@ -514,7 +520,8 @@ def show_auc():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
-    s_list = range(1, 101, 1)
+    s_list = range(1, 101, 2)
+    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
     method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
@@ -555,7 +562,8 @@ def show_auc_scores():
     method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
     color_list = ['b', 'y', 'k', 'c', 'olive', 'r', 'g', 'm']
-    s_list = range(1, 101, 1)
+    s_list = range(1, 101, 2)
+    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
     for method_ind, method in enumerate(method_list):
         if method in ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']:
             plt.plot(range(100), np.sort(all_aucs[method].values())[::-1],
@@ -592,7 +600,8 @@ def show_features():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
-    s_list = range(1, 101, 1)
+    s_list = range(1, 101, 2)
+    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
     all_features = pkl.load(open(data_path + 're_summary_all_features.pkl'))
     method_list = ['sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SHT-AM', 'StoIHT', 'HSG-HT']
@@ -631,10 +640,10 @@ def main():
     elif sys.argv[1] == 'run_solam':
         run_methods(method='solam')
     elif sys.argv[1] == 'show_auc':
-        summary_auc_results()
+        # summary_auc_results()
         show_auc()
     elif sys.argv[1] == 'show_features':
-        summary_feature_results()
+        # summary_feature_results()
         show_features()
     elif sys.argv[1] == 'show_auc_scores':
         show_auc_scores()
