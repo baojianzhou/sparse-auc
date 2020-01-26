@@ -886,7 +886,7 @@ def show_diff_s():
     plt.rcParams["font.size"] = 16
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 6, 5
-    para_s_list = range(10, 101, 5)
+    para_s_list = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100, 120, 150, 200, 300, 400, 500, 600]
     fig, ax = plt.subplots(1, 1)
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
@@ -1167,7 +1167,7 @@ def main(run_option):
         run_diff_ratio(method='sht_am_v1')
         run_diff_ratio(method='sht_am_v2')
     elif run_option == 'run_diff_s':
-        para_s_list = range(10, 101, 5)
+        para_s_list = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100, 120, 150, 200, 300, 400, 500, 600]
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
         ms_res = pool.map(run_diff_s, para_s_list)
         pool.close()
