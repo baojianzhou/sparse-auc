@@ -1051,12 +1051,12 @@ def show_result_01():
     ax.grid(color='lightgray', linestyle='dotted', axis='both')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    color_list = ['g', 'r', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'darkorange']
-    marker_list = ['o', 's', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'darkorange']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2', 'spam_l1l2']
     method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
                          r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$", ]
-    fig_list = [80]
+    fig_list = [20]
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
     for ind_method, method in enumerate(method_list):
         results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
@@ -1076,7 +1076,7 @@ def show_result_01():
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
     ax.set_xticks(posi_ratio_list)
     ax.set_yticks([0.5, 0.55, 0.65, 0.75, 0.85, 0.95])
-    ax.set_ylim([0.5, .96])
+    ax.set_ylim([0.5, .99])
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     plt.savefig(root_path + 'simu-result-01-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
@@ -1164,27 +1164,26 @@ def test_single_2():
 
 
 def test_single_3():
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.5, 80
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.1, 60
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    aver_auc = []
     for fold_id in range(k_fold):
-        para_s, para_b, _ = 80, 100, None
+        para_s, para_b, _ = 60, 20, None
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        para_tau, para_zeta = 1000., 1.033
-        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
+        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b,
+                          1., 0.0)
         wt, aucs, rts, epochs = _
-        import matplotlib.pyplot as plt
-        plt.plot(rts, aucs)
-        plt.show()
-        print(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
-        break
+        aver_auc.append(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
+    print(np.mean(aver_auc))
 
 
 if __name__ == '__main__':
-    main(run_option=sys.argv[1])
+    test_single_3()
+    # main(run_option=sys.argv[1])
