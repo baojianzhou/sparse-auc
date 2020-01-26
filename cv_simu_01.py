@@ -423,7 +423,7 @@ def cv_sht_am(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     # candidate parameters
-    list_s, list_b = range(5, 101, 5), [640 / _ for _ in [1, 2, 4, 8, 10]]
+    list_s, list_b = range(10, 101, 10), [640 / _ for _ in [1, 2, 4, 8, 10]]
     auc_wt, cv_wt_results = dict(), np.zeros((len(list_s), len(list_b)))
     step_len, verbose, record_aucs, stop_eps = 1e8, 0, 0, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -1185,5 +1185,4 @@ def test_single_3(trial_id):
 
 
 if __name__ == '__main__':
-    test_single_3(trial_id=int(sys.argv[1]))
-    # main(run_option=sys.argv[1])
+    main(run_option=sys.argv[1])
