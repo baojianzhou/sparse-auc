@@ -173,9 +173,9 @@ def cv_spam_l1(para):
 
 
 def test_spam_l1(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     ms = pkl.load(open(data_path + 'ms_00_05_spam_l1.pkl', 'rb'))
     results = dict()
@@ -189,17 +189,17 @@ def test_spam_l1(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
         pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
-        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_xi, para_l1],
+        results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l1],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'f1_score': 2. * pre * rec / (pre + rec) if (pre + rec) > 0 else 0.0,
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
         print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_xi:%.4f para_l1:%.4f' %
-              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_xi, para_l1))
+              (trial_id, fold_id, s, posi_ratio, results[item]['auc_wt'], para_xi, para_l1))
     sys.stdout.flush()
     return results
 
@@ -251,9 +251,9 @@ def cv_spam_l2(para):
 
 
 def test_spam_l2(para):
-    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i = para
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
-    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
     __ = np.empty(shape=(1,), dtype=float)
     ms = pkl.load(open(data_path + 'ms_00_05_spam_l2.pkl', 'rb'))
     results = dict()
@@ -267,17 +267,17 @@ def test_spam_l2(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, 0.0, para_l2)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, fig_i)
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
         pre, rec = float(len(xx)) * 1. / 40., float(len(xx)) / float(len(data['subset']))
-        results[item] = {'algo_para': [trial_id, fold_id, fig_i, para_xi, para_l2],
+        results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l2],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
                          'f1_score': 2. * pre * rec / (pre + rec) if (pre + rec) > 0 else 0.0,
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
         print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_xi:%.4f para_l2:%.4f' %
-              (trial_id, fold_id, fig_i, posi_ratio, results[item]['auc_wt'], para_xi, para_l2))
+              (trial_id, fold_id, s, posi_ratio, results[item]['auc_wt'], para_xi, para_l2))
     sys.stdout.flush()
     return results
 
