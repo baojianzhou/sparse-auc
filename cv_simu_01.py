@@ -112,7 +112,7 @@ def test_solam(para):
         wt, aucs, rts, epochs = _
         # indices = np.argsort(np.abs(wt))[::-1]
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-4)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         if float(len(indices)) != 0.0:
@@ -196,7 +196,7 @@ def test_spam_l1(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-4)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         if float(len(indices)) != 0.0:
@@ -280,7 +280,7 @@ def test_spam_l2(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, 0.0, para_l2)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-4)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         if float(len(indices)) != 0.0:
@@ -365,7 +365,7 @@ def test_spam_l1l2(para):
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, para_l2)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-4)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         if float(len(indices)) != 0.0:
@@ -447,7 +447,7 @@ def test_fsauc(para):
         _ = c_algo_fsauc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_r, para_g)
         wt, aucs, rts, epochs = _
         wt = np.asarray(wt)
-        wt[np.where(np.abs(wt) < 1e-5)] = 0.0
+        wt[np.where(np.abs(wt) < 1e-4)] = 0.0
         indices = np.nonzero(wt)[0]
         xx = set(indices).intersection(set(data['subset']))
         if float(len(indices)) != 0.0:
