@@ -842,7 +842,7 @@ def run_diff_ratio(method):
 
 def run_diff_s(para_s):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
-    posi_ratio, num_tr, mu, s = 0.05, 1000, 0.3, 40
+    posi_ratio, num_tr, mu, s = 0.3, 1000, 0.3, 40
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
@@ -886,7 +886,7 @@ def show_diff_s():
     plt.rcParams["font.size"] = 16
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 6, 5
-    para_s_list = range(20, 61, 5)
+    para_s_list = range(10, 101, 5)
     fig, ax = plt.subplots(1, 1)
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
