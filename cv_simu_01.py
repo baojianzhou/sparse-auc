@@ -913,7 +913,7 @@ def show_diff_s():
 
 def run_diff_b(para_b):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
-    posi_ratio, num_tr, mu, s = 0.1, 1000, 0.3, 20
+    posi_ratio, num_tr, mu, s = 0.05, 1000, 0.3, 20
     __ = np.empty(shape=(1,), dtype=float)
     step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
