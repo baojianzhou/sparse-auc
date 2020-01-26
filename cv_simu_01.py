@@ -867,8 +867,8 @@ def run_diff_s(para_s):
                 wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
                                                        para_s, para_b, 1., 0.0)
             else:
-                para_tau, para_zeta = 1.0, 1.0003
-                _, para_c, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
+                para_c, para_zeta = 3.0, 1.033
+                para_tau, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
                 wt, aucs, rts, epochs = c_algo_hsg_ht(x_tr, __, __, __, y_tr, 0, data['p'],
                                                       global_paras, para_s, para_tau, para_zeta, para_c, 0.0)
             re = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
@@ -1026,17 +1026,15 @@ def show_sparsity():
             for ind_fig, s in enumerate(s_list):
                 re_auc = [results[method][key]['auc_wt'] for key in results[method] if
                           key[-1] == s and key[-2] == posi_ratio]
-                str_list.append('%.3f$\pm$%.3f' % (float(np.mean(re_auc)), float(np.std(re_auc))))
-            print(' & '.join(str_list))
-    print('---')
-    for (ind_p, posi_ratio) in enumerate(posi_ratio_list):
-        for ind_method, method in enumerate(method_list):
-            print(method),
-            str_list = []
+                a1 = ("%.3f" % float(np.mean(re_auc))).lstrip('0')
+                a2 = ("%.3f" % float(np.std(re_auc))).lstrip('0')
+                str_list.append('%s$\pm$%s' % (a1, a2))
             for ind_fig, s in enumerate(s_list):
                 re_fm = [results[method][key]['f1_score'] for key in results[method] if
                          key[-1] == s and key[-2] == posi_ratio]
-                str_list.append('%.3f$\pm$%.3f' % (float(np.mean(re_fm)), float(np.std(re_fm))))
+                a1 = ("%.3f" % float(np.mean(re_fm))).lstrip('0')
+                a2 = ("%.3f" % float(np.std(re_fm))).lstrip('0')
+                str_list.append('%s$\pm$%s' % (a1, a2))
             print(' & '.join(str_list))
 
 
@@ -1108,47 +1106,55 @@ def show_result_01():
     from pylab import rcParams
     plt.rcParams["font.family"] = "serif"
     plt.rcParams["font.serif"] = "Times"
-    plt.rcParams["font.size"] = 16
+    plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
-    rcParams['figure.figsize'] = 12, 8
-    fig, ax = plt.subplots(1, 1)
-    ax.grid(color='lightgray', linestyle='dotted', axis='both')
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
+    rcParams['figure.figsize'] = 8, 4
     color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'darkorange']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2', 'spam_l1l2']
+    method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2']
     method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
-                         r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$", ]
-    method_list = ['sht_am', 'fsauc']
-    method_label_list = ['SHT-AUC', 'FSAUC']
-    s_list = [20]
+                         r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$"]
     posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
-    for ind_method, method in enumerate(method_list):
-        results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
-        if method == 'fsauc':
-            pass
-        for ind_fig, s in enumerate(s_list):
+    s_list = [20, 40, 60, 80]
+    for s in s_list:
+        fig, ax = plt.subplots(1, 2)
+        for i in range(2):
+            ax[i].grid(color='lightgray', linestyle='dotted', axis='both')
+            ax[i].spines['right'].set_visible(False)
+            ax[i].spines['top'].set_visible(False)
+        for ind_method, method in enumerate(method_list):
+            results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
             re = []
             for posi_ratio in posi_ratio_list:
                 re.append(np.mean([results[key]['auc_wt'] for key in results
                                    if key[-1] == s and key[-2] == posi_ratio]))
-            ax.plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
-                    markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
-                    markeredgewidth=2., )
-    ax.set_title(r"Network 1")
-    ax.set_ylabel('AUC')
-    ax.set_xlabel('Positive Ratio')
-    ax.legend(loc='lower right', framealpha=1., bbox_to_anchor=(1.0, 0.0),
-              fontsize=14., frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xticks(posi_ratio_list)
-    # ax.set_yticks([0.5, 0.55, 0.65, 0.75, 0.85, 0.95])
-    # ax.set_ylim([0.5, .99])
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    plt.savefig(root_path + 'simu-result-01-01.pdf', dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
-    plt.close()
-    plt.show()
+            ax[0].plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
+                       markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
+                       markeredgewidth=2.)
+            re = []
+            for posi_ratio in posi_ratio_list:
+                re.append(np.mean([results[key]['f1_score'] for key in results
+                                   if key[-1] == s and key[-2] == posi_ratio]))
+            ax[1].plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
+                       markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
+                       markeredgewidth=2.)
+        ax[0].set_title(r"s=%d" % s)
+        ax[0].set_ylabel('AUC Score')
+        ax[0].set_xlabel('Positive Ratio')
+        ax[0].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
+        ax[1].set_title(r"s=%d" % s)
+        ax[1].set_ylabel('F1 Score')
+        ax[1].set_xlabel('Positive Ratio')
+        ax[1].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
+        ax[1].legend(loc='lower right', framealpha=.1, bbox_to_anchor=(1.5, .2),
+                     fontsize=14., frameon=True, borderpad=0.1,
+                     labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+        root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+        plt.savefig(root_path + 'simu-result-01-%d.pdf' % s,
+                    dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+        plt.close()
+        break
 
 
 def main(run_option):
