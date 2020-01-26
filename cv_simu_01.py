@@ -110,13 +110,13 @@ def test_solam(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_solam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_r)
         wt, aucs, rts, epochs = _
-        xx = set(np.nonzero(wt)[0]).intersection(set(data['subset']))
+        indices = np.argsort(np.abs(wt))[::-1]
+        xx = set(indices[:s]).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
-        auc_original = roc_auc_score(y_true=data['y_tr'][te_index],
-                                     y_score=np.dot(data['x_tr'][te_index], wt))
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_r],
-                         'auc_wt': auc_original,
+                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
+                                                 y_score=np.dot(data['x_tr'][te_index], wt)),
                          'f1_score': 2. * pre * rec / (pre + rec) if (pre + rec) > 0 else 0.0,
                          'aucs': aucs, 'rts': rts, 'wt': wt, 'nonzero_wt': np.count_nonzero(wt)}
         print('trial-%d fold-%d %s p-ratio:%.2f auc: %.4f para_xi:%.4f para_r:%.4f' %
@@ -188,10 +188,10 @@ def test_spam_l1(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         _ = c_algo_spam(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_xi, para_l1, 0.0)
         wt, aucs, rts, epochs = _
-        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         indices = np.argsort(np.abs(wt))[::-1]
         xx = set(indices[:s]).intersection(set(data['subset']))
         pre, rec = float(len(xx)) / float(s), float(len(xx)) / float(len(data['subset']))
+        item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         results[item] = {'algo_para': [trial_id, fold_id, s, para_xi, para_l1],
                          'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                  y_score=np.dot(data['x_tr'][te_index], wt)),
