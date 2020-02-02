@@ -206,7 +206,7 @@ def cv_sto_iht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(1, 101, 2)
+    s_list = range(5, 101, 2)
     s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
@@ -215,7 +215,7 @@ def cv_sto_iht(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         results = dict()
         best_b, best_auc = None, None
-        for para_b in range(1, 40, 1):
+        for para_b in range(5, 41, 5):
             wt, _, _, _ = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, para_s, para_b, 1., 0.0)
             auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
             if best_b is None or best_auc is None or best_auc < auc_score:
@@ -241,7 +241,7 @@ def cv_hsg_ht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(1, 101, 2)
+    s_list = range(5, 101, 2)
     s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
