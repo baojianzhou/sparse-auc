@@ -148,17 +148,17 @@ void _algo_spam(Data *data,
  * @param para_s
  * @param para_b
  * @param para_c
- * @param para_l2_re
+ * @param para_l2_reg
  */
-void _algo_sht_am(Data *data,
-                  GlobalParas *paras,
-                  AlgoResults *re,
-                  int version,
-                  int operator_id,
-                  int para_s,
-                  int para_b,
-                  double para_c,
-                  double para_l2_re);
+void _algo_sht_auc(Data *data,
+                   GlobalParas *paras,
+                   AlgoResults *re,
+                   int version,
+                   int operator_id,
+                   int para_s,
+                   int para_b,
+                   double para_c,
+                   double para_l2_reg);
 
 void _algo_sto_iht(Data *data,
                    GlobalParas *paras,

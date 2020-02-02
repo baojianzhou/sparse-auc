@@ -16,7 +16,7 @@ try:
     try:
         from sparse_module import c_algo_solam
         from sparse_module import c_algo_spam
-        from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_sht_auc
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sto_iht
         from sparse_module import c_algo_hsg_ht
@@ -178,7 +178,8 @@ def cv_sht_auc(para):
         results = dict()
         best_b, best_auc = None, None
         for para_b in range(1, 40, 1):
-            wt, _, _, _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
+            wt, _, _, _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                         0, para_s, para_b, 1., 0.0)
             auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
             if best_b is None or best_auc is None or best_auc < auc_score:
                 best_b, best_auc = para_b, auc_score
@@ -186,11 +187,12 @@ def cv_sht_auc(para):
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                              0, para_s, best_b, 1., 0.0)
+        wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                               0, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
-                                                                y_score=np.dot(data['x_tr'][te_index], wt)), 'wt': wt}
+                                                                y_score=np.dot(data['x_tr'][te_index], wt)),
+                                        'wt': wt}
         print('best_b: %02d nonzero: %.4e test_auc: %.4f' %
               (best_b, float(np.count_nonzero(wt)), results[(trial_id, fold_id)]['auc_wt']))
         all_results[para_s] = results

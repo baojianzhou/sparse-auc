@@ -166,7 +166,7 @@ static PyObject *wrap_algo_sht_auc(PyObject *self, PyObject *args) {
     init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
     AlgoResults *re = make_algo_results(data->p, (data->n / para_b) * paras->num_passes + 1);
-    _algo_sht_am(data, paras, re, version, 0, para_s, para_b, para_xi, para_l2_reg);
+    _algo_sht_auc(data, paras, re, version, 0, para_s, para_b, para_xi, para_l2_reg);
     PyObject *results = get_results(data->p, re);
     free(paras), free_algo_results(re), free(data);
     return results;
@@ -200,7 +200,7 @@ static PyObject *wrap_algo_graph_am(PyObject *self, PyObject *args) {
     init_global_paras(paras, global_paras);
     init_data(data, x_tr_vals, x_tr_inds, x_tr_poss, x_tr_lens, data_y_tr);
     AlgoResults *re = make_algo_results(data->p, (data->n / para_b) * paras->num_passes + 1);
-    _algo_sht_am(data, paras, re, version, 1, para_s, para_b, para_xi, para_l2_reg);
+    _algo_sht_auc(data, paras, re, version, 1, para_s, para_b, para_xi, para_l2_reg);
     PyObject *results = get_results(data->p, re);
     free_graph_stat(data->graph_stat);
     free(data->proj_prizes);
@@ -256,7 +256,7 @@ static PyMethodDef sparse_methods[] = { // hello_name
         {"c_test",          test,               METH_VARARGS, "docs"},
         {"c_algo_solam",    wrap_algo_solam,    METH_VARARGS, "docs"},
         {"c_algo_spam",     wrap_algo_spam,     METH_VARARGS, "docs"},
-        {"c_algo_sht_auc",   wrap_algo_sht_auc,  METH_VARARGS, "docs"},
+        {"c_algo_sht_auc",  wrap_algo_sht_auc,  METH_VARARGS, "docs"},
         {"c_algo_graph_am", wrap_algo_graph_am, METH_VARARGS, "docs"},
         {"c_algo_opauc",    wrap_algo_opauc,    METH_VARARGS, "docs"},
         {"c_algo_fsauc",    wrap_algo_fsauc,    METH_VARARGS, "docs"},
