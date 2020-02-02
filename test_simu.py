@@ -16,7 +16,7 @@ try:
     try:
         from sparse_module import c_algo_solam
         from sparse_module import c_algo_spam
-        from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_sht_auc
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sto_iht
         from sparse_module import c_algo_hsg_ht
@@ -30,6 +30,70 @@ except ImportError:
 
 data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
 
+
+def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0.0, noise_std=1.0):
+    """
+    number of classes: 2
+    number of samples: 1,000
+    number of features: 1,000
+    ---
+    :param data_path:
+    :param num_tr:
+    :param trial_id:
+    :param mu:
+    :param posi_ratio:
+    :param noise_mu:
+    :param noise_std:
+    :return:
+    """
+    posi_label, nega_label, k_fold, p = +1, -1, 5, 1000
+    all_data = dict()
+    for s in [20, 40, 60, 80]:
+        perm = np.random.permutation(p)
+        subset_nodes = perm[:s]
+        n = num_tr
+        num_posi, num_nega = int(n * posi_ratio), int(n * (1. - posi_ratio))
+        assert (num_posi + num_nega) == n
+        # generate training samples and labels
+        labels = [posi_label] * num_posi + [nega_label] * num_nega
+        y_labels = np.asarray(labels, dtype=np.float64)
+        x_data = np.random.normal(noise_mu, noise_std, n * p).reshape(n, p)
+        anomalous_data = np.random.normal(mu, noise_std, s * num_posi).reshape(num_posi, s)
+        x_data[:num_posi, subset_nodes] = anomalous_data
+        rand_indices = np.random.permutation(len(y_labels))
+        x_tr, y_tr = x_data[rand_indices], y_labels[rand_indices]
+        print(trial_id, posi_ratio, s, np.linalg.norm(x_tr), subset_nodes[:5])
+        # normalize data by z-score
+        x_mean = np.tile(np.mean(x_tr, axis=0), (len(x_tr), 1))
+        x_std = np.tile(np.std(x_tr, axis=0), (len(x_tr), 1))
+        x_tr = np.nan_to_num(np.divide(x_tr - x_mean, x_std))
+
+        # normalize samples to unit length.
+        for i in range(len(x_tr)):
+            x_tr[i] = x_tr[i] / np.linalg.norm(x_tr[i])
+        data = {'x_tr': x_tr,
+                'y_tr': y_tr,
+                'subset': subset_nodes,
+                'mu': mu,
+                'p': p,
+                'n': num_tr,
+                's': len(subset_nodes),
+                'noise_mu': noise_mu,
+                'noise_std': noise_std,
+                'trial_id': trial_id,
+                'num_k_fold': k_fold,
+                'posi_ratio': posi_ratio}
+        # randomly permute the datasets 25 times for future use.
+        kf = KFold(n_splits=data['num_k_fold'], shuffle=False)
+        fake_x = np.zeros(shape=(data['n'], 1))  # just need the number of training samples
+        for fold_index, (train_index, test_index) in enumerate(kf.split(fake_x)):
+            # since original data is ordered, we need to shuffle it!
+            rand_perm = np.random.permutation(data['n'])
+            data['trial_%d_fold_%d' % (trial_id, fold_index)] = {'tr_index': rand_perm[train_index],
+                                                                 'te_index': rand_perm[test_index]}
+        all_data[s] = data
+    pkl.dump(all_data, open(data_path + '/data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+                            % (trial_id, num_tr, mu, posi_ratio), 'wb'))
 
 def node_pre_rec_fm(true_nodes, pred_nodes):
     """ Return the precision, recall and f-measure.
@@ -492,7 +556,7 @@ def cv_sht_am(para):
             sub_y_tr = np.asarray(data['y_tr'][tr_index[sub_tr_ind]], dtype=float)
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
-            _ = c_algo_sht_am(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, 0,
+            _ = c_algo_sht_auc(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, 0,
                               para_s, para_b, 1.0, 0.1)
             wt, aucs, rts, epochs = _
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
@@ -525,7 +589,7 @@ def test_sht_am(para):
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
+        _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
         wt, aucs, rts, epochs = _
         item = (trial_id, fold_id, k_fold, num_passes, num_tr, mu, posi_ratio, s)
         xx = set(np.nonzero(wt)[0]).intersection(set(data['subset']))
@@ -764,7 +828,7 @@ def run_para_s(para):
     data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[fig_i]
     __ = np.empty(shape=(1,), dtype=float)
     list_s = range(20, 76)
-    # c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
+    # c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
     list_c = 10. ** np.arange(-3, 3, 1, dtype=float)
     auc_wt, auc_wt_bar, cv_wt_results = dict(), dict(), np.zeros((len(list_c), len(list_s)))
     for fold_id, (ind_c, para_c), (ind_s, para_s) in product(range(k_fold), enumerate(list_c), enumerate(list_s)):
@@ -784,8 +848,8 @@ def run_para_s(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             b, para_l2, record_aucs, verbose = 50, 0.0, 0, 0
-            # c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
-            re = c_algo_sht_am(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, record_aucs, verbose)
+            # c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1.0, 0.0)
+            re = c_algo_sht_auc(sub_x_tr, sub_y_tr, para_s, b, para_c, para_l2, num_passes, record_aucs, verbose)
             wt = np.asarray(re[0])
             wt_bar = np.asarray(re[1])
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
@@ -831,7 +895,7 @@ def run_diff_ratio(method):
                 tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
                 x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
                 y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-                _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'],
                                   global_paras, version, para_s, para_b, 1.0, 0.0)
                 wt, aucs, rts, epochs = _
                 rts_list[trial_id * 5 + fold_id] = rts[:100]
@@ -860,7 +924,7 @@ def run_diff_s(para_s):
             y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
             if method == 'sht_am':
                 _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'],
                                                       global_paras, 0, para_s, para_b, 1.0, 0.0)
             elif method == 'sto_iht':
                 _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
@@ -931,7 +995,7 @@ def run_diff_b(para_b):
             y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
             if method == 'sht_am':
                 para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
-                wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'],
+                wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'],
                                                       global_paras, 0, para_s, para_b, 1.0, 0.0)
             elif method == 'sto_iht':
                 para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
@@ -1253,7 +1317,7 @@ def test_single_3(trial_id):
             te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
             x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
             y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-            _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
+            _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
             wt, aucs, rts, epochs = _
             aver_auc.append(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
         print(para_s, np.mean(aver_auc))
