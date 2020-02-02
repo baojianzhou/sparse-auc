@@ -902,7 +902,7 @@ def show_diff_s():
                 linewidth=2., markeredgewidth=2.)
     ax.legend(loc='lower right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.5, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparsity (s)')
+    ax.set_xlabel('Sparsity ($\displaystyle k$)')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'simu_diff_s.pdf'
@@ -1139,11 +1139,11 @@ def show_result_01():
             ax[1].plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
                        markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
                        markeredgewidth=2.)
-        ax[0].set_title(r"s=%d" % s)
+        ax[0].set_title(r"$\displaystyle k_*=%d$" % s)
         ax[0].set_ylabel('AUC Score')
         ax[0].set_xlabel('Positive Ratio')
         ax[0].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
-        ax[1].set_title(r"s=%d" % s)
+        ax[1].set_title(r"$\displaystyle k_*=%d$" % s)
         ax[1].set_ylabel('F1 Score')
         ax[1].set_xlabel('Positive Ratio')
         ax[1].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
