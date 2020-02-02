@@ -165,7 +165,6 @@ def process_data_20_colon():
 def cv_sht_auc(para):
     data, trial_id, fold_id = para
     num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
-    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
     s_list = range(5, 101, 2)
@@ -177,7 +176,8 @@ def cv_sht_auc(para):
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
         results = dict()
         best_b, best_auc = None, None
-        for para_b in range(1, 40, 1):
+        for para_b in range(5, 41, 5):
+            global_paras = np.asarray([num_passes, step_len, verbose, 0, stop_eps], dtype=float)
             wt, _, _, _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
                                          0, para_s, para_b, 1., 0.0)
             auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
@@ -187,6 +187,7 @@ def cv_sht_auc(para):
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
         wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
                                                0, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
