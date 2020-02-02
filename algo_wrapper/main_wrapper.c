@@ -151,7 +151,7 @@ static PyObject *wrap_algo_opauc(PyObject *self, PyObject *args) {
     return results;
 }
 
-static PyObject *wrap_algo_sht_am(PyObject *self, PyObject *args) {
+static PyObject *wrap_algo_sht_auc(PyObject *self, PyObject *args) {
     if (self != NULL) { printf("%zd", self->ob_refcnt); }
     PyArrayObject *x_tr_vals, *x_tr_inds, *x_tr_poss, *x_tr_lens, *data_y_tr, *global_paras;
     Data *data = malloc(sizeof(Data));
@@ -256,7 +256,7 @@ static PyMethodDef sparse_methods[] = { // hello_name
         {"c_test",          test,               METH_VARARGS, "docs"},
         {"c_algo_solam",    wrap_algo_solam,    METH_VARARGS, "docs"},
         {"c_algo_spam",     wrap_algo_spam,     METH_VARARGS, "docs"},
-        {"c_algo_sht_am",   wrap_algo_sht_am,   METH_VARARGS, "docs"},
+        {"c_algo_sht_auc",   wrap_algo_sht_auc,  METH_VARARGS, "docs"},
         {"c_algo_graph_am", wrap_algo_graph_am, METH_VARARGS, "docs"},
         {"c_algo_opauc",    wrap_algo_opauc,    METH_VARARGS, "docs"},
         {"c_algo_fsauc",    wrap_algo_fsauc,    METH_VARARGS, "docs"},

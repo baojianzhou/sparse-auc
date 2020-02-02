@@ -597,7 +597,7 @@ def main():
         method = sys.argv[2]
         data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
         data = pkl.load(open(data_path + 'colon_data.pkl'))
-        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+        pool = multiprocessing.Pool(processes=int(sys.argv[3]))
         para_list = []
         for trial_id, fold_id in product(range(data['num_trials']), range(5)):
             para_list.append((data, trial_id, fold_id))
