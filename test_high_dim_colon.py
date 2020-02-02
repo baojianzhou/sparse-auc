@@ -162,13 +162,13 @@ def process_data_20_colon():
     pkl.dump(data, open(data_path + 'colon_data.pkl', 'wb'))
 
 
-def cv_sht_am(para):
+def cv_sht_auc(para):
     data, trial_id, fold_id = para
     num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(1, 101, 2)
+    s_list = range(5, 101, 2)
     s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
@@ -426,36 +426,6 @@ def cv_fsauc(para):
     return trial_id, fold_id, results
 
 
-def run_methods(method):
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
-    data = pkl.load(open(data_path + 'colon_data.pkl'))
-    pool = multiprocessing.Pool(processes=int(sys.argv[2]))
-    para_list = []
-    for trial_id, fold_id in product(range(data['num_trials']), range(5)):
-        para_list.append((data, trial_id, fold_id))
-    if method == 'sht_am':
-        ms_res = pool.map(cv_sht_am, para_list)
-    elif method == 'sto_iht':
-        ms_res = pool.map(cv_sto_iht, para_list)
-    elif method == 'spam_l1':
-        ms_res = pool.map(cv_spam_l1, para_list)
-    elif method == 'spam_l2':
-        ms_res = pool.map(cv_spam_l2, para_list)
-    elif method == 'spam_l1l2':
-        ms_res = pool.map(cv_spam_l1l2, para_list)
-    elif method == 'fsauc':
-        ms_res = pool.map(cv_fsauc, para_list)
-    elif method == 'hsg_ht':
-        ms_res = pool.map(cv_hsg_ht, para_list)
-    elif method == 'solam':
-        ms_res = pool.map(cv_solam, para_list)
-    else:
-        ms_res = None
-    pool.close()
-    pool.join()
-    pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
-
-
 def summary_auc_results():
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     all_aus = dict()
@@ -623,30 +593,44 @@ def show_features():
 
 
 def main():
-    if sys.argv[1] == 'run_sht_am':
-        run_methods(method='sht_am')
-    elif sys.argv[1] == 'run_sto_iht':
-        run_methods(method='sto_iht')
-    elif sys.argv[1] == 'run_hsg_ht':
-        run_methods(method='hsg_ht')
-    elif sys.argv[1] == 'run_spam_l1':
-        run_methods(method='spam_l1')
-    elif sys.argv[1] == 'run_spam_l2':
-        run_methods(method='spam_l2')
-    elif sys.argv[1] == 'run_spam_l1l2':
-        run_methods(method='spam_l1l2')
-    elif sys.argv[1] == 'run_fsauc':
-        run_methods(method='fsauc')
-    elif sys.argv[1] == 'run_solam':
-        run_methods(method='solam')
-    elif sys.argv[1] == 'show_auc':
-        # summary_auc_results()
-        show_auc()
-    elif sys.argv[1] == 'show_features':
-        # summary_feature_results()
-        show_features()
-    elif sys.argv[1] == 'show_auc_scores':
-        show_auc_scores()
+    if sys.argv[1] == 'run':
+        method = sys.argv[2]
+        data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+        data = pkl.load(open(data_path + 'colon_data.pkl'))
+        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+        para_list = []
+        for trial_id, fold_id in product(range(data['num_trials']), range(5)):
+            para_list.append((data, trial_id, fold_id))
+        if method == 'sht_auc':
+            ms_res = pool.map(cv_sht_auc, para_list)
+        elif method == 'sto_iht':
+            ms_res = pool.map(cv_sto_iht, para_list)
+        elif method == 'spam_l1':
+            ms_res = pool.map(cv_spam_l1, para_list)
+        elif method == 'spam_l2':
+            ms_res = pool.map(cv_spam_l2, para_list)
+        elif method == 'spam_l1l2':
+            ms_res = pool.map(cv_spam_l1l2, para_list)
+        elif method == 'fsauc':
+            ms_res = pool.map(cv_fsauc, para_list)
+        elif method == 'hsg_ht':
+            ms_res = pool.map(cv_hsg_ht, para_list)
+        elif method == 'solam':
+            ms_res = pool.map(cv_solam, para_list)
+        else:
+            ms_res = None
+        pool.close()
+        pool.join()
+        pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
+    elif sys.argv[1] == 'show':
+        if sys.argv[2] == 'auc':
+            # summary_auc_results()
+            show_auc()
+        elif sys.argv[2] == 'features':
+            # summary_feature_results()
+            show_features()
+        elif sys.argv[2] == 'auc_scores':
+            show_auc_scores()
 
 
 if __name__ == '__main__':
