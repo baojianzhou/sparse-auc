@@ -167,8 +167,7 @@ def cv_sht_auc(para):
     num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(5, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -206,8 +205,7 @@ def cv_sto_iht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(5, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -241,8 +239,7 @@ def cv_hsg_ht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(5, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -618,8 +615,6 @@ def main():
             ms_res = pool.map(cv_spam_l1, para_list)
         elif method == 'spam_l2':
             ms_res = pool.map(cv_spam_l2, para_list)
-        elif method == 'spam_l1l2':
-            ms_res = pool.map(cv_spam_l1l2, para_list)
         elif method == 'fsauc':
             ms_res = pool.map(cv_fsauc, para_list)
         elif method == 'hsg_ht':

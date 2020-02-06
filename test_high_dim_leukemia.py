@@ -207,8 +207,7 @@ def cv_sht_am(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -242,8 +241,7 @@ def cv_sto_iht(para):
     num_passes, step_len, verbose, record_aucs, stop_eps = 100, 1e2, 0, 1, 1e-6
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_results = dict()
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
@@ -278,8 +276,7 @@ def cv_hsg_ht(para):
     global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
     __ = np.empty(shape=(1,), dtype=float)
     all_results = dict()
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for para_s in s_list:
         tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
         te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
@@ -605,8 +602,7 @@ def show_auc_scores():
     method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
     color_list = ['b', 'y', 'k', 'c', 'olive', 'r', 'g', 'm']
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for method_ind, method in enumerate(method_list):
         if method in ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']:
             plt.plot(range(100), np.sort(all_aucs[method].values())[::-1],
@@ -677,8 +673,6 @@ def main():
         run_methods(method='spam_l1')
     elif sys.argv[1] == 'run_spam_l2':
         run_methods(method='spam_l2')
-    elif sys.argv[1] == 'run_spam_l1l2':
-        run_methods(method='spam_l1l2')
     elif sys.argv[1] == 'run_fsauc':
         run_methods(method='fsauc')
     elif sys.argv[1] == 'run_hsg_ht':
