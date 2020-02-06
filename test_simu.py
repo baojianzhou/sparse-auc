@@ -95,6 +95,7 @@ def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0
     pkl.dump(all_data, open(data_path + '/data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
                             % (trial_id, num_tr, mu, posi_ratio), 'wb'))
 
+
 def node_pre_rec_fm(true_nodes, pred_nodes):
     """ Return the precision, recall and f-measure.
     :param true_nodes:
@@ -557,7 +558,7 @@ def cv_sht_am(para):
             sub_x_te = data['x_tr'][tr_index[sub_te_ind]]
             sub_y_te = data['y_tr'][tr_index[sub_te_ind]]
             _ = c_algo_sht_auc(sub_x_tr, __, __, __, sub_y_tr, 0, data['p'], global_paras, 0,
-                              para_s, para_b, 1.0, 0.1)
+                               para_s, para_b, 1.0, 0.1)
             wt, aucs, rts, epochs = _
             list_auc_wt[ind] = roc_auc_score(y_true=sub_y_te, y_score=np.dot(sub_x_te, wt))
             list_num_nonzeros_wt[ind] = np.count_nonzero(wt)
@@ -896,7 +897,7 @@ def run_diff_ratio(method):
                 x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
                 y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
                 _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'],
-                                  global_paras, version, para_s, para_b, 1.0, 0.0)
+                                   global_paras, version, para_s, para_b, 1.0, 0.0)
                 wt, aucs, rts, epochs = _
                 rts_list[trial_id * 5 + fold_id] = rts[:100]
                 aucs_list[trial_id * 5 + fold_id] = aucs[:100]
@@ -925,7 +926,7 @@ def run_diff_s(para_s):
             if method == 'sht_am':
                 _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
                 wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'],
-                                                      global_paras, 0, para_s, para_b, 1.0, 0.0)
+                                                       global_paras, 0, para_s, para_b, 1.0, 0.0)
             elif method == 'sto_iht':
                 _, para_b, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
                 wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
@@ -996,7 +997,7 @@ def run_diff_b(para_b):
             if method == 'sht_am':
                 para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
                 wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'],
-                                                      global_paras, 0, para_s, para_b, 1.0, 0.0)
+                                                       global_paras, 0, para_s, para_b, 1.0, 0.0)
             elif method == 'sto_iht':
                 para_s, _, _ = ms[para][method]['auc_wt'][(trial_id, fold_id)]['para']
                 wt, aucs, rts, epochs = c_algo_sto_iht(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
@@ -1077,7 +1078,7 @@ def show_diff_ratio(method):
     plt.show()
 
 
-def show_sparsity():
+def show_table1():
     method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'solam', 'sto_iht', 'hsg_ht']
     s_list = [20, 40, 60, 80]
     posi_ratio_list = [0.05]
@@ -1164,7 +1165,7 @@ def show_result_01_2():
     plt.show()
 
 
-def show_result_01():
+def show_figure1():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1172,10 +1173,9 @@ def show_result_01():
     plt.rcParams["font.serif"] = "Times"
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
-    rcParams['figure.figsize'] = 8, 4
-    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'orangered', 'olive', 'darkorange']
+    rcParams['figure.figsize'] = 10, 4
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'darkorange', 'olive', 'darkorange']
     marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
-    method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2', 'spam_l1l2']
     method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2']
     method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
                          r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$"]
@@ -1211,49 +1211,15 @@ def show_result_01():
         ax[1].set_ylabel('F1 Score')
         ax[1].set_xlabel('Positive Ratio')
         ax[1].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
-        ax[1].legend(loc='lower right', framealpha=.1, bbox_to_anchor=(1.5, .2),
-                     fontsize=14., frameon=True, borderpad=0.1,
-                     labelspacing=0.1, handletextpad=0.1, markerfirst=True)
+        ax[1].legend(loc='lower center', framealpha=.1, bbox_to_anchor=(-.2, -.3), handlelength=1.5,
+                     fontsize=14., frameon=False, borderpad=0.1, ncol=7, columnspacing=1.,
+                     labelspacing=0.05, handletextpad=0.1, markerfirst=True)
         root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+        plt.subplots_adjust(wspace=0.2, hspace=0.1)
         plt.savefig(root_path + 'simu-result-01-%d.pdf' % s,
-                    dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
+                    dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
         plt.close()
         break
-
-
-def main(run_option):
-    if run_option == 'run_ms':
-        run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
-               trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
-    elif run_option == 'run_test':
-        run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
-    elif run_option == 'run_diff_ratio':
-        run_diff_ratio(method='sht_am_v1')
-        run_diff_ratio(method='sht_am_v2')
-    elif run_option == 'run_diff_s':
-        para_s_list = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100, 120, 150, 200, 300, 400, 500, 600]
-        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
-        ms_res = pool.map(run_diff_s, para_s_list)
-        pool.close()
-        pool.join()
-        pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
-    elif run_option == 'show_diff_s':
-        show_diff_s()
-    elif run_option == 'run_diff_b':
-        para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
-        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
-        ms_res = pool.map(run_diff_b, para_b_list)
-        pool.close()
-        pool.join()
-        pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
-    elif run_option == 'show_diff_b':
-        show_diff_b()
-    elif run_option == 'show_diff_ratio':
-        show_diff_ratio(method='sht_am_v1')
-    elif run_option == 'show_sparsity':
-        show_sparsity()
-    elif run_option == 'show_01':
-        show_result_01()
 
 
 def test_single():
@@ -1350,4 +1316,36 @@ def run_all_model_selection():
 
 
 if __name__ == '__main__':
-    main(run_option=sys.argv[1])
+    run_option = sys.argv[1]
+    if run_option == 'run_ms':
+        run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
+               trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
+    elif run_option == 'run_test':
+        run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
+    elif run_option == 'run_diff_ratio':
+        run_diff_ratio(method='sht_am_v1')
+        run_diff_ratio(method='sht_am_v2')
+    elif run_option == 'run_diff_s':
+        para_s_list = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 80, 100, 120, 150, 200, 300, 400, 500, 600]
+        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+        ms_res = pool.map(run_diff_s, para_s_list)
+        pool.close()
+        pool.join()
+        pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
+    elif run_option == 'show_diff_s':
+        show_diff_s()
+    elif run_option == 'run_diff_b':
+        para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
+        pool = multiprocessing.Pool(processes=int(sys.argv[2]))
+        ms_res = pool.map(run_diff_b, para_b_list)
+        pool.close()
+        pool.join()
+        pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
+    elif run_option == 'show_diff_b':
+        show_diff_b()
+    elif run_option == 'show_diff_ratio':
+        show_diff_ratio(method='sht_am_v1')
+    elif run_option == 'show_table1':
+        show_table1()
+    elif run_option == 'show_figure1':
+        show_figure1()

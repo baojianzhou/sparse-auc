@@ -16,7 +16,7 @@ try:
     try:
         from sparse_module import c_algo_solam
         from sparse_module import c_algo_spam
-        from sparse_module import c_algo_sht_am
+        from sparse_module import c_algo_sht_auc
         from sparse_module import c_algo_opauc
         from sparse_module import c_algo_sto_iht
         from sparse_module import c_algo_hsg_ht
@@ -217,7 +217,8 @@ def cv_sht_am(para):
         results = dict()
         best_b, best_auc = None, None
         for para_b in range(1, 40, 1):
-            wt, _, _, _ = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
+            wt, _, _, _ = c_algo_sht_auc(
+                x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0)
             auc_score = roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt))
             if best_b is None or best_auc is None or best_auc < auc_score:
                 best_b, best_auc = para_b, auc_score
@@ -225,8 +226,8 @@ def cv_sht_am(para):
         te_index = data['trial_%d' % trial_id]['te_index']
         x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
         y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
-        wt, aucs, rts, epochs = c_algo_sht_am(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
-                                              0, para_s, best_b, 1., 0.0)
+        wt, aucs, rts, epochs = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras,
+                                               0, para_s, best_b, 1., 0.0)
         results[(trial_id, fold_id)] = {'algo_para': [trial_id, fold_id, para_s, best_b],
                                         'auc_wt': roc_auc_score(y_true=data['y_tr'][te_index],
                                                                 y_score=np.dot(data['x_tr'][te_index], wt)), 'wt': wt}
@@ -558,20 +559,24 @@ def show_auc():
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
     method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
     color_list = ['b', 'y', 'k', 'orangered', 'olive', 'r', 'g', 'm']
     for method_ind, method in enumerate(method_list):
         if method in ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']:
+            print(method, '%.4f %.4f' % (np.mean(all_aucs[method].values()), np.std(all_aucs[method].values())))
             plt.plot(s_list, [np.mean(all_aucs[method].values())] * len(s_list),
                      label=method_label_list[method_ind], color=color_list[method_ind], linewidth=1.5)
         if method in ['sht_am', 'sto_iht', 'hsg_ht']:
-            aucs = []
+            aucs, aucs_std = [], []
             for s in s_list:
                 aucs.append(np.mean(all_aucs[method][s].values()))
+                aucs_std.append(np.std(all_aucs[method][s].values()))
+            import operator
+            index, value = max(enumerate(aucs), key=operator.itemgetter(1))
+            print(method, '%.4f %.4f' % (value, aucs_std[index]))
             plt.plot(s_list, aucs, label=method_label_list[method_ind], color=color_list[method_ind], linewidth=1.5)
     ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
