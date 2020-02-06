@@ -485,21 +485,25 @@ def show_auc():
     plt.rcParams["font.serif"] = "Times"
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
-    rcParams['figure.figsize'] = 8, 8
+    rcParams['figure.figsize'] = 5, 4
     fig, ax = plt.subplots(1, 1)
+    ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
-    method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
-    color_list = ['b', 'y', 'k', 'orangered', 'olive', 'r', 'g', 'm']
+    method_list = ['sht_am', 'solam', 'spam_l1', 'spam_l2', 'fsauc', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SHT-AUC', 'SOLAM', 'SPAM-$\displaystyle \ell^1$',
+                         'SPAM-$\displaystyle \ell^1$', 'FSAUC', 'StoIHT', 'HSG-HT']
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'darkorange', 'olive', 'darkorange']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
     for method_ind, method in enumerate(method_list):
-        if method in ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']:
+        if method in ['solam', 'spam_l1', 'spam_l2', 'fsauc']:
             print(method, '%.4f %.4f' % (np.mean(all_aucs[method].values()), np.std(all_aucs[method].values())))
-            plt.plot(s_list, [np.mean(all_aucs[method].values())] * len(s_list),
-                     label=method_label_list[method_ind], color=color_list[method_ind], linewidth=1.5)
+            plt.plot(s_list, [np.mean(all_aucs[method].values())] * len(s_list), label=method_label_list[method_ind],
+                     marker=marker_list[method_ind], markerfacecolor='w', color=color_list[method_ind], linewidth=1.5,
+                     markersize=5.)
         if method in ['sht_am', 'sto_iht', 'hsg_ht']:
             aucs, aucs_std = [], []
             for s in s_list:
@@ -508,11 +512,15 @@ def show_auc():
             import operator
             index, value = max(enumerate(aucs), key=operator.itemgetter(1))
             print(method, '%.4f %.4f' % (value, aucs_std[index]))
-            plt.plot(s_list, aucs, label=method_label_list[method_ind], color=color_list[method_ind], linewidth=1.5)
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_xlabel('Sparsity')
+            plt.plot(s_list, aucs, label=method_label_list[method_ind], marker=marker_list[method_ind],
+                     markerfacecolor='w', color=color_list[method_ind], linewidth=1.5, markersize=5.)
+    ax.legend(loc='lower right', framealpha=1., frameon=True, borderpad=0.1,
+              labelspacing=.2, handletextpad=0.1, markerfirst=True)
+    ax.set_xlabel('Sparsity $\displaystyle k$')
     ax.set_ylabel('AUC Score')
+    ax.set_ylim([0.7, 0.90])
+    ax.set_yticks([0.7, 0.75, 0.8, 0.85, .9])
+    ax.set_yticklabels([0.70, 0.75, 0.80, 0.85, 0.90])
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'real_colon_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
@@ -527,14 +535,14 @@ def show_auc_scores():
     plt.rcParams["font.serif"] = "Times"
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
-    rcParams['figure.figsize'] = 8, 8
+    rcParams['figure.figsize'] = 5, 4
     fig, ax = plt.subplots(1, 1)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
-    method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
+    method_list = ['solam', 'spam_l1', 'spam_l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
+    method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
     color_list = ['b', 'y', 'k', 'c', 'olive', 'r', 'g', 'm']
     s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for method_ind, method in enumerate(method_list):
@@ -555,7 +563,7 @@ def show_auc_scores():
     ax.set_xlabel('i-th highest AUC score among 20 trials of 5-fold')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'real_colon_auc_scores.pdf'
+    f_name = root_path + 'real_colon_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
 
@@ -626,15 +634,11 @@ def main():
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
-    elif sys.argv[1] == 'show':
-        if sys.argv[2] == 'auc':
-            # summary_auc_results()
-            show_auc()
-        elif sys.argv[2] == 'figure3_a':
-            # summary_feature_results()
-            show_figure3_a()
-        elif sys.argv[2] == 'auc_scores':
-            show_auc_scores()
+    elif sys.argv[1] == 'show_figure3_a':
+        # summary_feature_results()
+        show_figure3_a()
+    elif sys.argv[1] == 'show_figure5':
+        show_auc()
 
 
 if __name__ == '__main__':

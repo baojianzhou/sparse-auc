@@ -1048,37 +1048,6 @@ def show_figure2_a():
     plt.show()
 
 
-def show_diff_ratio(method):
-    import matplotlib.pyplot as plt
-    from matplotlib import rc
-    from pylab import rcParams
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = "Times"
-    plt.rcParams["font.size"] = 14
-    rc('text', usetex=True)
-    rcParams['figure.figsize'] = 6, 5
-    results = pkl.load(open(data_path + 're_diff_p_ratio-%s.pkl' % method, 'rb'))
-    fig, ax = plt.subplots(1, 1)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-
-    color_list = ['r', 'b', 'g', 'm', 'c']
-    for ind_p, p_ratio in enumerate([0.10, 0.20, 0.30, 0.40, 0.50]):
-        aucs = results[p_ratio]
-        ax.plot(aucs[:50], color=color_list[ind_p], linewidth=2., label=r'$\displaystyle \hat{p}_n=%.1f$' % p_ratio)
-    ax.legend(loc='lower right', framealpha=0., bbox_to_anchor=(1.0, 0.0), frameon=True, borderpad=0.1,
-              labelspacing=0.1, handletextpad=0.1, markerfirst=True)
-    ax.set_ylabel('AUC')
-    ax.set_xlabel('Epochs')
-    plt.subplots_adjust(wspace=0.1, hspace=0.2)
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
-    f_name = root_path + 'simu_diff_p_ratio-%s.pdf' % method
-    plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
-    plt.close()
-    plt.show()
-    plt.show()
-
-
 def show_table1():
     method_list = ['sht_am', 'spam_l1', 'spam_l2', 'fsauc', 'solam', 'sto_iht', 'hsg_ht']
     s_list = [20, 40, 60, 80]
@@ -1222,6 +1191,64 @@ def show_figure1():
         plt.close()
 
 
+def show_figure4():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 14
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 16, 8
+    color_list = ['r', 'g', 'm', 'b', 'y', 'k', 'darkorange', 'olive', 'darkorange']
+    marker_list = ['s', 'o', 'P', 'X', 'H', '*', 'x', 'v', '^', '+', '>']
+    method_list = ['sht_am', 'fsauc', 'solam', 'sto_iht', 'hsg_ht', 'spam_l1', 'spam_l2']
+    method_label_list = ['SHT-AUC', 'FSAUC', r"SOLAM", r"StoIHT", 'HSG-HT', r"SPAM-$\displaystyle \ell^1$",
+                         r"SPAM-$\displaystyle \ell^2$", r"SPAM-$\displaystyle \ell^1/\ell^2$"]
+    posi_ratio_list = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+    fig, ax = plt.subplots(2, 3)
+    for i, j in product(range(2), range(3)):
+        ax[i, j].grid(color='lightgray', linestyle='dotted', axis='both')
+        ax[i, j].spines['right'].set_visible(False)
+        ax[i, j].spines['top'].set_visible(False)
+    s_list = [40, 60, 80]
+    for s_ind, s in enumerate(s_list):
+        for ind_method, method in enumerate(method_list):
+            results = pkl.load(open(os.path.join(data_path, 're_%s.pkl' % method)))
+            re = []
+            for posi_ratio in posi_ratio_list:
+                re.append(np.mean([results[key]['auc_wt'] for key in results
+                                   if key[-1] == s and key[-2] == posi_ratio]))
+            print(s, method)
+            ax[0, s_ind].plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
+                              markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
+                              markeredgewidth=2.)
+            ax[0, s_ind].set_title(r"$\displaystyle k_*=%d$" % s)
+            ax[0, 0].set_ylabel('AUC Score')
+            # ax[0, s_ind].set_xlabel(r"Imbalance Ratio $\displaystyle r$")
+            # ax[0, s_ind].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
+            re = []
+            for posi_ratio in posi_ratio_list:
+                re.append(np.mean([results[key]['f1_score'] for key in results
+                                   if key[-1] == s and key[-2] == posi_ratio]))
+            ax[1, s_ind].plot(posi_ratio_list, re, marker=marker_list[ind_method], label=method_label_list[ind_method],
+                              markersize=6., markerfacecolor='white', color=color_list[ind_method], linewidth=2.,
+                              markeredgewidth=2.)
+
+            # ax[1, s_ind].set_title(r"$\displaystyle k_*=%d$" % s)
+            ax[1, 0].set_ylabel('F1 Score')
+            ax[1, s_ind].set_xlabel(r"Imbalance Ratio $\displaystyle r$")
+            ax[1, s_ind].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
+    ax[1, 1].legend(loc='lower center', framealpha=.1, bbox_to_anchor=(.5, -.32), handlelength=1.5,
+                    frameon=False, borderpad=0.1, ncol=7, columnspacing=1.,
+                    labelspacing=0.05, handletextpad=0.1, markerfirst=True)
+    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    plt.subplots_adjust(wspace=0.2, hspace=0.1)
+    plt.savefig(root_path + 'simu-result-01-all-rest.pdf',
+                dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
+    plt.close()
+
+
 def test_single():
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = 0, 5, 50, 1000, 0.3, 0.5, 80
     f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
@@ -1332,8 +1359,6 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
-    elif run_option == 'show_figure2_b':
-        show_figure2_b()
     elif run_option == 'run_diff_b':
         para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
@@ -1341,11 +1366,13 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
+    elif run_option == 'show_figure2_b':
+        show_figure2_b()
     elif run_option == 'show_figure2_a':
         show_figure2_a()
-    elif run_option == 'show_diff_ratio':
-        show_diff_ratio(method='sht_am_v1')
     elif run_option == 'show_table1':
         show_table1()
     elif run_option == 'show_figure1':
         show_figure1()
+    elif run_option == 'show_figure4':
+        show_figure4()
