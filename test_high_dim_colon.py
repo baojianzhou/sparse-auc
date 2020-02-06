@@ -539,8 +539,7 @@ def show_auc_scores():
     method_list = ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'SPAM-L1L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
     color_list = ['b', 'y', 'k', 'c', 'olive', 'r', 'g', 'm']
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     for method_ind, method in enumerate(method_list):
         if method in ['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']:
             plt.plot(range(100), np.sort(all_aucs[method].values())[::-1],
@@ -564,7 +563,7 @@ def show_auc_scores():
     plt.close()
 
 
-def show_features():
+def show_figure3_a():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -572,27 +571,30 @@ def show_features():
     plt.rcParams["font.serif"] = "Times"
     plt.rcParams["font.size"] = 14
     rc('text', usetex=True)
-    rcParams['figure.figsize'] = 8, 8
+    rcParams['figure.figsize'] = 5, 4
     fig, ax = plt.subplots(1, 1)
+    ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
-    s_list = range(1, 101, 2)
-    s_list.extend([120, 140, 160, 180, 200, 220, 240, 260, 280, 300])
+    s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_features = pkl.load(open(data_path + 're_summary_all_features.pkl'))
     method_list = ['sht_am', 'sto_iht', 'hsg_ht']
-    method_label_list = ['SHT-AM', 'StoIHT', 'HSG-HT']
-    color_list = ['r', 'g', 'm']
+    method_label_list = ['SHT-AUC', 'StoIHT', 'HSG-HT']
+    color_list = ['r', 'b', 'g']
+    marker_list = ['D', 's', 'o']
     for method_ind, method in enumerate(method_list):
         ratio_features = []
         for s in s_list:
             ratio_features.append(np.mean(all_features[method][s].values()))
-        plt.plot(s_list, ratio_features, label=method_label_list[method_ind],
-                 color=color_list[method_ind], linewidth=1.5)
-    ax.legend(loc='center right', framealpha=0., frameon=True, borderpad=0.1,
+        plt.plot(s_list, ratio_features, label=method_label_list[method_ind], marker=marker_list[method_ind],
+                 markerfacecolor='w', color=color_list[method_ind], linewidth=1.5, markersize=5.)
+    ax.legend(loc='upper right', framealpha=1., frameon=True, borderpad=0.1,
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
     ax.set_xlabel('Sparsity')
-    ax.set_ylabel('Ratio of Related Features')
+    ax.set_ylabel('Ratio of Selected Genes')
+    ax.set_xticks([100, 200, 300, 400, 500])
+    ax.set_xticklabels([100, 200, 300, 400, 500])
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'real_colon_features.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
@@ -633,9 +635,9 @@ def main():
         if sys.argv[2] == 'auc':
             # summary_auc_results()
             show_auc()
-        elif sys.argv[2] == 'features':
+        elif sys.argv[2] == 'figure3_a':
             # summary_feature_results()
-            show_features()
+            show_figure3_a()
         elif sys.argv[2] == 'auc_scores':
             show_auc_scores()
 

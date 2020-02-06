@@ -942,7 +942,7 @@ def run_diff_s(para_s):
     return para_s, aucs_list
 
 
-def show_diff_s():
+def show_figure2_b():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -965,10 +965,12 @@ def show_diff_s():
         ax.plot(para_s_list, [np.mean(_[method]) for _ in results], label=method_label[method_ind],
                 marker=marker_list[method_ind], markersize=6., markerfacecolor='white', color=color_list[method_ind],
                 linewidth=2., markeredgewidth=2.)
-    ax.legend(loc='lower right', framealpha=0., frameon=True, borderpad=0.1,
+    ax.legend(loc='lower right', framealpha=1., frameon=True, borderpad=0.1,
               labelspacing=0.5, handletextpad=0.1, markerfirst=True)
     ax.set_xlabel('Sparsity ($\displaystyle k$)')
     ax.set_ylabel('AUC Score')
+    ax.set_xticks([100, 200, 300, 400, 500])
+    ax.set_xticklabels([100, 200, 300, 400, 500])
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'simu_diff_s.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
@@ -1010,7 +1012,7 @@ def run_diff_b(para_b):
     return para_b, aucs_list
 
 
-def show_diff_b():
+def show_figure2_a():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1034,11 +1036,10 @@ def show_diff_b():
         ax.plot(range(len(para_b_list)), y, label=method_label[method_ind],
                 marker=marker_list[method_ind], markersize=6., markerfacecolor='white',
                 color=color_list[method_ind], linewidth=2., markeredgewidth=2.)
-    ax.legend(loc='lower right', framealpha=0., frameon=True, borderpad=0.1,
+    ax.legend(loc='lower right', framealpha=1., frameon=True, borderpad=0.1,
               labelspacing=0.5, handletextpad=0.1, markerfirst=True)
-    ax.set_xticks(range(len([40, 44, 50, 57, 66, 80, 100, 133, 200, 400, 800])))
-    ax.set_xticklabels([40, 44, 50, 57, 66, 80, 100, 133, 200, 400, 800])
-    ax.set_xlabel('Block Size (b)')
+    ax.set_xticklabels([40, 80, 120, 200, 400, 800])
+    ax.set_xlabel('Block Size ($\displaystyle b$)')
     ax.set_ylabel('AUC Score')
     root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
     f_name = root_path + 'simu_diff_b.pdf'
@@ -1205,11 +1206,11 @@ def show_figure1():
                        markeredgewidth=2.)
         ax[0].set_title(r"$\displaystyle k_*=%d$" % s)
         ax[0].set_ylabel('AUC Score')
-        ax[0].set_xlabel('Positive Ratio')
+        ax[0].set_xlabel(r"Imbalance Ratio $\displaystyle r$")
         ax[0].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
         ax[1].set_title(r"$\displaystyle k_*=%d$" % s)
         ax[1].set_ylabel('F1 Score')
-        ax[1].set_xlabel('Positive Ratio')
+        ax[1].set_xlabel(r"Imbalance Ratio $\displaystyle r$")
         ax[1].set_xticks([0.1, 0.2, 0.3, 0.4, 0.5])
         ax[1].legend(loc='lower center', framealpha=.1, bbox_to_anchor=(-.2, -.3), handlelength=1.5,
                      fontsize=14., frameon=False, borderpad=0.1, ncol=7, columnspacing=1.,
@@ -1219,7 +1220,6 @@ def show_figure1():
         plt.savefig(root_path + 'simu-result-01-%d.pdf' % s,
                     dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
         plt.close()
-        break
 
 
 def test_single():
@@ -1332,8 +1332,8 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_s.pkl', 'wb'))
-    elif run_option == 'show_diff_s':
-        show_diff_s()
+    elif run_option == 'show_figure2_b':
+        show_figure2_b()
     elif run_option == 'run_diff_b':
         para_b_list = [800 / _ for _ in [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20][::-1]]
         pool = multiprocessing.Pool(processes=int(sys.argv[2]))
@@ -1341,8 +1341,8 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
-    elif run_option == 'show_diff_b':
-        show_diff_b()
+    elif run_option == 'show_figure2_a':
+        show_figure2_a()
     elif run_option == 'show_diff_ratio':
         show_diff_ratio(method='sht_am_v1')
     elif run_option == 'show_table1':
