@@ -568,7 +568,7 @@ def show_auc_scores():
     plt.close()
 
 
-def show_figure3_a():
+def show_figure4_a():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -634,10 +634,10 @@ def main():
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_%s.pkl' % method, 'wb'))
-    elif sys.argv[1] == 'show_figure3_a':
+    elif sys.argv[1] == 'show_figure4_a':
         # summary_feature_results()
-        show_figure3_a()
-    elif sys.argv[1] == 'show_figure5':
+        show_figure4_a()
+    elif sys.argv[1] == 'show_figure7':
         show_auc()
 
 
