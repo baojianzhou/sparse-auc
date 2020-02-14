@@ -1135,7 +1135,7 @@ def show_result_01_2():
     plt.show()
 
 
-def show_figure1():
+def show_figure2():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1372,7 +1372,7 @@ if __name__ == '__main__':
         show_figure3_a()
     elif run_option == 'show_table1':
         show_table1()
-    elif run_option == 'show_figure1':
-        show_figure1()
+    elif run_option == 'show_figure2':
+        show_figure2()
     elif run_option == 'show_figure4':
         show_figure4()
