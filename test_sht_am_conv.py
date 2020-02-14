@@ -60,8 +60,8 @@ def run_conv(num_cpus):
     increase num_passes to see convergence
     '''
     trial_id, k_fold, num_passes, num_tr, mu = 0, 3, 300, 1000, 0.3
-    posi_ratio_list = [0.05]
-    s_list = [40,60,80]
+    posi_ratio_list = [0.05, 0.25, 0.50]
+    s_list = [20,40,60,80]
     para_space = []
     for posi_ratio, s in product(posi_ratio_list, s_list):
         para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
@@ -88,7 +88,7 @@ def show_figure1():
     plt.rcParams["font.size"] = 16
     rc('text', usetex=True)
     rcParams['figure.figsize'] = 6, 5
-    s_list = [80]
+    s_list = [20]
     posi_ratio_list = [0.05, 0.25, 0.5]
     for s in s_list:
         mean_lines = []
@@ -112,7 +112,7 @@ def show_figure1():
         ax.set_xticks([0, 2.5, 5, 7.5, 10, 12.5, 15])
         ax.set_xticklabels([0,50, 100, 150, 200, 250, 300])
         ax.set_yticklabels([])
-        f_name = result_path +  's_%d.pdf' % (s)
+        f_name = data_path +  's_%d.pdf' % (s)
         plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
         plt.close()
 
