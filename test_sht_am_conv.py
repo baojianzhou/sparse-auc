@@ -25,7 +25,6 @@ except ImportError:
 
 data_path = '/home/neyo/Projects/sparse-auc-master/data/00_simu/'
 
-result_path = '/home/neyo/Projects/sparse-auc-master/results/conv/'
 
 def pred_results(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
@@ -52,7 +51,7 @@ def pred_results(para):
     print('s: %d p-ratio: %.2f %f' % (s, posi_ratio,m))
     sys.stdout.flush()
     results['auc'] = np.mean(results['aver_auc'],0) / m
-    pkl.dump(results, open(result_path + 's_%d_p-ratio_%.2f.pkl' % (s, posi_ratio), 'wb'))
+    pkl.dump(results, open(data_path + 'conv_s_%d_p-ratio_%.2f.pkl' % (s, posi_ratio), 'wb'))
 
 
 
@@ -100,7 +99,7 @@ def show():
         marker_list = ['D', 's', 'o']
         color_list = ['r', 'g', 'b']
         for ind, posi_ratio in enumerate(posi_ratio_list):
-            results = pkl.load(open(os.path.join(result_path, 's_%d_p-ratio_%.2f.pkl' % (s, posi_ratio))))
+            results = pkl.load(open(os.path.join(data_path, 'conv_s_%d_p-ratio_%.2f.pkl' % (s, posi_ratio))))
             mean_line = results['auc'] 
             mean_line_length = len(mean_line)
             iters = int(mean_line_length/300)
