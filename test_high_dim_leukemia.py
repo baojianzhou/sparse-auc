@@ -543,7 +543,7 @@ def summary_feature_results():
     pkl.dump(all_features, open(data_path + 're_summary_all_features.pkl', 'wb'))
 
 
-def show_figure5():
+def show_figure7():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -593,7 +593,7 @@ def show_figure5():
     plt.close()
 
 
-def show_figure3_b():
+def show_figure4_b():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -646,12 +646,12 @@ def main():
         run_methods(method='hsg_ht')
     elif sys.argv[1] == 'run_solam':
         run_methods(method='solam')
-    elif sys.argv[1] == 'show_figure5':
+    elif sys.argv[1] == 'show_figure7':
         # summary_auc_results()
-        show_figure5()
-    elif sys.argv[1] == 'show_figure3_b':
+        show_figure7()
+    elif sys.argv[1] == 'show_figure4_b':
         # summary_feature_results()
-        show_figure3_b()
+        show_figure4_b()
 
 
 if __name__ == '__main__':
