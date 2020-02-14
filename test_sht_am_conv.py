@@ -26,7 +26,7 @@ except ImportError:
 data_path = '/home/neyo/Projects/sparse-auc-master/data/00_simu/'
 
 
-def pred_results(para):
+def conv(para):
     trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
     results = dict()
     results['para'] = para
@@ -55,7 +55,7 @@ def pred_results(para):
 
 
 
-def run(num_cpus):
+def run_conv(num_cpus):
     '''
     increase num_passes to see convergence
     '''
@@ -66,7 +66,7 @@ def run(num_cpus):
     for posi_ratio, s in product(posi_ratio_list, s_list):
         para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
     pool = multiprocessing.Pool(processes=num_cpus)
-    conv_res = pool.map(pred_results, para_space)
+    conv_res = pool.map(conv, para_space)
     pool.close()
     pool.join()
     # for para, mrts, srts, maucs, saucs in conv_res:
@@ -79,7 +79,7 @@ def run(num_cpus):
         # g_name = result_path +  's_%d_p-ratio_%.2f_%.6f.pdf' % (s, posi_ratio, t)
         # plt.savefig(g_name, format='pdf')
 
-def show():
+def show_figure1():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -117,10 +117,10 @@ def show():
         plt.close()
 
 def main(run_option):
-    if run_option == 'run':
-        run(num_cpus = 12)
-    elif run_option == 'show':
-        show()
+    if run_option == 'run_conv':
+        run_conv(num_cpus = int(sys.argv[2]))
+    elif run_option == 'show_figure1':
+        show_figure1()
     
 if __name__ == '__main__':
     main(run_option=sys.argv[1])
