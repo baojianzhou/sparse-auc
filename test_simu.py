@@ -942,7 +942,7 @@ def run_diff_s(para_s):
     return para_s, aucs_list
 
 
-def show_figure2_b():
+def show_figure3_b():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1012,7 +1012,7 @@ def run_diff_b(para_b):
     return para_b, aucs_list
 
 
-def show_figure2_a():
+def show_figure3_a():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1366,10 +1366,10 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
-    elif run_option == 'show_figure2_b':
-        show_figure2_b()
-    elif run_option == 'show_figure2_a':
-        show_figure2_a()
+    elif run_option == 'show_figure3_b':
+        show_figure3_b()
+    elif run_option == 'show_figure3_a':
+        show_figure3_a()
     elif run_option == 'show_table1':
         show_table1()
     elif run_option == 'show_figure1':
