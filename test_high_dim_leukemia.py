@@ -463,7 +463,7 @@ def cv_fsauc(para):
 
 
 def run_methods(method):
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    data_path = '/enter/your/directory/to/21_leukemia/'
     data = pkl.load(open(data_path + 'leukemia_data.pkl'))
     pool = multiprocessing.Pool(processes=int(sys.argv[2]))
     para_list = []
@@ -493,7 +493,7 @@ def run_methods(method):
 
 
 def summary_auc_results():
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    data_path = '/enter/your/directory/to/21_leukemia/'
     all_aus = dict()
     for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
         re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
