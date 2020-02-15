@@ -1,5 +1,5 @@
 #!/bin/bash
-ROOT_PATH=/network/rit/lab/ceashpc/bz383376/opt/
+ROOT_PATH=/enter/your/direction/here/
 PYTHON_PATH=${ROOT_PATH}python-2.7.14/include/python2.7
 NUMPY_PATH=${ROOT_PATH}env-python2.7.14/lib/python2.7/site-packages/numpy/core/include/
 OPENBLAS_PATH=${ROOT_PATH}openblas-0.3.1/include/
