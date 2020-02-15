@@ -28,8 +28,8 @@ except ImportError:
     print('cannot find the module: sparse_module')
     pass
 
-data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-
+# Enter direction to your 00_simu folder
+data_path = 
 
 def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0.0, noise_std=1.0):
     """
