@@ -609,7 +609,7 @@ def show_figure4_a():
 def main():
     if sys.argv[1] == 'run':
         method = sys.argv[2]
-        data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+        data_path = 'enter/your/directory/to/20_colon/'
         data = pkl.load(open(data_path + 'colon_data.pkl'))
         pool = multiprocessing.Pool(processes=int(sys.argv[3]))
         para_list = []
