@@ -1319,7 +1319,7 @@ def show_figure6():
     ax[1, 1].legend(loc='lower center', framealpha=.1, bbox_to_anchor=(.5, -.32), handlelength=1.5,
                     frameon=False, borderpad=0.1, ncol=7, columnspacing=1.,
                     labelspacing=0.05, handletextpad=0.1, markerfirst=True)
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     plt.subplots_adjust(wspace=0.2, hspace=0.1)
     plt.savefig(root_path + 'simu-result-01-all-rest.pdf',
                 dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
