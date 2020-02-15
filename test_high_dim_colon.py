@@ -81,7 +81,7 @@ def process_data_20_colon():
     http://genomics-pubs.princeton.edu/oncology/affydata/index.html
     :return:
     """
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data_path = '/enter/your/directory/to/20_colon/'
     data = {'feature_ids': None, 'x_tr': [], 'y_tr': [], 'feature_names': []}
     import csv
     with open(data_path + 'colon_x.csv') as csv_file:
@@ -427,7 +427,7 @@ def cv_fsauc(para):
 
 
 def summary_auc_results():
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data_path = '/enter/your/directory/to/20_colon/'
     all_aus = dict()
     for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
         re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
@@ -449,7 +449,7 @@ def summary_auc_results():
 
 
 def summary_feature_results():
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data_path = '/enter/your/directory/to/20_colon/'
     all_features = dict()
     for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
         re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
@@ -490,7 +490,7 @@ def show_auc():
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data_path = '/enter/your/directory/to/20_colon/'
     s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
     method_list = ['sht_am', 'solam', 'spam_l1', 'spam_l2', 'fsauc', 'sto_iht', 'hsg_ht']
@@ -521,7 +521,7 @@ def show_auc():
     ax.set_ylim([0.7, 0.90])
     ax.set_yticks([0.7, 0.75, 0.8, 0.85, .9])
     ax.set_yticklabels([0.70, 0.75, 0.80, 0.85, 0.90])
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     f_name = root_path + 'real_colon_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
@@ -539,7 +539,7 @@ def show_auc_scores():
     fig, ax = plt.subplots(1, 1)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data_path = '/enter/your/directory/to/20_colon/'
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
     method_list = ['solam', 'spam_l1', 'spam_l2', 'fsauc', 'sht_am', 'sto_iht', 'hsg_ht']
     method_label_list = ['SOLAM', 'SPAM-L1', 'SPAM-L2', 'FSAUC', 'SHT-AM', 'StoIHT', 'HSG-HT']
@@ -562,7 +562,7 @@ def show_auc_scores():
               labelspacing=0.1, handletextpad=0.1, markerfirst=True)
     ax.set_xlabel('i-th highest AUC score among 20 trials of 5-fold')
     ax.set_ylabel('AUC Score')
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     f_name = root_path + 'real_colon_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
@@ -581,7 +581,7 @@ def show_figure4_a():
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/20_colon/'
+    data_path = '/enter/your/directory/to/20_colon/'
     s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_features = pkl.load(open(data_path + 're_summary_all_features.pkl'))
     method_list = ['sht_am', 'sto_iht', 'hsg_ht']
@@ -600,7 +600,7 @@ def show_figure4_a():
     ax.set_ylabel('Ratio of Selected Genes')
     ax.set_xticks([100, 200, 300, 400, 500])
     ax.set_xticklabels([100, 200, 300, 400, 500])
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     f_name = root_path + 'real_colon_features.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
@@ -609,7 +609,7 @@ def show_figure4_a():
 def main():
     if sys.argv[1] == 'run':
         method = sys.argv[2]
-        data_path = 'enter/your/directory/to/20_colon/'
+        data_path = '/enter/your/directory/to/20_colon/'
         data = pkl.load(open(data_path + 'colon_data.pkl'))
         pool = multiprocessing.Pool(processes=int(sys.argv[3]))
         para_list = []
