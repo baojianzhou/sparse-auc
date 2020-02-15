@@ -133,7 +133,7 @@ def process_data_21_leukemia():
     http://genomics-pubs.princeton.edu/oncology/affydata/index.html
     :return:
     """
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    data_path = '/enter/your/directory/to/21_leukemia/'
     data = {'feature_ids': None, 'x_tr': [], 'y_tr': [], 'feature_names': []}
     import csv
     with open(data_path + 'golub_x.csv') as csv_file:
@@ -515,7 +515,7 @@ def summary_auc_results():
 
 
 def summary_feature_results():
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    data_path = '/enter/your/directory/to/21_leukemia/'
     all_features = dict()
     for method_ind, method in enumerate(['solam', 'spam_l1', 'spam_l2', 'spam_l1l2', 'fsauc']):
         re_summary = pkl.load(open(data_path + 're_%s.pkl' % method, 'rb'))
@@ -556,7 +556,7 @@ def show_figure7():
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    data_path = '/enter/your/directory/to/21_leukemia/'
     s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_aucs = pkl.load(open(data_path + 're_summary_all_aucs.pkl'))
     method_list = ['sht_am', 'solam', 'spam_l1', 'spam_l2', 'fsauc', 'sto_iht', 'hsg_ht']
@@ -587,7 +587,7 @@ def show_figure7():
     ax.set_ylim([0.8, 1.01])
     ax.set_yticks([0.8, 0.85, 0.9, 0.95, 1.0])
     ax.set_yticklabels([0.8, 0.85, 0.9, 0.95, 1.0])
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     f_name = root_path + 'real_leukemia_auc.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
@@ -606,7 +606,7 @@ def show_figure4_b():
     ax.grid(color='lightgray', linestyle='--')
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/21_leukemia/'
+    data_path = '/enter/your/directory/to/21_leukemia/'
     s_list = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500]
     all_features = pkl.load(open(data_path + 're_summary_all_features.pkl'))
     method_list = ['sht_am', 'sto_iht', 'hsg_ht']
@@ -625,7 +625,7 @@ def show_figure4_b():
     ax.set_ylabel('Ratio of Selected Genes')
     ax.set_xticks([100, 200, 300, 400, 500])
     ax.set_xticklabels([100, 200, 300, 400, 500])
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     f_name = root_path + 'real_leukemia_features.pdf'
     plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0, format='pdf')
     plt.close()
