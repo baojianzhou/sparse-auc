@@ -28,8 +28,7 @@ except ImportError:
     print('cannot find the module: sparse_module')
     pass
 
-# Enter direction to your 00_simu folder
-data_path = 
+data_path = 'enter/your/directory/to/00_simu'
 
 def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0.0, noise_std=1.0):
     """
