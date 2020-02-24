@@ -297,5 +297,27 @@ initsparse_module(void) {
 #endif
 
 int main() {
-    printf("test of main wrapper!\n");
+    int n = 15;
+    double *arr = malloc(sizeof(double) * n);
+    arr[0] = 7.;
+    arr[1] = -3.;
+    arr[2] = 4.;
+    arr[3] = 0.;
+    arr[4] = -5;
+    arr[5] = 6;
+    arr[6] = 10;
+    arr[7] = -1;
+    arr[8] = 7;
+    arr[9] = 12;
+    arr[10] = 15;
+    arr[11] = -8;
+    arr[12] = 20;
+    arr[13] = 2;
+    arr[14] = 7;
+    int k = 6;
+    _hard_thresholding(arr, n, k);
+    for (int i = 0; i < n; i++) {
+        printf("%.2f ", arr[i]);
+    }
+    exit(0);
 }

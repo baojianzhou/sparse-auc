@@ -188,6 +188,8 @@ void _algo_hsg_ht(Data *data,
                   double para_step_init,
                   double para_l2);
 
+int _hard_thresholding(double *arr, int n, int k);
+
 /**
  *
  * @param data

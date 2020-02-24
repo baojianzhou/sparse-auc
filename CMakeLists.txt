@@ -36,6 +36,14 @@ target_link_libraries(test_kth_selection -Wall -O3 -lm)
 add_executable(test_case algo_wrapper/test_case.c)
 target_link_libraries(test_case -Wall -O3 -lm)
 
+
+add_executable(sparse_wrapper algo_wrapper/main_wrapper.c
+        algo_wrapper/auc_opt_methods.h algo_wrapper/auc_opt_methods.c
+        algo_wrapper/fast_pcst.c algo_wrapper/fast_pcst.h algo_wrapper/loss.c algo_wrapper/loss.h)
+target_link_libraries(sparse_wrapper python2.7 -std=c11 -Wall -Wextra -O3
+        -I${OPENBLAS_INCLUDE} -I${NUMPY_INCLUDE} -I${PYTHON_INCLUDE} -L${OPENBLAS_LIB}
+        -lm -lpython2.7 -lopenblas -lpthread)
+
 add_library(sparse_module SHARED algo_wrapper/main_wrapper.c
         algo_wrapper/auc_opt_methods.h algo_wrapper/auc_opt_methods.c
         algo_wrapper/fast_pcst.c algo_wrapper/fast_pcst.h algo_wrapper/loss.c algo_wrapper/loss.h)

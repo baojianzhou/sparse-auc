@@ -75,8 +75,34 @@ bool get_array(double *arr, int n, int arr_opt) {
     return false;
 }
 
+void test_t() {
+    double *arr = malloc(sizeof(double) * 15);
+    arr[0] = 7.;
+    arr[1] = 3.;
+    arr[2] = 4.;
+    arr[3] = 0.;
+    arr[4] = 5;
+    arr[5] = 6;
+    arr[6] = 10;
+    arr[7] = 1;
+    arr[8] = 7;
+    arr[9] = 12;
+    arr[10] = 15;
+    arr[11] = 8;
+    arr[12] = 20;
+    arr[13] = 2;
+    arr[14] = 7;
+    printf("%.2f\n", kth_largest_floyd_rivest(arr, 15, 1));
+    printf("%.2f\n", kth_largest_floyd_rivest(arr, 15, 2));
+    printf("%.2f\n", kth_largest_floyd_rivest(arr, 15, 3));
+    printf("%.2f\n", kth_largest_floyd_rivest(arr, 15, 4));
+    printf("%.2f\n", kth_largest_floyd_rivest(arr, 15, 5));
+    printf("%.2f\n", kth_largest_floyd_rivest(arr, 15, 6));
+    exit(0);
+}
 
 int main() {
+    test_t();
     int arr_opt = 0;
     srand48(time(0));
     clock_t begin = clock(), begin_kth;
@@ -84,6 +110,8 @@ int main() {
     int num_iter = 1000;
 
     double *arr = malloc(sizeof(double) * n);
+
+
     int *sorted_set = malloc(sizeof(int) * n);
     double total_v1 = 0.0, total_run_time_v1 = 0.0;
     double total_v2 = 0.0, total_run_time_v2 = 0.0;
