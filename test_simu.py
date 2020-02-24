@@ -28,8 +28,7 @@ except ImportError:
     print('cannot find the module: sparse_module')
     pass
 
-data_path = '/network/rit/lab/ceashpc/bz383376/data/icml2020/00_simu/'
-
+data_path = 'enter/your/directory/to/00_simu'
 
 def _gen_dataset_00_simu(data_path, num_tr, trial_id, mu, posi_ratio, noise_mu=0.0, noise_std=1.0):
     """
@@ -756,6 +755,84 @@ def test_hsg_ht(para):
     sys.stdout.flush()
     return results
 
+def conv(para):
+    trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s = para
+    results = dict()
+    results['para'] = para
+    results['aver_auc'] = []
+    f_name = data_path + 'data_trial_%02d_tr_%03d_mu_%.1f_p-ratio_%.2f.pkl'
+    data = pkl.load(open(f_name % (trial_id, num_tr, mu, posi_ratio), 'rb'))[s]
+    __ = np.empty(shape=(1,), dtype=float)
+    step_len, verbose, record_aucs, stop_eps = 1e2, 0, 1, 1e-4
+    global_paras = np.asarray([num_passes, step_len, verbose, record_aucs, stop_eps], dtype=float)
+    for fold_id in range(k_fold):
+        para_s = s
+        para_b = 50 # batch size
+        tr_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['tr_index']
+        te_index = data['trial_%d_fold_%d' % (trial_id, fold_id)]['te_index']
+        x_tr = np.asarray(data['x_tr'][tr_index], dtype=float)
+        y_tr = np.asarray(data['y_tr'][tr_index], dtype=float)
+        _ = c_algo_sht_auc(x_tr, __, __, __, y_tr, 0, data['p'], global_paras, 0, para_s, para_b, 1., 0.0) # p is dimension
+        wt, aucs, rts, epochs = _ # type are all list	
+        # aver_auc.append(roc_auc_score(y_true=data['y_tr'][te_index], y_score=np.dot(data['x_tr'][te_index], wt)))
+        results['aver_auc'].append(aucs)
+    m = np.max(results['aver_auc'])	
+    print('s: %d p-ratio: %.2f %f' % (s, posi_ratio,m))
+    sys.stdout.flush()
+    results['auc'] = np.mean(results['aver_auc'],0) / m
+    pkl.dump(results, open(data_path + 'conv_s_%d_p-ratio_%.2f.pkl' % (s, posi_ratio), 'wb'))
+
+def show_figure1():
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    from pylab import rcParams
+    plt.rcParams["font.family"] = "serif"
+    plt.rcParams["font.serif"] = "Times"
+    plt.rcParams["font.size"] = 16
+    rc('text', usetex=True)
+    rcParams['figure.figsize'] = 6, 5
+    s_list = [20]
+    posi_ratio_list = [0.05, 0.25, 0.5]
+    for s in s_list:
+        mean_lines = []
+        fig, ax = plt.subplots(1, 1)
+        ax.grid(color='lightgray', linestyle='dotted', axis='both')
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+        marker_list = ['D', 's', 'o']
+        color_list = ['r', 'g', 'b']
+        for ind, posi_ratio in enumerate(posi_ratio_list):
+            results = pkl.load(open(os.path.join(data_path, 'conv_s_%d_p-ratio_%.2f.pkl' % (s, posi_ratio))))
+            mean_line = results['auc'] 
+            mean_line_length = len(mean_line)
+            iters = int(mean_line_length/300)
+            mean_line_epochs = mean_line[0::20*iters]  
+            ax.plot(range(15), mean_line_epochs, label='r = %.2f' % posi_ratio,  marker=marker_list[ind], markersize=6., markerfacecolor='white', color=color_list[ind], linewidth=2., markeredgewidth=2.)
+        ax.legend(loc='lower right', framealpha=1., frameon=True, borderpad=0.1,
+              labelspacing=0.5, handletextpad=0.1, markerfirst=True)
+        ax.set_xlabel('Epochs')
+        ax.set_ylabel('AUC Score (scaled)')
+        ax.set_xticks([0, 2.5, 5, 7.5, 10, 12.5, 15])
+        ax.set_xticklabels([0,50, 100, 150, 200, 250, 300])
+        ax.set_yticklabels([])
+        f_name = data_path +  's_%d.pdf' % (s)
+        plt.savefig(f_name, dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
+        plt.close()
+
+def run_conv(num_cpus):
+    '''
+    increase num_passes to see convergence
+    '''
+    trial_id, k_fold, num_passes, num_tr, mu = 0, 3, 300, 1000, 0.3
+    posi_ratio_list = [0.05]
+    s_list = [40,60,80]
+    para_space = []
+    for posi_ratio, s in product(posi_ratio_list, s_list):
+        para_space.append((trial_id, k_fold, num_passes, num_tr, mu, posi_ratio, s))
+    pool = multiprocessing.Pool(processes=num_cpus)
+    conv_res = pool.map(conv, para_space)
+    pool.close()
+    pool.join()
 
 def run_ms(method_name, trial_id_low, trial_id_high, num_cpus):
     k_fold, num_trials, num_passes, tr_list, mu_list = 5, 5, 50, [1000], [0.3]
@@ -942,7 +1019,7 @@ def run_diff_s(para_s):
     return para_s, aucs_list
 
 
-def show_figure2_b():
+def show_figure3_b():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1012,7 +1089,7 @@ def run_diff_b(para_b):
     return para_b, aucs_list
 
 
-def show_figure2_a():
+def show_figure3_a():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1135,7 +1212,7 @@ def show_result_01_2():
     plt.show()
 
 
-def show_figure1():
+def show_figure2():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1191,7 +1268,7 @@ def show_figure1():
         plt.close()
 
 
-def show_figure4():
+def show_figure6():
     import matplotlib.pyplot as plt
     from matplotlib import rc
     from pylab import rcParams
@@ -1242,7 +1319,7 @@ def show_figure4():
     ax[1, 1].legend(loc='lower center', framealpha=.1, bbox_to_anchor=(.5, -.32), handlelength=1.5,
                     frameon=False, borderpad=0.1, ncol=7, columnspacing=1.,
                     labelspacing=0.05, handletextpad=0.1, markerfirst=True)
-    root_path = '/home/baojian/Dropbox/Apps/ShareLaTeX/icml20-sht-auc/figs/'
+    root_path = '/enter/your/directory/to/save/'
     plt.subplots_adjust(wspace=0.2, hspace=0.1)
     plt.savefig(root_path + 'simu-result-01-all-rest.pdf',
                 dpi=600, bbox_inches='tight', pad_inches=0.05, format='pdf')
@@ -1347,6 +1424,8 @@ if __name__ == '__main__':
     if run_option == 'run_ms':
         run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
                trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
+    elif run_option == 'run_conv':
+        run_conv(num_cpus = int(sys.argv[2]))
     elif run_option == 'run_test':
         run_testing(method_name=sys.argv[2], num_cpus=int(sys.argv[3]))
     elif run_option == 'run_diff_ratio':
@@ -1366,13 +1445,15 @@ if __name__ == '__main__':
         pool.close()
         pool.join()
         pkl.dump(ms_res, open(data_path + 're_diff_b.pkl', 'wb'))
-    elif run_option == 'show_figure2_b':
-        show_figure2_b()
-    elif run_option == 'show_figure2_a':
-        show_figure2_a()
-    elif run_option == 'show_table1':
-        show_table1()
     elif run_option == 'show_figure1':
         show_figure1()
-    elif run_option == 'show_figure4':
-        show_figure4()
+    elif run_option == 'show_figure3_b':
+        show_figure3_b()
+    elif run_option == 'show_figure3_a':
+        show_figure3_a()
+    elif run_option == 'show_table1':
+        show_table1()
+    elif run_option == 'show_figure2':
+        show_figure2()
+    elif run_option == 'show_figure6':
+        show_figure6()
