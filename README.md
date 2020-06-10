@@ -2,8 +2,8 @@
 
 In a Python 2.7 enrivoment
 
-Change the directory in your favor in build.sh test_simu.py test_high_dim_colon.py test_high_dim_leukemia.py
+Change the directory in your favor in `build.sh` `test_simu.py` `test_high_dim_colon.py` `test_high_dim_leukemia.py`
 
-Run build.sh to build
+Run `build.sh` to build
 
-Test the experiments with test_simu.py test_high_dim_colon.py test_high_dim_leukemia.py
+Test the experiments with `test_simu.py` `test_high_dim_colon.py` `test_high_dim_leukemia.py`
