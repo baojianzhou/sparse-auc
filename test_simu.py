@@ -1421,7 +1421,12 @@ def run_all_model_selection():
 
 if __name__ == '__main__':
     run_option = sys.argv[1]
-    if run_option == 'run_ms':
+    if run_option == 'data_gen':
+        for trial_id in range(20):
+            for posi_ratio in [0.01, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]:
+                _gen_dataset_00_simu(data_path=data_path,
+                                     num_tr=1000, trial_id=trial_id, mu=0.3, posi_ratio=posi_ratio)
+    elif run_option == 'run_ms':
         run_ms(method_name=sys.argv[2], trial_id_low=int(sys.argv[3]),
                trial_id_high=int(sys.argv[4]), num_cpus=int(sys.argv[5]))
     elif run_option == 'run_conv':
